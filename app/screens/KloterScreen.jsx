@@ -1,5 +1,7 @@
 "use client";
 import React, { useState } from "react";
+import Header from "@/app/components/Header";
+import { CalendarIcon, PlusIcon } from "@/app/components/CustomIcons";
 
 export default function KloterScreen() {
   // Toggle between 0 (List View) and 1 (Add Form View)
@@ -10,43 +12,14 @@ export default function KloterScreen() {
       {/* LIST VIEW[cite: 14] */}
       {view === 0 && (
         <div>
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold flex items-center gap-3 text-[#263754]">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              Daftar Kloter
-            </h1>
-            <button
-              onClick={() => setView(1)}
-              className="bg-[#2e7d32] hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Tambah Kloter
-            </button>
-          </div>
+          <Header
+            title="Daftar Kloter"
+            icon={<CalendarIcon />}
+            buttonIcon={<PlusIcon />}
+            buttonOnClick={() => setView(1)}
+            buttonText="Tambah Kloter"
+            buttonBgColor="bg-[#2e7d32] hover:bg-green-700"
+          />
 
           <div className="bg-white rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 p-6">
             <div className="border border-gray-200 rounded-lg overflow-hidden">

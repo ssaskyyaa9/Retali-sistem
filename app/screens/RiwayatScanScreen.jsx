@@ -1,12 +1,10 @@
 import React from "react";
+import Header from "@/app/components/Header";
 
 export default function RiwayatScanScreen() {
   return (
     <div className="p-10 w-full max-w-6xl">
-      <h1 className="text-3xl font-bold text-[#263754] mb-8">
-        Riwayat Scan Koper
-      </h1>
-
+      <Header title="Riwayat Scan Koper" />
       <div className="flex gap-4 items-end mb-6">
         <div className="w-64">
           <label className="block text-sm font-bold text-gray-900 mb-2">

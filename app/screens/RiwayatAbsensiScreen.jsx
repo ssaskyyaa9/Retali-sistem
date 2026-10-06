@@ -1,12 +1,11 @@
 // app/screens/RiwayatAbsensiScreen.jsx
 import React from "react";
+import Header from "@/app/components/Header";
 
 export default function RiwayatAbsensiScreen() {
   return (
     <div className="p-10 w-full max-w-6xl">
-      <h1 className="text-3xl font-bold text-[#263754] mb-8">
-        Riwayat Absensi
-      </h1>
+      <Header title="Riwayat Absensi" />
 
       {/* Control Bar (Matching Riwayat Scan)[cite: 15] */}
       <div className="flex gap-4 items-end mb-6">

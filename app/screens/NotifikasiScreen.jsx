@@ -1,6 +1,8 @@
 // app/screens/NotifikasiScreen.jsx
 "use client";
 import React, { useState } from "react";
+import Header from "@/app/components/Header";
+import { PlusIcon } from "@/app/components/CustomIcons";
 
 export default function NotifikasiScreen() {
   // 0 = Daftar Notifikasi (List), 1 = Buat Notifikasi Baru (Form)
@@ -11,31 +13,12 @@ export default function NotifikasiScreen() {
       {/* LIST VIEW */}
       {view === 0 && (
         <div>
-          <div className="flex justify-between items-center mb-8 border-b pb-4">
-            <h1 className="text-2xl font-bold text-[#263754]">
-              Daftar Notifikasi
-            </h1>
-            <button
-              onClick={() => setView(1)}
-              className="bg-[#263754] hover:bg-[#3d547a] text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Buat Notifikasi Baru
-            </button>
-          </div>
-
+          <Header
+            title="Daftar Notifikasi"
+            buttonIcon={<PlusIcon />}
+            buttonOnClick={() => setView(1)}
+            buttonText="Buat Notifikasi Baru"
+          />
           <div className="bg-white rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 p-4">
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <table className="w-full text-center text-sm">

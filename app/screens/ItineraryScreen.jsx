@@ -1,5 +1,7 @@
 "use client";
 import React, { useState } from "react";
+import Header from "@/app/components/Header";
+import { CalendarIcon, PlusIcon } from "@/app/components/CustomIcons";
 
 export default function ItineraryScreen() {
   const [view, setView] = useState(0); // 0 = List View, 1 = Add Form
@@ -10,43 +12,13 @@ export default function ItineraryScreen() {
       {/* LIST VIEW[cite: 19, 20] */}
       {view === 0 && (
         <div>
-          <div className="flex justify-between items-center mb-8 border-b pb-4">
-            <h1 className="text-2xl font-bold flex items-center gap-3 text-[#263754]">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              Itenary
-            </h1>
-            <button
-              onClick={() => setView(1)}
-              className="bg-[#263754] hover:bg-[#3d547a] text-white px-5 py-2.5 rounded text-sm font-bold flex items-center gap-2 shadow-sm transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Add Schedule
-            </button>
-          </div>
+          <Header
+            title="Itinerary"
+            icon={<CalendarIcon />}
+            buttonIcon={<PlusIcon />}
+            buttonOnClick={() => setView(1)}
+            buttonText="Add Schedule"
+          />
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex justify-between items-center mb-6">
