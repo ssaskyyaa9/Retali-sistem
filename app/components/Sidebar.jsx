@@ -11,6 +11,7 @@ export default function Sidebar() {
 
   const isActive = (path) => pathname === path;
   const isParentActive = (paths) => paths.some((p) => pathname.startsWith(p));
+
   return (
     <aside className="w-64 bg-[#263754] flex flex-col h-full text-white shadow-xl z-10 shrink-0">
       {/* 1. Fixed Top Section (Logo) */}
@@ -33,14 +34,14 @@ export default function Sidebar() {
           {/* Dashboard */}
           <Link
             href="/"
-            className={`flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors duration-300 ease-in-out ${
               isActive("/")
                 ? "bg-[#1e2b43] border-l-4 border-yellow-500 text-white"
-                : "text-gray-300 hover:bg-[#1e2b43] hover:text-white"
+                : "text-gray-300 hover:bg-[#1e2b43] hover:text-white border-l-4 border-transparent"
             }`}
           >
             <svg
-              className={`w-5 h-5 ${isActive("/") ? "text-yellow-500" : "text-gray-400"}`}
+              className={`w-5 h-5 transition-colors duration-300 ${isActive("/") ? "text-yellow-500" : "text-gray-400"}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -59,7 +60,7 @@ export default function Sidebar() {
           <div>
             <button
               onClick={() => setIsPenggunaOpen(!isPenggunaOpen)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition-colors ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition-colors duration-300 ease-in-out ${
                 isParentActive(["/tour-leader", "/muthawif"])
                   ? "text-white font-medium"
                   : "text-gray-300 hover:bg-[#1e2b43] hover:text-white"
@@ -67,7 +68,7 @@ export default function Sidebar() {
             >
               <div className="flex items-center gap-3">
                 <svg
-                  className={`w-5 h-5 ${isParentActive(["/tour-leader", "/muthawif"]) ? "text-yellow-500" : "text-gray-400"}`}
+                  className={`w-5 h-5 transition-colors duration-300 ${isParentActive(["/tour-leader", "/muthawif"]) ? "text-yellow-500" : "text-gray-400"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -82,7 +83,7 @@ export default function Sidebar() {
                 <span className="text-sm">Pengguna</span>
               </div>
               <svg
-                className={`w-4 h-4 transition-transform text-yellow-500 ${isPenggunaOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 text-yellow-500 transition-transform duration-300 ease-in-out ${isPenggunaOpen ? "rotate-180" : "rotate-0"}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -96,37 +97,46 @@ export default function Sidebar() {
               </svg>
             </button>
 
-            {isPenggunaOpen && (
-              <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-gray-600 pl-2">
-                <Link
-                  href="/tour-leader"
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors ${
-                    isActive("/tour-leader")
-                      ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                      : "text-gray-300 hover:text-white hover:bg-[#1e2b43]"
-                  }`}
-                >
-                  Tour Leader
-                </Link>
-                <Link
-                  href="/muthawif"
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors ${
-                    isActive("/muthawif")
-                      ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                      : "text-gray-300 hover:text-white hover:bg-[#1e2b43]"
-                  }`}
-                >
-                  Muthawif
-                </Link>
+            {/* Smooth Dropdown Animation Container */}
+            <div
+              className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                isPenggunaOpen
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-gray-600 pl-2">
+                  <Link
+                    href="/tour-leader"
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                      isActive("/tour-leader")
+                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
+                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                    }`}
+                  >
+                    Tour Leader
+                  </Link>
+                  <Link
+                    href="/muthawif"
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                      isActive("/muthawif")
+                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
+                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                    }`}
+                  >
+                    Muthawif
+                  </Link>
+                </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Dropdown Menu: Tugas */}
           <div>
             <button
               onClick={() => setIsTugasOpen(!isTugasOpen)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition-colors ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition-colors duration-300 ease-in-out ${
                 isParentActive(["/tugas-tour-leader", "/tugas-ceklis"])
                   ? "text-white font-medium"
                   : "text-gray-300 hover:bg-[#1e2b43] hover:text-white"
@@ -134,7 +144,7 @@ export default function Sidebar() {
             >
               <div className="flex items-center gap-3">
                 <svg
-                  className={`w-5 h-5 ${isParentActive(["/tugas-tour-leader", "/tugas-ceklis"]) ? "text-yellow-500" : "text-gray-400"}`}
+                  className={`w-5 h-5 transition-colors duration-300 ${isParentActive(["/tugas-tour-leader", "/tugas-ceklis"]) ? "text-yellow-500" : "text-gray-400"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -149,7 +159,7 @@ export default function Sidebar() {
                 <span className="text-sm">Tugas</span>
               </div>
               <svg
-                className={`w-4 h-4 transition-transform text-yellow-500 ${isTugasOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 text-yellow-500 transition-transform duration-300 ease-in-out ${isTugasOpen ? "rotate-180" : "rotate-0"}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -163,30 +173,39 @@ export default function Sidebar() {
               </svg>
             </button>
 
-            {isTugasOpen && (
-              <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-gray-600 pl-2">
-                <Link
-                  href="/tugas-tour-leader"
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors ${
-                    isActive("/tugas-tour-leader")
-                      ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                      : "text-gray-300 hover:text-white hover:bg-[#1e2b43]"
-                  }`}
-                >
-                  Tugas Tour Leader
-                </Link>
-                <Link
-                  href="/tugas-ceklis"
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors ${
-                    isActive("/tugas-ceklis")
-                      ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                      : "text-gray-300 hover:text-white hover:bg-[#1e2b43]"
-                  }`}
-                >
-                  Tugas Ceklis
-                </Link>
+            {/* Smooth Dropdown Animation Container */}
+            <div
+              className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                isTugasOpen
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-gray-600 pl-2">
+                  <Link
+                    href="/tugas-tour-leader"
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                      isActive("/tugas-tour-leader")
+                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
+                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                    }`}
+                  >
+                    Tugas Tour Leader
+                  </Link>
+                  <Link
+                    href="/tugas-ceklis"
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                      isActive("/tugas-ceklis")
+                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
+                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                    }`}
+                  >
+                    Tugas Ceklis
+                  </Link>
+                </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Other single links */}
@@ -280,14 +299,14 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors duration-300 ease-in-out ${
                   active
                     ? "bg-[#1e2b43] border-l-4 border-yellow-500 text-white"
-                    : "text-gray-300 hover:bg-[#1e2b43] hover:text-white"
+                    : "text-gray-300 hover:bg-[#1e2b43] hover:text-white border-l-4 border-transparent"
                 }`}
               >
                 <span
-                  className={`${active ? "text-yellow-500" : "text-gray-400"}`}
+                  className={`transition-colors duration-300 ${active ? "text-yellow-500" : "text-gray-400"}`}
                 >
                   {item.icon}
                 </span>
@@ -309,7 +328,7 @@ export default function Sidebar() {
             <p className="text-xs text-yellow-500">Administrator</p>
           </div>
         </div>
-        <button className="w-full flex items-center justify-center gap-2 bg-[#334768] hover:bg-[#3d547a] text-white py-2.5 rounded-md text-sm font-medium transition-colors shadow-sm">
+        <button className="w-full flex items-center justify-center gap-2 bg-[#334768] hover:bg-[#3d547a] text-white py-2.5 rounded-md text-sm font-medium transition-colors duration-300 ease-in-out shadow-sm">
           Log out
         </button>
       </div>
