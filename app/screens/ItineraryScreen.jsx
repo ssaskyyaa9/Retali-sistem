@@ -128,13 +128,13 @@ export default function ItineraryScreen() {
 
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">
+              <label className="block text-sm  font-bold text-gray-900 mb-2">
                 Package
               </label>
               <input
                 type="text"
                 defaultValue="Umrah super cermat"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm"
+                className="w-full border text-gray-900 border-gray-300 rounded px-4 py-2.5 text-sm"
               />
             </div>
 
@@ -143,7 +143,7 @@ export default function ItineraryScreen() {
                 <label className="block text-sm font-bold text-gray-900 mb-2">
                   City
                 </label>
-                <select className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm bg-white">
+                <select className="w-full border text-gray-500 border-gray-300 rounded px-4 py-2.5 text-sm bg-white">
                   <option>Madinah</option>
                 </select>
               </div>
@@ -151,7 +151,7 @@ export default function ItineraryScreen() {
                 <label className="block text-sm font-bold text-gray-900 mb-2">
                   Day
                 </label>
-                <select className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm bg-white">
+                <select className="w-full border text-gray-500 border-gray-300 rounded px-4 py-2.5 text-sm bg-white">
                   <option>Day 1</option>
                 </select>
               </div>
@@ -162,7 +162,7 @@ export default function ItineraryScreen() {
                 <input
                   type="time"
                   defaultValue="08:00"
-                  className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm"
+                  className="w-full border text-gray-500 border-gray-300 rounded px-4 py-2.5 text-sm"
                 />
               </div>
               <div>
@@ -173,7 +173,7 @@ export default function ItineraryScreen() {
                   <input
                     type="number"
                     defaultValue="1"
-                    className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm"
+                    className="w-full border text-gray-500 border-gray-300 rounded px-4 py-2.5 text-sm"
                   />
                   <span className="flex items-center text-sm font-medium">
                     hr
@@ -189,7 +189,7 @@ export default function ItineraryScreen() {
               <input
                 type="text"
                 defaultValue="05 - 11 - 2025"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm"
+                className="w-full border text-gray-900 border-gray-300 rounded px-4 py-2.5 text-sm"
               />
             </div>
 
@@ -200,7 +200,7 @@ export default function ItineraryScreen() {
               <input
                 type="text"
                 defaultValue="Breakfast at hotel"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm"
+                className="w-full border text-gray-900 border-gray-300 rounded px-4 py-2.5 text-sm"
               />
             </div>
 
@@ -210,7 +210,8 @@ export default function ItineraryScreen() {
               </label>
               <textarea
                 rows="4"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm"
+                placeholder="Masukkan catatan tambahan... (opsional)"
+                className="w-full border placeholder:text-gray-500 text-gray-900 border-gray-300 rounded px-4 py-2.5 text-sm"
               ></textarea>
             </div>
           </div>

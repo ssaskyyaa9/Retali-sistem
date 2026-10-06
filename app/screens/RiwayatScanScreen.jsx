@@ -10,7 +10,7 @@ export default function RiwayatScanScreen() {
           <label className="block text-sm font-bold text-gray-900 mb-2">
             Tour Leader
           </label>
-          <select className="w-full border border-gray-300 rounded px-4 py-2 text-sm bg-white">
+          <select className="w-full border text-gray-500 border-gray-300 rounded px-4 py-2 text-sm bg-white">
             <option>-- Semua Tour Leader --</option>
           </select>
         </div>

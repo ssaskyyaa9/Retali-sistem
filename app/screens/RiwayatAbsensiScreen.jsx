@@ -13,7 +13,7 @@ export default function RiwayatAbsensiScreen() {
           <label className="block text-sm font-bold text-gray-900 mb-2">
             Tour Leader
           </label>
-          <select className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#263754]">
+          <select className="w-full border  text-gray-500 border-gray-300 rounded px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#263754]">
             <option>-- Semua Tour Leader --</option>
           </select>
         </div>
@@ -23,7 +23,7 @@ export default function RiwayatAbsensiScreen() {
           </label>
           <input
             type="date"
-            className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#263754]"
+            className="w-full border border-gray-300 rounded px-4 py-2.5 text-sm text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#263754]"
           />
         </div>
         <button className="bg-[#334768] hover:bg-[#263754] text-white px-6 py-2.5 rounded text-sm font-bold transition-colors mb-0 shadow-sm">

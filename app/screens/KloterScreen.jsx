@@ -167,8 +167,8 @@ export default function KloterScreen() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Masukkan nama kloter"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
+                  placeholder="Masukkan nama kloter..."
+                  className="w-full border placeholder:text-gray-500 text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
                 />
               </div>
 
@@ -178,8 +178,8 @@ export default function KloterScreen() {
                 </label>
                 <input
                   type="text"
-                  placeholder="cth: 13 - 20 September 2025"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
+                  placeholder="contoh: 13 - 20 September 2025"
+                  className="w-full border placeholder:text-gray-500 text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
                 />
               </div>
             </div>

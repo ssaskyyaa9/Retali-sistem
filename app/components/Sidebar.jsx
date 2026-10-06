@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -14,10 +15,16 @@ export default function Sidebar() {
     <aside className="w-64 bg-[#263754] flex flex-col h-full text-white shadow-xl z-10 shrink-0">
       {/* 1. Fixed Top Section (Logo) */}
       <div className="flex items-center gap-3 px-6 py-8 shrink-0">
-        <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
-          <span className="text-xs font-bold">R</span>
-        </div>
-        <span className="font-bold text-sm tracking-wide">RETALI SISTEM</span>
+        <Image
+          src="/retali-white-logo.png"
+          alt="Retali Logo"
+          width={45}
+          height={45}
+          className="rounded-md object-cover"
+        />
+        <span className="font-bold mt-2 text-lg tracking-wide">
+          RETALI SISTEM
+        </span>
       </div>
 
       {/* 2. Scrollable Middle Section (Navigation Only) */}

@@ -139,8 +139,8 @@ export default function MuthawifScreen() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Masukkan nama muthawif"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#263754] focus:border-[#263754]"
+                  placeholder="Masukkan nama muthawif..."
+                  className="w-full border placeholder:text-gray-500 text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#263754] focus:border-[#263754]"
                 />
               </div>
 
@@ -150,8 +150,8 @@ export default function MuthawifScreen() {
                 </label>
                 <input
                   type="email"
-                  placeholder="Masukkan email muthawif"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#263754] focus:border-[#263754]"
+                  placeholder="Masukkan email muthawif..."
+                  className="w-full border placeholder:text-gray-500 text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#263754] focus:border-[#263754]"
                 />
               </div>
 
@@ -159,7 +159,7 @@ export default function MuthawifScreen() {
                 <label className="block text-sm font-bold text-gray-900 mb-2">
                   Kloter
                 </label>
-                <select className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#263754]">
+                <select className="w-full border text-gray-500 border-gray-300 rounded-lg px-4 py-3 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#263754]">
                   <option>-- Pilih Kloter --</option>
                   <option>Umrah plus turky (20 - 30 Oktober 2025)</option>
                   <option>
@@ -172,7 +172,7 @@ export default function MuthawifScreen() {
             <div className="flex justify-between items-center border-t border-gray-100 pt-6">
               <button
                 onClick={() => setView(0)}
-                className="bg-gray-400 hover:bg-gray-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+                className="bg-gray-500 hover:bg-gray-400 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
               >
                 <svg
                   className="w-4 h-4"
@@ -191,7 +191,7 @@ export default function MuthawifScreen() {
               </button>
               <button
                 onClick={() => setView(0)}
-                className="bg-[#2e7d32] hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+                className="bg-[#2e7d32] hover:bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
               >
                 <svg
                   className="w-4 h-4"

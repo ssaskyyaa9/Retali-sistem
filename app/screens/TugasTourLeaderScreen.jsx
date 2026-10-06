@@ -46,13 +46,13 @@ export default function TugasTourLeaderScreen() {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-gray-900 mb-2">
+                <label className="block text-sm  font-bold text-gray-900 mb-2">
                   Judul Tugas
                 </label>
                 <input
                   type="text"
-                  placeholder="Masukkan judul tugas.."
-                  className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-sm focus:ring-[#263754] focus:border-[#263754]"
+                  placeholder="Masukkan judul tugas..."
+                  className="w-full border border-gray-300 text-gray-900 placeholder:text-gray-500 rounded-md px-4 py-2.5 text-sm focus:ring-[#263754] focus:border-[#263754]"
                 />
               </div>
 
@@ -61,7 +61,7 @@ export default function TugasTourLeaderScreen() {
                   <label className="block text-sm font-bold text-gray-900 mb-2">
                     Jumlah Soal
                   </label>
-                  <select className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-sm appearance-none bg-white">
+                  <select className="w-full border  text-gray-500 border-gray-300 rounded-md px-4 py-2.5 text-sm appearance-none bg-white">
                     <option>Pilih Jumlah</option>
                   </select>
                 </div>
@@ -89,7 +89,7 @@ export default function TugasTourLeaderScreen() {
                 <label className="block text-sm font-bold text-gray-900 mb-2">
                   Kirim ke siapa
                 </label>
-                <select className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-sm appearance-none bg-white">
+                <select className="w-full border text-gray-500 border-gray-300 rounded-md px-4 py-2.5 text-sm appearance-none bg-white">
                   <option>Pilih Tujuan</option>
                 </select>
               </div>
@@ -146,7 +146,7 @@ export default function TugasTourLeaderScreen() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Masukkan soalnya.."
+                  placeholder="Masukkan soalnya..."
                   className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-sm"
                 />
               </div>
@@ -156,7 +156,7 @@ export default function TugasTourLeaderScreen() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Masukkan soalnya.."
+                  placeholder="Masukkan soalnya..."
                   className="w-full border border-gray-300 rounded-md px-4 py-2.5 text-sm"
                 />
               </div>

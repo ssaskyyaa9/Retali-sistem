@@ -212,8 +212,8 @@ export default function TugasCeklisScreen() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Masukkan judul tugas.."
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#263754]"
+                    placeholder="Masukkan judul tugas..."
+                    className="w-full border text-gray-900 placeholder:text-gray-500 border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#263754]"
                   />
                 </div>
 
@@ -254,7 +254,7 @@ export default function TugasCeklisScreen() {
                     <input
                       type="number"
                       defaultValue={3}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium"
+                      className="w-full border text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm font-medium"
                     />
                   </div>
                   <div>
@@ -276,7 +276,7 @@ export default function TugasCeklisScreen() {
                     </label>
                     <input
                       type="date"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-400"
+                      className="w-full border text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm"
                     />
                   </div>
                   <div>
@@ -298,7 +298,7 @@ export default function TugasCeklisScreen() {
                     </label>
                     <input
                       type="date"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-400"
+                      className="w-full border text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm"
                     />
                   </div>
                 </div>
@@ -317,7 +317,7 @@ export default function TugasCeklisScreen() {
                   <input
                     type="text"
                     defaultValue="Semua Tour Leader"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm font-medium"
+                    className="w-full border text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm font-medium"
                   />
                 </div>
               </div>
@@ -448,8 +448,8 @@ export default function TugasCeklisScreen() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Masukkan pertanyaan untuk tugas ini.."
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm"
+                    placeholder="Masukkan pertanyaan untuk tugas ini..."
+                    className="w-full border placeholder:text-gray-500 border-gray-300 rounded-lg px-4 py-3 text-sm"
                   />
                 </div>
                 <div>
@@ -458,8 +458,8 @@ export default function TugasCeklisScreen() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Masukkan pertanyaan untuk tugas ini.."
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm"
+                    placeholder="Masukkan pertanyaan untuk tugas ini..."
+                    className="w-full border placeholder:text-gray-500 border-gray-300 rounded-lg px-4 py-3 text-sm"
                   />
                 </div>
               </div>
