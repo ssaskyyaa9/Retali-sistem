@@ -1,12 +1,8 @@
-
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import { CalendarIcon, PlusIcon } from "@/app/components/CustomIcons";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 const initialForm = {
   name: "",
@@ -37,82 +33,35 @@ function formatPeriod(start, end) {
 
 export default function KloterScreen() {
   const [view, setView] = useState(0);
-  const [kloters, setKloters] = useState([]);
+  const [kloters, setKloters] = useState([
+    {
+      id: 1,
+      name: "Kloter 1 - Jakarta",
+      description: "Kloter pertama keberangkatan jamaah",
+      start_date: "2026-06-01",
+      end_date: "2026-06-15",
+      status: "aktif",
+    },
+    {
+      id: 2,
+      name: "Kloter 2 - Surabaya",
+      description: "Kloter kedua keberangkatan jamaah",
+      start_date: "2026-06-10",
+      end_date: "2026-06-25",
+      status: "nonaktif",
+    },
+  ]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const getToken = () => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("access_token");
-  };
-
-  const request = async (path, options = {}) => {
-    const token = getToken();
-
-    if (!token) {
-      throw new Error("Token login tidak ditemukan. Silakan login ulang.");
-    }
-
-    const response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...options.headers,
-      },
-      cache: "no-store",
-    });
-
-    const text = await response.text();
-    let data = null;
-
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = null;
-    }
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("Sesi login tidak valid. Silakan login ulang.");
-      }
-
-      if (response.status === 403) {
-        throw new Error("Akses ditolak. Pastikan akun lu memiliki role admin.");
-      }
-
-      throw new Error(
-        data?.detail ||
-          data?.message ||
-          `Request gagal dengan status ${response.status}.`
-      );
-    }
-
-    return data;
-  };
-
   const loadKloters = useCallback(async () => {
     setLoading(true);
     setError("");
-
-    try {
-      const data = await request("/api/kloter");
-
-      if (!Array.isArray(data)) {
-        throw new Error("Format data kloter dari backend tidak sesuai.");
-      }
-
-      setKloters(data);
-    } catch (err) {
-      setError(err.message || "Gagal mengambil data kloter.");
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -170,40 +119,30 @@ export default function KloterScreen() {
       return;
     }
 
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      start_date: form.start_date || null,
-      end_date: form.end_date || null,
-      status: form.status,
-    };
-
     setSaving(true);
 
     try {
       if (editingId) {
-        await request(`/api/kloter/${editingId}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        });
-
-        setSuccess("Kloter berhasil diperbarui.");
+        setKloters((prev) =>
+          prev.map((item) =>
+            item.id === editingId ? { ...item, ...form } : item
+          )
+        );
+        setSuccess("Kloter berhasil diperbarui (mode lokal).");
       } else {
-        await request("/api/kloter", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-
-        setSuccess("Kloter berhasil ditambahkan.");
+        const newKloter = {
+          id: Date.now(),
+          ...form,
+        };
+        setKloters((prev) => [...prev, newKloter]);
+        setSuccess("Kloter berhasil ditambahkan (mode lokal).");
       }
-
-      await loadKloters();
 
       setForm(initialForm);
       setEditingId(null);
       setView(0);
     } catch (err) {
-      setError(err.message || "Gagal menyimpan kloter.");
+      setError("Gagal menyimpan kloter.");
     } finally {
       setSaving(false);
     }
@@ -219,16 +158,8 @@ export default function KloterScreen() {
     setError("");
     setSuccess("");
 
-    try {
-      await request(`/api/kloter/${kloter.id}`, {
-        method: "DELETE",
-      });
-
-      setSuccess("Kloter berhasil dihapus.");
-      await loadKloters();
-    } catch (err) {
-      setError(err.message || "Gagal menghapus kloter.");
-    }
+    setKloters((prev) => prev.filter((item) => item.id !== kloter.id));
+    setSuccess("Kloter berhasil dihapus (mode lokal).");
   }
 
   function goBack() {

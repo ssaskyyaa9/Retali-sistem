@@ -1,89 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+import React, { useState } from "react";
 
 export default function DashboardScreen() {
-  const router = useRouter();
-
-  const [stats, setStats] = useState({
-    total_scan: 0,
-    total_pengguna: 0,
-    total_notifikasi: 0,
+  const [stats] = useState({
+    total_scan: 120,
+    total_pengguna: 15,
+    total_notifikasi: 8,
   });
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDashboard() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const token = localStorage.getItem("access_token");
-
-        if (!token) {
-          router.replace("/login");
-          return;
-        }
-
-        const response = await fetch(
-          `${API_URL}/api/dashboard/stats`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-            cache: "no-store",
-          }
-        );
-
-        const data = await response.json();
-
-        if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          localStorage.removeItem("user");
-
-          router.replace("/login");
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(
-            data.detail || `Request gagal (${response.status})`
-          );
-        }
-
-        if (!cancelled) {
-          setStats(data);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err.message || "Gagal mengambil data dashboard."
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
 
   const cards = [
     {
@@ -125,15 +49,6 @@ export default function DashboardScreen() {
         Atur semua data dengan mudah
       </p>
 
-      {error && (
-        <div
-          role="alert"
-          className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-        >
-          {error}
-        </div>
-      )}
-
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {cards.map((card) => (
           <div
@@ -143,17 +58,11 @@ export default function DashboardScreen() {
             {card.icon}
             <h2 className="mb-3 text-xl font-bold">{card.title}</h2>
             <p className="text-2xl font-bold">
-              {loading ? "..." : card.value}
+              {card.value}
             </p>
           </div>
         ))}
       </div>
-
-      {loading && (
-        <p className="mt-4 text-sm text-gray-500">
-          Memuat statistik dashboard...
-        </p>
-      )}
     </div>
   );
 }
