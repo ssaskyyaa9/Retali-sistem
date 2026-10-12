@@ -17,7 +17,7 @@ export default function Sidebar() {
       {/* 1. Fixed Top Section (Logo) */}
       <div className="flex items-center gap-3 px-6 py-8 shrink-0">
         <Image
-          src="/retali-white-logo.png"
+          src="/logoretali-ungu.png"
           alt="Retali Logo"
           width={45}
           height={45}
