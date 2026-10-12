@@ -5,10 +5,8 @@ import Image from "next/image";
 
 export default function Sidebar() {
   const pathname = usePathname();
-
   const [isPenggunaOpen, setIsPenggunaOpen] = useState(true);
   const [isTugasOpen, setIsTugasOpen] = useState(true);
-
   const isActive = (path) => pathname === path;
   const isParentActive = (paths) => paths.some((p) => pathname.startsWith(p));
 
