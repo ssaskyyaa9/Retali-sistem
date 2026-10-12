@@ -1,229 +1,507 @@
+
 "use client";
-import React, { useState } from "react";
+
+import React, { useCallback, useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import { CalendarIcon, PlusIcon } from "@/app/components/CustomIcons";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+const initialForm = {
+  name: "",
+  description: "",
+  start_date: "",
+  end_date: "",
+  status: "aktif",
+};
+
+function formatDate(date) {
+  if (!date) return "-";
+
+  return new Date(`${date}T00:00:00`).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatPeriod(start, end) {
+  if (!start && !end) return "-";
+  if (start && end) {
+    return `${formatDate(start)} - ${formatDate(end)}`;
+  }
+
+  return formatDate(start || end);
+}
+
 export default function KloterScreen() {
-  // Toggle between 0 (List View) and 1 (Add Form View)
   const [view, setView] = useState(0);
+  const [kloters, setKloters] = useState([]);
+  const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const getToken = () => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("access_token");
+  };
+
+  const request = async (path, options = {}) => {
+    const token = getToken();
+
+    if (!token) {
+      throw new Error("Token login tidak ditemukan. Silakan login ulang.");
+    }
+
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
+      cache: "no-store",
+    });
+
+    const text = await response.text();
+    let data = null;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Sesi login tidak valid. Silakan login ulang.");
+      }
+
+      if (response.status === 403) {
+        throw new Error("Akses ditolak. Pastikan akun lu memiliki role admin.");
+      }
+
+      throw new Error(
+        data?.detail ||
+          data?.message ||
+          `Request gagal dengan status ${response.status}.`
+      );
+    }
+
+    return data;
+  };
+
+  const loadKloters = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await request("/api/kloter");
+
+      if (!Array.isArray(data)) {
+        throw new Error("Format data kloter dari backend tidak sesuai.");
+      }
+
+      setKloters(data);
+    } catch (err) {
+      setError(err.message || "Gagal mengambil data kloter.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadKloters();
+  }, [loadKloters]);
+
+  function openCreateForm() {
+    setForm(initialForm);
+    setEditingId(null);
+    setError("");
+    setSuccess("");
+    setView(1);
+  }
+
+  function openEditForm(kloter) {
+    setForm({
+      name: kloter.name || "",
+      description: kloter.description || "",
+      start_date: kloter.start_date || "",
+      end_date: kloter.end_date || "",
+      status: kloter.status || "aktif",
+    });
+
+    setEditingId(kloter.id);
+    setError("");
+    setSuccess("");
+    setView(1);
+  }
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!form.name.trim()) {
+      setError("Nama kloter wajib diisi.");
+      return;
+    }
+
+    if (
+      form.start_date &&
+      form.end_date &&
+      form.end_date < form.start_date
+    ) {
+      setError("Tanggal selesai tidak boleh sebelum tanggal mulai.");
+      return;
+    }
+
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      start_date: form.start_date || null,
+      end_date: form.end_date || null,
+      status: form.status,
+    };
+
+    setSaving(true);
+
+    try {
+      if (editingId) {
+        await request(`/api/kloter/${editingId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+
+        setSuccess("Kloter berhasil diperbarui.");
+      } else {
+        await request("/api/kloter", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        setSuccess("Kloter berhasil ditambahkan.");
+      }
+
+      await loadKloters();
+
+      setForm(initialForm);
+      setEditingId(null);
+      setView(0);
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan kloter.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(kloter) {
+    const confirmed = window.confirm(
+      `Yakin ingin menghapus kloter "${kloter.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await request(`/api/kloter/${kloter.id}`, {
+        method: "DELETE",
+      });
+
+      setSuccess("Kloter berhasil dihapus.");
+      await loadKloters();
+    } catch (err) {
+      setError(err.message || "Gagal menghapus kloter.");
+    }
+  }
+
+  function goBack() {
+    setView(0);
+    setEditingId(null);
+    setForm(initialForm);
+    setError("");
+    setSuccess("");
+  }
 
   return (
-    <div className="p-10 w-full max-w-5xl">
-      {/* LIST VIEW[cite: 14] */}
+    <div className="w-full max-w-5xl p-10">
+      {error && (
+        <div
+          role="alert"
+          className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div
+          role="status"
+          className="mb-5 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700"
+        >
+          {success}
+        </div>
+      )}
+
       {view === 0 && (
         <div>
           <Header
             title="Daftar Kloter"
             icon={<CalendarIcon />}
             buttonIcon={<PlusIcon />}
-            buttonOnClick={() => setView(1)}
+            buttonOnClick={openCreateForm}
             buttonText="Tambah Kloter"
             buttonBgColor="bg-[#2e7d32] hover:bg-green-700"
           />
 
-          <div className="bg-white rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 p-6">
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-[0_0_15px_rgba(0,0,0,0.05)]">
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="w-full text-center text-sm">
                 <thead className="bg-[#263754] text-white">
                   <tr>
-                    <th className="px-6 py-4 font-bold border-b border-r border-[#3d547a]">
+                    <th className="border-b border-r border-[#3d547a] px-6 py-4 font-bold">
                       No
                     </th>
-                    <th className="px-6 py-4 font-bold border-b border-r border-[#3d547a]">
+                    <th className="border-b border-r border-[#3d547a] px-6 py-4 font-bold">
                       Nama Kloter
                     </th>
-                    <th className="px-6 py-4 font-bold border-b border-r border-[#3d547a]">
+                    <th className="border-b border-r border-[#3d547a] px-6 py-4 font-bold">
                       Tanggal
                     </th>
-                    <th className="px-6 py-4 font-bold border-b">Aksi</th>
+                    <th className="border-b border-r border-[#3d547a] px-6 py-4 font-bold">
+                      Status
+                    </th>
+                    <th className="border-b px-6 py-4 font-bold">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 text-gray-800 font-medium">
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 border-r border-gray-200">1</td>
-                    <td className="px-6 py-4 border-r border-gray-200">
-                      Umrah plus turky
-                    </td>
-                    <td className="px-6 py-4 border-r border-gray-200">
-                      20 - 30 Oktober 2025
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-2">
-                        <button className="bg-[#263754] hover:bg-[#3d547a] text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors">
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+
+                <tbody className="divide-y divide-gray-200 font-medium text-gray-800">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-10 text-gray-500">
+                        Memuat data kloter...
+                      </td>
+                    </tr>
+                  ) : kloters.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-10 text-gray-500">
+                        Belum ada data kloter.
+                      </td>
+                    </tr>
+                  ) : (
+                    kloters.map((kloter, index) => (
+                      <tr key={kloter.id} className="hover:bg-gray-50">
+                        <td className="border-r border-gray-200 px-6 py-4">
+                          {index + 1}
+                        </td>
+
+                        <td className="border-r border-gray-200 px-6 py-4 text-left">
+                          <div className="font-bold">{kloter.name}</div>
+                          {kloter.description && (
+                            <div className="mt-1 text-xs font-normal text-gray-500">
+                              {kloter.description}
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="border-r border-gray-200 px-6 py-4">
+                          {formatPeriod(kloter.start_date, kloter.end_date)}
+                        </td>
+
+                        <td className="border-r border-gray-200 px-6 py-4">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              kloter.status === "aktif"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>{" "}
-                          Edit
-                        </button>
-                        <button className="bg-[#e53935] hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors">
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>{" "}
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 border-r border-gray-200">2</td>
-                    <td className="px-6 py-4 border-r border-gray-200">
-                      Umrah plus turky
-                    </td>
-                    <td className="px-6 py-4 border-r border-gray-200">
-                      20 - 30 Oktober 2025
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-2">
-                        <button className="bg-[#263754] hover:bg-[#3d547a] text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors">
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>{" "}
-                          Edit
-                        </button>
-                        <button className="bg-[#e53935] hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors">
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>{" "}
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                            {kloter.status}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditForm(kloter)}
+                              className="flex items-center gap-1 rounded-md bg-[#263754] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#3d547a]"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(kloter)}
+                              className="flex items-center gap-1 rounded-md bg-[#e53935] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-red-700"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+
+            <button
+              type="button"
+              onClick={loadKloters}
+              disabled={loading}
+              className="mt-4 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {loading ? "Memuat..." : "Refresh Data"}
+            </button>
           </div>
         </div>
       )}
 
-      {/* FORM VIEW[cite: 15] */}
       {view === 1 && (
-        <div className="bg-white rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
-          {/* Green Header */}
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_0_15px_rgba(0,0,0,0.05)]">
           <div className="bg-[#2e7d32] px-8 py-5 text-white">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              Tambah Kloter
+            <h2 className="flex items-center gap-2 text-xl font-bold">
+              {editingId ? "Edit Kloter" : "Tambah Kloter"}
             </h2>
           </div>
 
-          <div className="p-8">
-            <div className="space-y-6 mb-10">
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6 p-8">
               <div>
-                <label className="block text-base font-bold text-gray-900 mb-2">
-                  Nama Kloter
+                <label
+                  htmlFor="name"
+                  className="mb-2 block text-base font-bold text-gray-900"
+                >
+                  Nama Kloter *
                 </label>
                 <input
+                  id="name"
+                  name="name"
                   type="text"
+                  value={form.name}
+                  onChange={handleChange}
                   placeholder="Masukkan nama kloter..."
-                  className="w-full border placeholder:text-gray-500 text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#2e7d32] focus:outline-none focus:ring-1 focus:ring-[#2e7d32]"
                 />
               </div>
 
               <div>
-                <label className="block text-base font-bold text-gray-900 mb-2">
-                  Tanggal
+                <label
+                  htmlFor="description"
+                  className="mb-2 block text-base font-bold text-gray-900"
+                >
+                  Deskripsi
                 </label>
-                <input
-                  type="text"
-                  placeholder="contoh: 13 - 20 September 2025"
-                  className="w-full border placeholder:text-gray-500 text-gray-900 border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
+                <textarea
+                  id="description"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Deskripsi kloter (opsional)..."
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#2e7d32] focus:outline-none focus:ring-1 focus:ring-[#2e7d32]"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="start_date"
+                    className="mb-2 block text-base font-bold text-gray-900"
+                  >
+                    Tanggal Mulai
+                  </label>
+                  <input
+                    id="start_date"
+                    name="start_date"
+                    type="date"
+                    value={form.start_date}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 focus:border-[#2e7d32] focus:outline-none focus:ring-1 focus:ring-[#2e7d32]"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="end_date"
+                    className="mb-2 block text-base font-bold text-gray-900"
+                  >
+                    Tanggal Selesai
+                  </label>
+                  <input
+                    id="end_date"
+                    name="end_date"
+                    type="date"
+                    min={form.start_date || undefined}
+                    value={form.end_date}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 focus:border-[#2e7d32] focus:outline-none focus:ring-1 focus:ring-[#2e7d32]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="status"
+                  className="mb-2 block text-base font-bold text-gray-900"
+                >
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={form.status}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:border-[#2e7d32] focus:outline-none focus:ring-1 focus:ring-[#2e7d32]"
+                >
+                  <option value="aktif">Aktif</option>
+                  <option value="nonaktif">Nonaktif</option>
+                  <option value="selesai">Selesai</option>
+                </select>
               </div>
             </div>
 
-            <div className="flex justify-between items-center border-t border-gray-100 pt-6">
+            <div className="flex items-center justify-between border-t border-gray-100 px-8 py-6">
               <button
-                onClick={() => setView(0)}
-                className="bg-gray-400 hover:bg-gray-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+                type="button"
+                onClick={goBack}
+                disabled={saving}
+                className="rounded-lg bg-gray-400 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-gray-500 disabled:opacity-50"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
                 Kembali
               </button>
+
               <button
-                onClick={() => setView(0)}
-                className="bg-[#2e7d32] hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-[#2e7d32] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                  <path
-                    fillRule="evenodd"
-                    d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Simpan
+                {saving
+                  ? "Menyimpan..."
+                  : editingId
+                    ? "Simpan Perubahan"
+                    : "Simpan"}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>
