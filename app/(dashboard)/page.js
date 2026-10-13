@@ -1,5 +1,5 @@
-import DashboardScreen from "@/screens/DashboardScreen";
+import DashboardScreen from "@/app/screens/DashboardScreen";
 
-export default function Home() {
+export default function home() {
   return <DashboardScreen />;
 }
