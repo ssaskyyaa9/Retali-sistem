@@ -1,3 +1,4 @@
+//app/login/page.js
 'use client';
 
 import { useState } from 'react';
@@ -23,7 +24,7 @@ export default function LoginPage() {
       localStorage.setItem('access_token', result.access_token);
       localStorage.setItem('user', JSON.stringify(result.user));
 
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       setError(err.message || 'Terjadi kesalahan saat login.');
     } finally {

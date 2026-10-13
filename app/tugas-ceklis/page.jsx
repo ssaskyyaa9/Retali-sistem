@@ -1,13 +1,13 @@
 "use client";
 import React, { useState } from "react";
 
-export default function TugasCeklisScreen() {
+export default function TugasCeklisPage() {
   // 0 = List, 1 = Step 1, 2 = Step 2, 3 = Step 3
   const [view, setView] = useState(0);
 
   return (
     <div className="p-10 w-full max-w-5xl">
-      {/* LIST VIEW[cite: 7] */}
+      {/* LIST VIEW */}
       {view === 0 && (
         <div>
           <div className="flex justify-between items-center mb-8 border-b pb-4">
@@ -172,7 +172,7 @@ export default function TugasCeklisScreen() {
       {/* FORM STEPS CONTAINER */}
       {view > 0 && (
         <div className="bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 p-8 relative">
-          {/* STEP 1[cite: 8] */}
+          {/* STEP 1 */}
           {view === 1 && (
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2 text-[#263754] mb-6 border-b pb-4">
@@ -229,8 +229,8 @@ export default function TugasCeklisScreen() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Kloter akan otomatis diambil dari profil Tour Leader (tidak
-                  perlu dipilih manual).
+                  Kloter akan otomatis diambil dari profil Tour Leader (tidak perlu
+                  dipilih manual).
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -365,7 +365,7 @@ export default function TugasCeklisScreen() {
             </div>
           )}
 
-          {/* STEP 2[cite: 9, 11] */}
+          {/* STEP 2 */}
           {view === 2 && (
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2 text-[#263754] mb-6 border-b pb-4">
@@ -553,7 +553,7 @@ export default function TugasCeklisScreen() {
             </div>
           )}
 
-          {/* STEP 3[cite: 10] */}
+          {/* STEP 3 */}
           {view === 3 && (
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2 text-[#263754] mb-6 border-b pb-4">

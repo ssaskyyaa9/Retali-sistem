@@ -1,7 +1,7 @@
 import React from "react";
 import Header from "@/app/components/Header";
 
-export default function RiwayatScanScreen() {
+export default function RiwayatScanPage() {
   return (
     <div className="p-10 w-full max-w-6xl">
       <Header title="Riwayat Scan Koper" />

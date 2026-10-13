@@ -1,8 +1,7 @@
-// app/screens/MuthawifScreen.jsx
 "use client";
 import React, { useState } from "react";
 
-export default function MuthawifScreen() {
+export default function MuthawifPage() {
   // 0 = List View, 1 = Form View (Tambah/Edit)
   const [view, setView] = useState(0);
 

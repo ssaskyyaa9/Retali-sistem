@@ -1,15 +1,16 @@
 "use client";
+
 import React, { useState } from "react";
 import Header from "@/app/components/Header";
 import { CalendarIcon, PlusIcon } from "@/app/components/CustomIcons";
 
-export default function ItineraryScreen() {
+export default function ItineraryPage() {
   const [view, setView] = useState(0); // 0 = List View, 1 = Add Form
   const [activeDay, setActiveDay] = useState(1);
 
   return (
     <div className="p-10 w-full max-w-5xl">
-      {/* LIST VIEW[cite: 19, 20] */}
+      {/* LIST VIEW */}
       {view === 0 && (
         <div>
           <Header
@@ -119,7 +120,7 @@ export default function ItineraryScreen() {
         </div>
       )}
 
-      {/* FORM VIEW[cite: 21] */}
+      {/* FORM VIEW */}
       {view === 1 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
           <h2 className="text-2xl font-bold text-[#263754] mb-8 pb-4 border-b">
@@ -128,7 +129,7 @@ export default function ItineraryScreen() {
 
           <div className="space-y-5">
             <div>
-              <label className="block text-sm  font-bold text-gray-900 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-2">
                 Package
               </label>
               <input

@@ -1,8 +1,9 @@
+// This is the main dashboard page for the admin panel. It displays key statistics and provides an overview of the system's status.
 "use client";
 
 import React, { useState } from "react";
 
-export default function DashboardScreen() {
+export default function DashboardPage() {
   const [stats] = useState({
     total_scan: 120,
     total_pengguna: 15,

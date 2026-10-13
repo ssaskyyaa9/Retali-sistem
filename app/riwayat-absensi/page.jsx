@@ -1,19 +1,18 @@
-// app/screens/RiwayatAbsensiScreen.jsx
 import React from "react";
 import Header from "@/app/components/Header";
 
-export default function RiwayatAbsensiScreen() {
+export default function RiwayatAbsensiPage() {
   return (
     <div className="p-10 w-full max-w-6xl">
       <Header title="Riwayat Absensi" />
 
-      {/* Control Bar (Matching Riwayat Scan)[cite: 15] */}
+      {/* Control Bar */}
       <div className="flex gap-4 items-end mb-6">
         <div className="w-64">
           <label className="block text-sm font-bold text-gray-900 mb-2">
             Tour Leader
           </label>
-          <select className="w-full border  text-gray-500 border-gray-300 rounded px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#263754]">
+          <select className="w-full border text-gray-500 border-gray-300 rounded px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#263754]">
             <option>-- Semua Tour Leader --</option>
           </select>
         </div>

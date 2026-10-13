@@ -1,14 +1,24 @@
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isPenggunaOpen, setIsPenggunaOpen] = useState(true);
   const [isTugasOpen, setIsTugasOpen] = useState(true);
   const isActive = (path) => pathname === path;
   const isParentActive = (paths) => paths.some((p) => pathname.startsWith(p));
+
+  const handleLogout = () => {
+    // Hapus data sesi login dari localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+
+    // Arahkan kembali ke halaman login (root /)
+    router.push('/');
+  };
 
   return (
     <aside className="w-64 bg-[#263754] flex flex-col h-full text-white shadow-xl z-10 shrink-0">
@@ -31,15 +41,15 @@ export default function Sidebar() {
         <nav className="flex flex-col gap-1 pb-4">
           {/* Dashboard */}
           <Link
-            href="/"
+            href="/dashboard"
             className={`flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors duration-300 ease-in-out ${
-              isActive("/")
+              isActive("/dashboard")
                 ? "bg-[#1e2b43] border-l-4 border-yellow-500 text-white"
                 : "text-gray-300 hover:bg-[#1e2b43] hover:text-white border-l-4 border-transparent"
             }`}
           >
             <svg
-              className={`w-5 h-5 transition-colors duration-300 ${isActive("/") ? "text-yellow-500" : "text-gray-400"}`}
+              className={`w-5 h-5 transition-colors duration-300 ${isActive("/dashboard") ? "text-yellow-500" : "text-gray-400"}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -326,7 +336,10 @@ export default function Sidebar() {
             <p className="text-xs text-yellow-500">Administrator</p>
           </div>
         </div>
-        <button className="w-full flex items-center justify-center gap-2 bg-[#334768] hover:bg-[#3d547a] text-white py-2.5 rounded-md text-sm font-medium transition-colors duration-300 ease-in-out shadow-sm">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 bg-[#334768] hover:bg-[#3d547a] text-white py-2.5 rounded-md text-sm font-medium transition-colors duration-300 ease-in-out shadow-sm cursor-pointer"
+        >
           Log out
         </button>
       </div>

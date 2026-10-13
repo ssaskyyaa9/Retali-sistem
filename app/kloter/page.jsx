@@ -25,13 +25,13 @@ function formatDate(date) {
 function formatPeriod(start, end) {
   if (!start && !end) return "-";
   if (start && end) {
-    return `${formatDate(start)} - ${formatDate(end)}`;
+    return `${formatDate(start)}\n${formatDate(end)}`;
   }
 
   return formatDate(start || end);
 }
 
-export default function KloterScreen() {
+export default function KloterPage() {
   const [view, setView] = useState(0);
   const [kloters, setKloters] = useState([
     {
@@ -251,7 +251,7 @@ export default function KloterScreen() {
                           )}
                         </td>
 
-                        <td className="border-r border-gray-200 px-6 py-4">
+                        <td className="border-r border-gray-200 px-6 py-4 whitespace-pre-line">
                           {formatPeriod(kloter.start_date, kloter.end_date)}
                         </td>
 

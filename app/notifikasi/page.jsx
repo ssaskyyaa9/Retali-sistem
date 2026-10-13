@@ -1,10 +1,9 @@
-// app/screens/NotifikasiScreen.jsx
 "use client";
 import React, { useState } from "react";
 import Header from "@/app/components/Header";
 import { PlusIcon } from "@/app/components/CustomIcons";
 
-export default function NotifikasiScreen() {
+export default function NotifikasiPage() {
   // 0 = Daftar Notifikasi (List), 1 = Buat Notifikasi Baru (Form)
   const [view, setView] = useState(0);
 
@@ -76,7 +75,6 @@ export default function NotifikasiScreen() {
       {/* FORM VIEW: Buat Notifikasi Baru */}
       {view === 1 && (
         <div className="bg-white rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
-          {/* Header matching system style */}
           <div className="bg-[#263754] px-8 py-5 text-white">
             <h2 className="text-xl font-bold flex items-center gap-2">
               <svg
