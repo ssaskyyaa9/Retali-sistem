@@ -1,145 +1,196 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { useState } from "react";
+import Link from "next/link";
+
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "https://be-projectretalitwo.vercel.app"
+).replace(/\/+$/, "");
+
+async function postAuth(endpoint, payload) {
+  const response = await fetch(`${API_URL}/api/auth/${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let data = {};
+
+  try {
+    data = await response.json();
+  } catch {
+    // Respons backend mungkin bukan JSON.
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data.detail || data.message || `Permintaan gagal (${response.status}).`
+    );
+  }
+
+  return data;
+}
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const resetMessages = () => {
-    setMessage('');
-    setError('');
+    setMessage("");
+    setError("");
   };
 
-  // Tahap 1: Kirim OTP ke email
+  // Tahap 1: Kirim OTP melalui backend FastAPI.
   const handleSendOtp = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     resetMessages();
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        email.trim()
-      );
-
-      if (error) throw error;
+      await postAuth("forgot-password", {
+        email: email.trim(),
+      });
 
       setMessage(
-        'Jika email terdaftar, kode pemulihan akan dikirim. Periksa inbox atau folder spam.'
+        "Jika email terdaftar, kode pemulihan akan dikirim. Periksa inbox atau folder spam."
       );
       setStep(2);
     } catch (err) {
-      setError(err.message || 'Gagal mengirim kode OTP.');
+      setError(err.message || "Gagal mengirim kode OTP.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Tahap 2: Verifikasi OTP
+  // Tahap 2: Verifikasi OTP melalui backend FastAPI.
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     resetMessages();
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
+      const data = await postAuth("verify-reset-otp", {
         email: email.trim(),
-        token: otp.trim(),
-        type: 'recovery',
+        otp: otp.trim(),
       });
 
-      if (error) throw error;
+      // Backend perlu memberikan token reset setelah OTP valid.
+      const token =
+        data.reset_token || data.resetToken || data.token;
 
-      setMessage('OTP berhasil diverifikasi. Silakan buat password baru.');
+      if (!token) {
+        throw new Error(
+          "OTP diverifikasi, tetapi token reset tidak diterima dari backend."
+        );
+      }
+
+      setResetToken(token);
+      setMessage("OTP berhasil diverifikasi. Silakan buat password baru.");
       setStep(3);
     } catch (err) {
-      setError(
-        err.message || 'OTP tidak valid atau sudah kedaluwarsa.'
-      );
+      setError(err.message || "OTP tidak valid atau sudah kedaluwarsa.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Tahap 3: Simpan password baru
+  // Tahap 3: Simpan password baru melalui backend FastAPI.
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     resetMessages();
 
     if (password.length < 8) {
-      setError('Password minimal 8 karakter.');
+      setError("Password minimal 8 karakter.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Konfirmasi password tidak cocok.');
+      setError("Konfirmasi password tidak cocok.");
+      return;
+    }
+
+    if (!resetToken) {
+      setError("Token reset tidak tersedia. Silakan verifikasi OTP kembali.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password,
+      await postAuth("reset-password", {
+        email: email.trim(),
+        reset_token: resetToken,
+        new_password: password,
       });
 
-      if (error) throw error;
-
-      await supabase.auth.signOut();
+      setPassword("");
+      setConfirmPassword("");
+      setOtp("");
+      setResetToken("");
 
       setMessage(
-        'Password berhasil diperbarui. Silakan login menggunakan password baru.'
+        "Password berhasil diperbarui. Silakan login menggunakan password baru."
       );
       setStep(4);
     } catch (err) {
-      setError(err.message || 'Gagal memperbarui password.');
+      setError(err.message || "Gagal memperbarui password.");
     } finally {
       setLoading(false);
     }
   };
 
   const inputClass =
-    'w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900';
+    "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900";
 
   const buttonClass =
-    'w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50';
+    "w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md space-y-6 rounded-2xl border border-slate-100 bg-white p-8 shadow-xl">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            {step === 1 && 'Forgot Password'}
-            {step === 2 && 'Verifikasi OTP'}
-            {step === 3 && 'Password Baru'}
-            {step === 4 && 'Reset Berhasil'}
+            {step === 1 && "Forgot Password"}
+            {step === 2 && "Verifikasi OTP"}
+            {step === 3 && "Password Baru"}
+            {step === 4 && "Reset Berhasil"}
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            {step === 1 && 'Masukkan email akun untuk menerima kode pemulihan.'}
-            {step === 2 && 'Masukkan kode yang dikirim ke email lu.'}
-            {step === 3 && 'Buat password baru untuk akun lu.'}
-            {step === 4 && 'Password akun lu sudah berhasil diperbarui.'}
+            {step === 1 &&
+              "Masukkan email akun untuk menerima kode pemulihan."}
+            {step === 2 && "Masukkan kode yang dikirim ke email lu."}
+            {step === 3 && "Buat password baru untuk akun lu."}
+            {step === 4 &&
+              "Password akun lu sudah berhasil diperbarui."}
           </p>
         </div>
 
         {error && (
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          >
             {error}
           </div>
         )}
 
         {message && (
-          <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+          <div
+            role="status"
+            className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
+          >
             {message}
           </div>
         )}
@@ -161,8 +212,12 @@ export default function ForgotPasswordPage() {
               />
             </div>
 
-            <button disabled={loading} className={buttonClass}>
-              {loading ? 'Mengirim...' : 'Kirim Kode OTP'}
+            <button
+              type="submit"
+              disabled={loading}
+              className={buttonClass}
+            >
+              {loading ? "Mengirim..." : "Kirim Kode OTP"}
             </button>
           </form>
         )}
@@ -185,17 +240,21 @@ export default function ForgotPasswordPage() {
               />
             </div>
 
-            <button disabled={loading} className={buttonClass}>
-              {loading ? 'Memverifikasi...' : 'Verifikasi OTP'}
+            <button
+              type="submit"
+              disabled={loading}
+              className={buttonClass}
+            >
+              {loading ? "Memverifikasi..." : "Verifikasi OTP"}
             </button>
 
             <button
               type="button"
               disabled={loading}
               onClick={handleSendOtp}
-              className="w-full text-sm font-medium text-slate-600 hover:text-slate-900"
+              className="w-full text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
             >
-              Kirim ulang kode
+              {loading ? "Memproses..." : "Kirim ulang kode"}
             </button>
           </form>
         )}
@@ -234,8 +293,12 @@ export default function ForgotPasswordPage() {
               />
             </div>
 
-            <button disabled={loading} className={buttonClass}>
-              {loading ? 'Menyimpan...' : 'Simpan Password Baru'}
+            <button
+              type="submit"
+              disabled={loading}
+              className={buttonClass}
+            >
+              {loading ? "Menyimpan..." : "Simpan Password Baru"}
             </button>
           </form>
         )}
