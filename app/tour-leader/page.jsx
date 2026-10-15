@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Topbar from "../components/Topbar";
 import PageHeader from "../components/PageHeader";
+import { FaUserTie } from "react-icons/fa6";
 
 export default function TourLeaderPage() {
   const [view, setView] = useState(0);
@@ -73,29 +74,9 @@ export default function TourLeaderPage() {
         {view === 0 && (
           <>
             <PageHeader
-              title="Riwayat Scan Koper"
+              title="Manajemen Tour Leader"
               description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
-              icon={
-                <svg
-                  className="w-[26px] h-[26px] text-[#eab308]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 11l-2 2m0-2l2 2"
-                  />
-                </svg>
-              }
+              icon={<FaUserTie className="w-[26px] h-[26px] text-[#eab308]" />}
             />
 
             {/* MAIN CARD */}

@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import Topbar from "../components/Topbar";
+import PageHeader from "../components/PageHeader";
+import { FaUserCheck } from "react-icons/fa6";
 
 export default function MuthawifPage() {
   const [view, setView] = useState(0);
@@ -8,6 +10,7 @@ export default function MuthawifPage() {
   const [muthawifList] = useState([
     {
       id: "MT-001",
+      initial: "U",
       name: "Ustadz Hasan Basri",
       email: "hasan@retali.id",
       phone: "+62 811-7788-001",
@@ -17,6 +20,7 @@ export default function MuthawifPage() {
     },
     {
       id: "MT-002",
+      initial: "U",
       name: "Ustadzah Aminah Salim",
       email: "aminah@retali.id",
       phone: "+62 812-6612-334",
@@ -26,6 +30,7 @@ export default function MuthawifPage() {
     },
     {
       id: "MT-003",
+      initial: "U",
       name: "Ustadz Yusuf Mansur",
       email: "yusuf@retali.id",
       phone: "+62 813-4478-556",
@@ -35,6 +40,7 @@ export default function MuthawifPage() {
     },
     {
       id: "MT-004",
+      initial: "U",
       name: "Ustadzah Fatimah Zahra",
       email: "fatimah@retali.id",
       phone: "+62 815-8890-223",
@@ -44,6 +50,7 @@ export default function MuthawifPage() {
     },
     {
       id: "MT-005",
+      initial: "U",
       name: "Ustadz Ibrahim Malik",
       email: "ibrahim@retali.id",
       phone: "+62 817-2234-778",
@@ -66,43 +73,22 @@ export default function MuthawifPage() {
         {view === 0 && (
           <div>
             {/* Header Title */}
-            <div className="mb-6">
-              <div className="flex items-start gap-3.5">
-                <div className="bg-[#263754] p-2.5 rounded-lg text-white shadow-sm flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-amber-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Manajemen Muthawif
-                  </h1>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    Kelola data muthawif pembimbing ibadah yang bertugas
-                    mendampingi jamaah selama perjalanan.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <PageHeader
+              title="Manajemen Muthawif"
+              description="Kelola data muthawif pembimbing ibadah yang bertugas mendampingi jamaah selama perjalanan."
+              icon={
+                <FaUserCheck className="w-[26px] h-[26px] text-[#eab308]" />
+              }
+            />
 
-            {/* Main Card */}
-            <div className="bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 p-6">
-              {/* Filter & Add Button Bar */}
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  {/* Search */}
-                  <div className="relative w-full sm:w-72">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400">
+            {/* MAIN CARD */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              {/* TOOLBAR: Search, Filter, Add Button */}
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  {/* Search Input */}
+                  <div className="relative w-72">
+                    <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
                       <svg
                         className="w-4 h-4"
                         fill="none"
@@ -119,16 +105,20 @@ export default function MuthawifPage() {
                     </span>
                     <input
                       type="text"
-                      placeholder="Cari muthawif..."
-                      className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#263754]"
+                      placeholder="Cari tour leader..."
+                      className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#1a2538]"
                     />
                   </div>
-
-                  {/* Status Dropdown Filter */}
+                  {/* Filter Dropdown */}
                   <div className="relative">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 cursor-pointer">
+                    <select className="appearance-none bg-white border border-gray-200 rounded-lg pl-10 pr-8 py-2 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#1a2538] cursor-pointer">
+                      <option>Semua Status</option>
+                      <option>Aktif</option>
+                      <option>Cuti</option>
+                    </select>
+                    <span className="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
                       <svg
-                        className="w-4 h-4 text-gray-400"
+                        className="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -140,19 +130,29 @@ export default function MuthawifPage() {
                           d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                         />
                       </svg>
-                      <select className="bg-transparent border-none focus:outline-none text-gray-700 cursor-pointer pr-2">
-                        <option>Semua Status</option>
-                        <option>Aktif</option>
-                        <option>Cuti</option>
-                      </select>
-                    </div>
+                    </span>
+                    <span className="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </span>
                   </div>
                 </div>
 
-                {/* Tambah Muthawif Button */}
+                {/* Add Button */}
                 <button
                   onClick={() => setView(1)}
-                  className="w-full sm:w-auto bg-[#1b2a47] hover:bg-[#263754] text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  className="bg-[#1a2538] hover:bg-[#2c3e5d] transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
                 >
                   <svg
                     className="w-4 h-4"
@@ -164,89 +164,65 @@ export default function MuthawifPage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M12 4v16m8-8H4"
+                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
                     />
                   </svg>
                   Tambah Muthawif
                 </button>
               </div>
 
-              {/* Table */}
+              {/* TABLE LIST */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-gray-400 font-semibold text-xs tracking-wider uppercase border-b border-gray-100">
-                      <th className="pb-3 px-4">Pengguna</th>
-                      <th className="pb-3 px-4">Kontak</th>
-                      <th className="pb-3 px-4">Kloter</th>
-                      <th className="pb-3 px-4">Bergabung</th>
-                      <th className="pb-3 px-4">Status</th>
-                      <th className="pb-3 px-4 text-right">Aksi</th>
+                  <thead className="text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-white border-b border-gray-100">
+                    <tr>
+                      <th className="px-6 py-4">PENGGUNA</th>
+                      <th className="px-6 py-4">KONTAK</th>
+                      <th className="px-6 py-4">KLOTER</th>
+                      <th className="px-6 py-4">BERGABUNG</th>
+                      <th className="px-6 py-4 text-right">AKSI</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50 text-gray-700">
-                    {muthawifList.map((item, index) => (
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {muthawifList.map((tl, idx) => (
                       <tr
-                        key={index}
+                        key={idx}
                         className="hover:bg-gray-50/50 transition-colors"
                       >
-                        {/* Pengguna */}
-                        <td className="py-3 px-4">
+                        {/* PENGGUNA */}
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center font-bold text-xs">
-                              U
+                            <div className="w-9 h-9 rounded-full bg-[#eef2f6] text-[#6b7280] font-bold flex items-center justify-center text-xs">
+                              {tl.initial}
                             </div>
                             <div>
-                              <div className="font-bold text-gray-900">
-                                {item.name}
-                              </div>
-                              <div className="text-xs text-gray-400 font-normal">
-                                {item.id}
-                              </div>
+                              <p className="font-bold text-[#1a2538]">
+                                {tl.name}
+                              </p>
+                              <p className="text-xs text-gray-400">{tl.id}</p>
                             </div>
                           </div>
                         </td>
-
-                        {/* Kontak */}
-                        <td className="py-3 px-4">
-                          <div className="text-gray-900 font-medium">
-                            {item.phone}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            {item.email}
-                          </div>
+                        {/* KONTAK */}
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-gray-700">
+                            {tl.phone}
+                          </p>
+                          <p className="text-xs text-gray-400">{tl.email}</p>
+                        </td>
+                        {/* KLOTER */}
+                        <td className="px-6 py-4 font-semibold text-gray-600">
+                          {tl.kloter}
+                        </td>
+                        {/* BERGABUNG */}
+                        <td className="px-6 py-4 text-gray-500">
+                          {tl.joinDate}
                         </td>
 
-                        {/* Kloter */}
-                        <td className="py-3 px-4 text-gray-800 font-medium">
-                          {item.kloter}
-                        </td>
-
-                        {/* Bergabung */}
-                        <td className="py-3 px-4 text-gray-500 text-xs">
-                          {item.joinDate}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold ${
-                              item.status === "Aktif"
-                                ? "bg-emerald-50 text-emerald-600 border border-emerald-200/60"
-                                : "bg-amber-50 text-amber-600 border border-amber-200/60"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-
-                        {/* Aksi */}
-                        <td className="py-3 px-4 text-right">
+                        {/* AKSI */}
+                        <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-3 text-gray-400">
-                            <button
-                              className="hover:text-gray-600 transition-colors"
-                              title="Lihat"
-                            >
+                            <button className="hover:text-blue-500 transition-colors">
                               <svg
                                 className="w-4 h-4"
                                 fill="none"
@@ -256,21 +232,18 @@ export default function MuthawifPage() {
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  strokeWidth="1.5"
+                                  strokeWidth="2"
                                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                                 />
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  strokeWidth="1.5"
+                                  strokeWidth="2"
                                   d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                 />
                               </svg>
                             </button>
-                            <button
-                              className="hover:text-amber-500 transition-colors"
-                              title="Edit"
-                            >
+                            <button className="hover:text-yellow-500 transition-colors">
                               <svg
                                 className="w-4 h-4"
                                 fill="none"
@@ -280,15 +253,12 @@ export default function MuthawifPage() {
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  strokeWidth="1.5"
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  strokeWidth="2"
+                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 />
                               </svg>
                             </button>
-                            <button
-                              className="hover:text-red-500 transition-colors"
-                              title="Hapus"
-                            >
+                            <button className="hover:text-red-500 transition-colors">
                               <svg
                                 className="w-4 h-4"
                                 fill="none"
@@ -298,7 +268,7 @@ export default function MuthawifPage() {
                                 <path
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
-                                  strokeWidth="1.5"
+                                  strokeWidth="2"
                                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                                 />
                               </svg>
@@ -311,25 +281,48 @@ export default function MuthawifPage() {
                 </table>
               </div>
 
-              {/* Pagination Footer */}
-              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-4 border-t border-gray-100 text-xs text-gray-500 gap-4">
-                <div>
-                  Menampilkan halaman{" "}
-                  <span className="font-semibold text-gray-800">1</span> dari 2
-                  • 8 pengguna
-                </div>
+              {/* PAGINATION */}
+              <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-xs text-gray-500 font-medium">
+                  Menampilkan halaman <strong>1</strong> dari <strong>2</strong>{" "}
+                  - 9 pengguna
+                </span>
                 <div className="flex items-center gap-1">
-                  <button className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 text-gray-400">
-                    &lt;
+                  <button className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
                   </button>
-                  <button className="w-8 h-8 bg-[#263754] text-white rounded-lg font-semibold flex items-center justify-center">
+                  <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#1a2538] text-white font-medium text-sm">
                     1
                   </button>
-                  <button className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 text-gray-700">
+                  <button className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium text-sm">
                     2
                   </button>
-                  <button className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 text-gray-700">
-                    &gt;
+                  <button className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
                   </button>
                 </div>
               </div>
