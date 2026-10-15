@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Header from "@/app/components/Header";
+import PageHeader from "@/app/components/PageHeader";
 import { CalendarIcon, PlusIcon } from "@/app/components/CustomIcons";
 
 export default function ItineraryPage() {

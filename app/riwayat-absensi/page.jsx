@@ -1,10 +1,10 @@
 import React from "react";
-import Header from "@/app/components/Header";
+import PageHeader from "@/app/components/PageHeader";
 
 export default function RiwayatAbsensiPage() {
   return (
     <div className="p-10 w-full max-w-6xl">
-      <Header title="Riwayat Absensi" />
+      <PageHeader title="Riwayat Absensi" />
 
       {/* Control Bar */}
       <div className="flex gap-4 items-end mb-6">

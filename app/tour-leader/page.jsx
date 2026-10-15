@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Topbar from "../components/Topbar";
+import PageHeader from "../components/PageHeader";
 
 export default function TourLeaderPage() {
   const [view, setView] = useState(0);
@@ -71,10 +72,12 @@ export default function TourLeaderPage() {
       <main className="p-8 w-full max-w-7xl mx-auto flex-1 no-scrollbar overflow-y-auto">
         {view === 0 && (
           <>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="bg-[#1a2538] p-3 rounded-xl flex items-center justify-center">
+            <PageHeader
+              title="Riwayat Scan Koper"
+              description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
+              icon={
                 <svg
-                  className="w-6 h-6 text-[#eab308]"
+                  className="w-[26px] h-[26px] text-[#eab308]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -90,20 +93,10 @@ export default function TourLeaderPage() {
                     strokeLinejoin="round"
                     strokeWidth="2"
                     d="M19 11l-2 2m0-2l2 2"
-                  />{" "}
-                  {/* Star/Badge mock icon */}
+                  />
                 </svg>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#1a2538]">
-                  Manajemen Tour Leader
-                </h1>
-                <p className="text-sm text-gray-400 mt-1">
-                  Kelola data tour leader yang mendampingi jamaah pada setiap
-                  kloter perjalanan umrah.
-                </p>
-              </div>
-            </div>
+              }
+            />
 
             {/* MAIN CARD */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

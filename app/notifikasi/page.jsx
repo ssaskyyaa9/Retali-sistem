@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import Header from "@/app/components/Header";
+import PageHeader from "@/app/components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
 
 export default function NotifikasiPage() {

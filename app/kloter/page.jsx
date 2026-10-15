@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import Header from "@/app/components/Header";
+import PageHeader from "@/app/components/PageHeader";
 import { CalendarIcon, PlusIcon } from "@/app/components/CustomIcons";
 
 const initialForm = {
@@ -110,11 +110,7 @@ export default function KloterPage() {
       return;
     }
 
-    if (
-      form.start_date &&
-      form.end_date &&
-      form.end_date < form.start_date
-    ) {
+    if (form.start_date && form.end_date && form.end_date < form.start_date) {
       setError("Tanggal selesai tidak boleh sebelum tanggal mulai.");
       return;
     }
@@ -125,8 +121,8 @@ export default function KloterPage() {
       if (editingId) {
         setKloters((prev) =>
           prev.map((item) =>
-            item.id === editingId ? { ...item, ...form } : item
-          )
+            item.id === editingId ? { ...item, ...form } : item,
+          ),
         );
         setSuccess("Kloter berhasil diperbarui (mode lokal).");
       } else {
@@ -150,7 +146,7 @@ export default function KloterPage() {
 
   async function handleDelete(kloter) {
     const confirmed = window.confirm(
-      `Yakin ingin menghapus kloter "${kloter.name}"?`
+      `Yakin ingin menghapus kloter "${kloter.name}"?`,
     );
 
     if (!confirmed) return;
