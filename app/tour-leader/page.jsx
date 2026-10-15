@@ -64,7 +64,7 @@ export default function TourLeaderPage() {
       {/* TOP NAVBAR / HEADER ATAS (NOTIFIKASI & PROFIL) */}
       <Topbar
         title="Tour Leader"
-        breadcrumbs={["Dashboard", "Pengguna", "Tour Leader"]}
+        breadcrumbs={["Dashboard", "Petugas", "Tour Leader"]}
       />
 
       {/* MAIN CONTENT AREA */}
@@ -204,7 +204,6 @@ export default function TourLeaderPage() {
                       <th className="px-6 py-4">KONTAK</th>
                       <th className="px-6 py-4">KLOTER</th>
                       <th className="px-6 py-4">BERGABUNG</th>
-                      <th className="px-6 py-4">STATUS</th>
                       <th className="px-6 py-4 text-right">AKSI</th>
                     </tr>
                   </thead>
@@ -243,18 +242,7 @@ export default function TourLeaderPage() {
                         <td className="px-6 py-4 text-gray-500">
                           {tl.joinDate}
                         </td>
-                        {/* STATUS */}
-                        <td className="px-6 py-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              tl.status === "Aktif"
-                                ? "bg-green-100/60 text-green-600"
-                                : "bg-orange-100/60 text-orange-500"
-                            }`}
-                          >
-                            {tl.status}
-                          </span>
-                        </td>
+
                         {/* AKSI */}
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-3 text-gray-400">

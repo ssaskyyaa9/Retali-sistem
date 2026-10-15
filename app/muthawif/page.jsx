@@ -58,7 +58,7 @@ export default function MuthawifPage() {
       {/* TOP NAVBAR / HEADER ATAS (NOTIFIKASI & PROFIL) */}
       <Topbar
         title="Muthawif"
-        breadcrumbs={["Dashboard", "Pengguna", "Muthawif"]}
+        breadcrumbs={["Dashboard", "Petugas", "Muthawif"]}
       />
 
       {/* MAIN CONTENT AREA */}
