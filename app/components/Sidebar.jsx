@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,48 +9,54 @@ export default function Sidebar() {
   const router = useRouter();
   const [isPenggunaOpen, setIsPenggunaOpen] = useState(true);
   const [isTugasOpen, setIsTugasOpen] = useState(true);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
   const isActive = (path) => pathname === path;
   const isParentActive = (paths) => paths.some((p) => pathname.startsWith(p));
 
   const handleLogout = () => {
-    // Hapus data sesi login dari localStorage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-
-    // Arahkan kembali ke halaman login (root /)
-    router.push('/');
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    router.push("/");
   };
 
   return (
-    <aside className="w-64 bg-[#263754] flex flex-col h-full text-white shadow-xl z-10 shrink-0">
-      {/* 1. Fixed Top Section (Logo) */}
-      <div className="flex items-center gap-3 px-6 py-8 shrink-0">
+    <aside className="w-64 bg-[#0d1523] flex flex-col h-full text-white shadow-xl z-10 shrink-0 select-none">
+      {/* 1. Header & Logo */}
+      <div className="flex items-center gap-3 px-6 py-5 shrink-0 border-b border-[#1e2b43]/60">
         <Image
           src="/logoretali-ungu.png"
           alt="Retali Logo"
-          width={45}
-          height={45}
+          width={36}
+          height={36}
           className="rounded-md object-cover"
         />
-        <span className="font-bold mt-2 text-lg tracking-wide">
-          RETALI SISTEM
+        <span className="font-bold text-base tracking-wide text-white">
+          RETALI <span className="text-[#a760ff]">SISTEM</span>
         </span>
       </div>
 
-      {/* 2. Scrollable Middle Section (Navigation Only) */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-3">
-        <nav className="flex flex-col gap-1 pb-4">
+      {/* 2. Navigation */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-3 py-4">
+        <h3 className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+          Menu Utama
+        </h3>
+
+        <nav className="flex flex-col gap-1.5 pb-4">
           {/* Dashboard */}
           <Link
             href="/dashboard"
-            className={`flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors duration-300 ease-in-out ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
               isActive("/dashboard")
-                ? "bg-[#1e2b43] border-l-4 border-yellow-500 text-white"
-                : "text-gray-300 hover:bg-[#1e2b43] hover:text-white border-l-4 border-transparent"
+                ? "bg-[#1e2b43] text-white relative overflow-hidden"
+                : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"
             }`}
           >
+            {isActive("/dashboard") && (
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500 rounded-r-md"></div>
+            )}
             <svg
-              className={`w-5 h-5 transition-colors duration-300 ${isActive("/dashboard") ? "text-yellow-500" : "text-gray-400"}`}
+              className={`w-5 h-5 ${isActive("/dashboard") ? "text-yellow-500" : "text-gray-400"}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -58,7 +65,7 @@ export default function Sidebar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
-                d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
             Dashboard
@@ -68,15 +75,15 @@ export default function Sidebar() {
           <div>
             <button
               onClick={() => setIsPenggunaOpen(!isPenggunaOpen)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition-colors duration-300 ease-in-out ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
                 isParentActive(["/tour-leader", "/muthawif"])
                   ? "text-white font-medium"
-                  : "text-gray-300 hover:bg-[#1e2b43] hover:text-white"
+                  : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"
               }`}
             >
               <div className="flex items-center gap-3">
                 <svg
-                  className={`w-5 h-5 transition-colors duration-300 ${isParentActive(["/tour-leader", "/muthawif"]) ? "text-yellow-500" : "text-gray-400"}`}
+                  className={`w-5 h-5 ${isParentActive(["/tour-leader", "/muthawif"]) ? "text-yellow-500" : "text-gray-400"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -88,10 +95,10 @@ export default function Sidebar() {
                     d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                   />
                 </svg>
-                <span className="text-sm">Pengguna</span>
+                <span>Pengguna</span>
               </div>
               <svg
-                className={`w-4 h-4 text-yellow-500 transition-transform duration-300 ease-in-out ${isPenggunaOpen ? "rotate-180" : "rotate-0"}`}
+                className={`w-4 h-4 transition-transform duration-300 ${isPenggunaOpen ? "rotate-180" : "rotate-0"} ${isParentActive(["/tour-leader", "/muthawif"]) ? "text-yellow-500" : "text-gray-400"}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -105,7 +112,6 @@ export default function Sidebar() {
               </svg>
             </button>
 
-            {/* Smooth Dropdown Animation Container */}
             <div
               className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
                 isPenggunaOpen
@@ -114,23 +120,23 @@ export default function Sidebar() {
               }`}
             >
               <div className="overflow-hidden">
-                <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-gray-600 pl-2">
+                <div className="ml-6 mt-1 flex flex-col gap-1 border-l border-[#1e2b43] pl-3 py-1">
                   <Link
                     href="/tour-leader"
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                    className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                       isActive("/tour-leader")
-                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                        ? "text-white font-medium bg-[#1e2b43]/50"
+                        : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"
                     }`}
                   >
                     Tour Leader
                   </Link>
                   <Link
                     href="/muthawif"
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                    className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                       isActive("/muthawif")
-                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                        ? "text-white font-medium bg-[#1e2b43]/50"
+                        : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"
                     }`}
                   >
                     Muthawif
@@ -144,15 +150,15 @@ export default function Sidebar() {
           <div>
             <button
               onClick={() => setIsTugasOpen(!isTugasOpen)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-md transition-colors duration-300 ease-in-out ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
                 isParentActive(["/tugas-tour-leader", "/tugas-ceklis"])
                   ? "text-white font-medium"
-                  : "text-gray-300 hover:bg-[#1e2b43] hover:text-white"
+                  : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"
               }`}
             >
               <div className="flex items-center gap-3">
                 <svg
-                  className={`w-5 h-5 transition-colors duration-300 ${isParentActive(["/tugas-tour-leader", "/tugas-ceklis"]) ? "text-yellow-500" : "text-gray-400"}`}
+                  className={`w-5 h-5 ${isParentActive(["/tugas-tour-leader", "/tugas-ceklis"]) ? "text-yellow-500" : "text-gray-400"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -164,10 +170,10 @@ export default function Sidebar() {
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
                   />
                 </svg>
-                <span className="text-sm">Tugas</span>
+                <span>Tugas</span>
               </div>
               <svg
-                className={`w-4 h-4 text-yellow-500 transition-transform duration-300 ease-in-out ${isTugasOpen ? "rotate-180" : "rotate-0"}`}
+                className={`w-4 h-4 transition-transform duration-300 ${isTugasOpen ? "rotate-180" : "rotate-0"} ${isParentActive(["/tugas-tour-leader", "/tugas-ceklis"]) ? "text-yellow-500" : "text-gray-400"}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -181,7 +187,6 @@ export default function Sidebar() {
               </svg>
             </button>
 
-            {/* Smooth Dropdown Animation Container */}
             <div
               className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
                 isTugasOpen
@@ -190,23 +195,23 @@ export default function Sidebar() {
               }`}
             >
               <div className="overflow-hidden">
-                <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-gray-600 pl-2">
+                <div className="ml-6 mt-1 flex flex-col gap-1 border-l border-[#1e2b43] pl-3 py-1">
                   <Link
                     href="/tugas-tour-leader"
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                    className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                       isActive("/tugas-tour-leader")
-                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                        ? "text-white font-medium bg-[#1e2b43]/50"
+                        : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"
                     }`}
                   >
                     Tugas Tour Leader
                   </Link>
                   <Link
                     href="/tugas-ceklis"
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors duration-300 ease-in-out ${
+                    className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                       isActive("/tugas-ceklis")
-                        ? "bg-[#334768] text-white border-l-2 border-yellow-500"
-                        : "text-gray-300 hover:text-white hover:bg-[#1e2b43] border-l-2 border-transparent"
+                        ? "text-white font-medium bg-[#1e2b43]/50"
+                        : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"
                     }`}
                   >
                     Tugas Ceklis
@@ -216,89 +221,67 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* Other single links */}
+          {/* Other Single Links */}
           {[
             {
               name: "Kloter",
               href: "/kloter",
               icon: (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                />
               ),
             },
             {
               name: "Itinerary",
               href: "/itinerary",
               icon: (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               ),
             },
             {
               name: "Riwayat Absensi",
               href: "/riwayat-absensi",
+              // Using a generic outline icon to match styling
               icon: (
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                </svg>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               ),
             },
             {
               name: "Riwayat Scan",
               href: "/riwayat-scan",
               icon: (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                />
               ),
             },
             {
               name: "Notifikasi",
               href: "/notifikasi",
               icon: (
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                </svg>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
               ),
             },
           ].map((item) => {
@@ -307,40 +290,132 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-md font-medium transition-colors duration-300 ease-in-out ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                   active
-                    ? "bg-[#1e2b43] border-l-4 border-yellow-500 text-white"
-                    : "text-gray-300 hover:bg-[#1e2b43] hover:text-white border-l-4 border-transparent"
+                    ? "bg-[#1e2b43] text-white relative overflow-hidden"
+                    : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"
                 }`}
               >
-                <span
-                  className={`transition-colors duration-300 ${active ? "text-yellow-500" : "text-gray-400"}`}
+                {active && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500 rounded-r-md"></div>
+                )}
+                <svg
+                  className={`w-5 h-5 ${active ? "text-yellow-500" : "text-gray-400"}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
                   {item.icon}
-                </span>
-                <span className="text-sm">{item.name}</span>
+                </svg>
+                {item.name}
               </Link>
             );
           })}
         </nav>
       </div>
 
-      {/* 3. Fixed Bottom Section (Admin Profile & Log out) */}
-      <div className="p-6 shrink-0 border-t border-[#1e2b43]/40">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-[#263754] font-bold text-lg">
-            A
+      {/* 3. Bottom Profile & Logout Popover */}
+      <div className="relative px-4 py-4 shrink-0 border-t border-[#1e2b43]/60">
+        {/* Logout Popover */}
+        {isProfileDropdownOpen && (
+          <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#121c2d] rounded-xl shadow-2xl border border-[#1e2b43] overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2">
+            {/* Expanded Header (Matches design left-side snippet) */}
+            <div
+              className="px-4 py-4 flex items-center justify-between border-b border-[#1e2b43]/60 cursor-pointer hover:bg-[#1e2b43]/30 transition-colors"
+              onClick={() => setIsProfileDropdownOpen(false)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#de3b69] flex items-center justify-center text-white font-bold text-sm">
+                  A
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-white leading-tight">
+                    Ahmad Fauzi
+                  </p>
+                  <p className="text-[11px] text-gray-400 font-medium">
+                    Administrator
+                  </p>
+                </div>
+              </div>
+              <svg
+                className="w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+
+            <div className="p-3">
+              {/* Email display box */}
+              <div className="bg-[#1a2538] text-gray-300 text-xs px-4 py-2.5 rounded-lg mb-2 truncate">
+                asd@retali.id
+              </div>
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-rose-400 font-medium hover:bg-[#1a2538] hover:text-rose-300 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                Keluar
+              </button>
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-sm text-white">Admin</p>
-            <p className="text-xs text-yellow-500">Administrator</p>
-          </div>
-        </div>
+        )}
+
+        {/* Collapsed Profile Button */}
         <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 bg-[#334768] hover:bg-[#3d547a] text-white py-2.5 rounded-md text-sm font-medium transition-colors duration-300 ease-in-out shadow-sm cursor-pointer"
+          onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+          className={`w-full flex items-center justify-between p-2 rounded-xl transition-colors ${
+            isProfileDropdownOpen ? "bg-[#1e2b43]" : "hover:bg-[#1e2b43]/50"
+          }`}
         >
-          Log out
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#de3b69] flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              A
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-sm text-white leading-tight">
+                Ahmad Fauzi
+              </p>
+              <p className="text-[11px] text-gray-400 font-medium">
+                Administrator
+              </p>
+            </div>
+          </div>
+          <svg
+            className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${
+              isProfileDropdownOpen ? "rotate-180" : "rotate-0"
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M5 15l7-7 7 7"
+            />
+          </svg>
         </button>
       </div>
     </aside>
