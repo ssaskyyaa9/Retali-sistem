@@ -73,82 +73,82 @@ export default function DashboardPage() {
         {/* MAIN CONTENT AREA DENGAN NO-SCROLLBAR */}
         <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           
-          {/* 5 Card Statistik Clean & Seragam dengan Bayangan Soft */}
+          {/* 5 Card Statistik dengan Icon & Kotak Tembus Pandang Kuning */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             
             {/* Card 1: Total Scan */}
-            <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-32">
+            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Total Scan</p>
-                  <h3 className="text-3xl font-black text-[#1b3167] mt-2">{stats.total_scan}</h3>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-[#1b3167] text-yellow-400 flex items-center justify-center shadow-sm">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <h3 className="text-3xl font-black text-[#1b3167]">{stats.total_scan}</h3>
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                   </svg>
                 </div>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500">Total Scan</p>
+              </div>
             </div>
 
             {/* Card 2: Total Tour Leader */}
-            <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-32">
+            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Total Tour Leader</p>
-                  <h3 className="text-3xl font-black text-[#1b3167] mt-2">{stats.total_tour_leader}</h3>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-[#1b3167] text-yellow-400 flex items-center justify-center shadow-sm">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <h3 className="text-3xl font-black text-[#1b3167]">{stats.total_tour_leader}</h3>
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                   </svg>
                 </div>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500">Total Tour Leader</p>
+              </div>
             </div>
 
             {/* Card 3: Total Muthawif */}
-            <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-32">
+            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Total Muthawif</p>
-                  <h3 className="text-3xl font-black text-[#1b3167] mt-2">{stats.total_muthawif}</h3>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-[#1b3167] text-yellow-400 flex items-center justify-center shadow-sm">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <h3 className="text-3xl font-black text-[#1b3167]">{stats.total_muthawif}</h3>
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2a1 1 0 000 2h6a1 1 0 100-2H7zm6 7a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H10zm-4-3a1 1 0 011-1h.01a1 1 0 110 2H7a1 1 0 01-1-1zm1-3a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h.01a1 1 0 100-2H10zm3 0a1 1 0 100 2h.01a1 1 0 100-2H13z" clipRule="evenodd" />
                   </svg>
                 </div>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500">Total Muthawif</p>
+              </div>
             </div>
 
             {/* Card 4: Total Absen Jamaah */}
-            <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-32">
+            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Absen Jamaah</p>
-                  <h3 className="text-3xl font-black text-[#1b3167] mt-2">{stats.total_absen_jamaah}</h3>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-[#1b3167] text-yellow-400 flex items-center justify-center shadow-sm">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <h3 className="text-3xl font-black text-[#1b3167]">{stats.total_absen_jamaah}</h3>
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                     <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                 </div>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500">Absen Jamaah</p>
+              </div>
             </div>
 
             {/* Card 5: Total Itinerary */}
-            <div className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-32 sm:col-span-2 md:col-span-1">
+            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 sm:col-span-2 md:col-span-1">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Total Itinerary</p>
-                  <h3 className="text-3xl font-black text-[#1b3167] mt-2">{stats.total_itinerary}</h3>
-                </div>
-                <div className="w-11 h-11 rounded-xl bg-[#1b3167] text-yellow-400 flex items-center justify-center shadow-sm">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <h3 className="text-3xl font-black text-[#1b3167]">{stats.total_itinerary}</h3>
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                   </svg>
                 </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500">Total Itinerary</p>
               </div>
             </div>
 
