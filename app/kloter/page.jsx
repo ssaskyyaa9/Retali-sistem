@@ -1,119 +1,54 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import Topbar from "@/app/components/Topbar";
-import PageHeader from "../components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
 
 const initialForm = {
   name: "",
-  description: "",
-  start_date: "",
-  end_date: "",
-  status: "Persiapan",
-  gelombang: "Gelombang I",
-  code: "KLR-015",
-  jamaah_count: 40,
-  tour_leader: "Hafiz Anwar",
-  progress: 0,
+  date_range: "",
 };
 
-function formatDate(date) {
-  if (!date) return "-";
-  return new Date(`${date}T00:00:00`).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatPeriod(start, end) {
-  if (!start && !end) return "-";
-  if (start && end) {
-    return `${formatDate(start)} – ${formatDate(end)}`;
-  }
-  return formatDate(start || end);
-}
-
 export default function KloterPage() {
-  const [view, setView] = useState(0);
-  const [statusFilter, setStatusFilter] = useState("Semua Status");
+  const [view, setView] = useState(0); // 0 = Tabel List, 1 = Modal Form Tambah/Edit
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [kloterToDelete, setKloterToDelete] = useState(null);
+
   const [kloters, setKloters] = useState([
     {
       id: 1,
-      name: "Kloter 12",
-      gelombang: "Gelombang I",
-      code: "KLR-012",
-      description: "Kloter pertama keberangkatan jamaah",
-      start_date: "2026-09-10",
-      end_date: "2026-09-22",
-      status: "Berlangsung",
-      jamaah_count: 45,
-      tour_leader: "Muhammad Rizki",
-      progress: 78,
+      name: "Umrah Ultimo Minimalis",
+      date_range: "17-25 November 2026",
     },
     {
       id: 2,
-      name: "Kloter 13",
-      gelombang: "Gelombang I",
-      code: "KLR-013",
-      description: "Kloter kedua keberangkatan jamaah",
-      start_date: "2026-09-18",
-      end_date: "2026-09-30",
-      status: "Persiapan",
-      jamaah_count: 42,
-      tour_leader: "Abdul Karim",
-      progress: 45,
+      name: "Umrah Ultimo Minimalis",
+      date_range: "8-16 September 2026",
     },
     {
       id: 3,
-      name: "Kloter 11",
-      gelombang: "Gelombang I",
-      code: "KLR-011",
-      description: "Kloter awal",
-      start_date: "2026-08-28",
-      end_date: "2026-09-09",
-      status: "Selesai",
-      jamaah_count: 45,
-      tour_leader: "Umar Hidayat",
-      progress: 100,
+      name: "Umrah Ultimo Minimalis",
+      date_range: "17-25 Agustus 2026",
     },
     {
       id: 4,
-      name: "Kloter 14",
-      gelombang: "Gelombang II",
-      code: "KLR-014",
-      description: "Kloter tambahan",
-      start_date: "2026-09-25",
-      end_date: "2026-10-07",
-      status: "Persiapan",
-      jamaah_count: 40,
-      tour_leader: "Hafiz Anwar",
-      progress: 30,
+      name: "Umrah Itikaf Mandiri",
+      date_range: "21 Februari - 6 Maret 2027",
+    },
+    {
+      id: 5,
+      name: "umrah plus turkey",
+      date_range: "13 februari 2026 - 25 februari 2026",
     },
   ]);
 
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const loadKloters = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    loadKloters();
-  }, [loadKloters]);
 
   function openCreateForm() {
     setForm(initialForm);
     setEditingId(null);
-    setError("");
     setSuccess("");
     setView(1);
   }
@@ -121,19 +56,9 @@ export default function KloterPage() {
   function openEditForm(kloter) {
     setForm({
       name: kloter.name || "",
-      description: kloter.description || "",
-      start_date: kloter.start_date || "",
-      end_date: kloter.end_date || "",
-      status: kloter.status || "Persiapan",
-      gelombang: kloter.gelombang || "Gelombang I",
-      code: kloter.code || "KLR-015",
-      jamaah_count: kloter.jamaah_count || 40,
-      tour_leader: kloter.tour_leader || "Hafiz Anwar",
-      progress: kloter.progress || 0,
+      date_range: kloter.date_range || "",
     });
-
     setEditingId(kloter.id);
-    setError("");
     setSuccess("");
     setView(1);
   }
@@ -146,361 +71,309 @@ export default function KloterPage() {
     }));
   }
 
-  async function handleSubmit(event) {
+  function handleSubmit(event) {
     event.preventDefault();
-    setError("");
     setSuccess("");
 
-    if (!form.name.trim()) {
-      setError("Nama kloter wajib diisi.");
-      return;
+    if (!form.name.trim()) return;
+
+    if (editingId) {
+      setKloters((prev) =>
+        prev.map((item) =>
+          item.id === editingId ? { ...item, ...form } : item
+        )
+      );
+      setSuccess("Kloter berhasil diperbarui.");
+    } else {
+      const newKloter = {
+        id: Date.now(),
+        ...form,
+      };
+      setKloters((prev) => [...prev, newKloter]);
+      setSuccess("Kloter berhasil ditambahkan.");
     }
 
-    if (
-      form.start_date &&
-      form.end_date &&
-      form.end_date < form.start_date
-    ) {
-      setError("Tanggal selesai tidak boleh sebelum tanggal mulai.");
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      if (editingId) {
-        setKloters((prev) =>
-          prev.map((item) =>
-            item.id === editingId ? { ...item, ...form } : item
-          )
-        );
-        setSuccess("Kloter berhasil diperbarui.");
-      } else {
-        const newKloter = {
-          id: Date.now(),
-          ...form,
-        };
-        setKloters((prev) => [...prev, newKloter]);
-        setSuccess("Kloter berhasil ditambahkan.");
-      }
-
-      setForm(initialForm);
-      setEditingId(null);
-      setView(0);
-    } catch (err) {
-      setError("Gagal menyimpan kloter.");
-    } finally {
-      setSaving(false);
-    }
+    setForm(initialForm);
+    setEditingId(null);
+    setView(0);
   }
 
-  async function handleDelete(kloter) {
-    const confirmed = window.confirm(
-      `Yakin ingin menghapus kloter "${kloter.name}"?`
-    );
+  function confirmDelete(kloter) {
+    setKloterToDelete(kloter);
+    setDeleteModalOpen(true);
+  }
 
-    if (!confirmed) return;
-
-    setError("");
-    setSuccess("");
-
-    setKloters((prev) => prev.filter((item) => item.id !== kloter.id));
+  function handleDelete() {
+    if (!kloterToDelete) return;
+    setKloters((prev) => prev.filter((item) => item.id !== kloterToDelete.id));
     setSuccess("Kloter berhasil dihapus.");
+    setDeleteModalOpen(false);
+    setKloterToDelete(null);
   }
 
-  function goBack() {
+  function closeModal() {
     setView(0);
     setEditingId(null);
     setForm(initialForm);
-    setError("");
-    setSuccess("");
   }
 
-  const filteredKloters = kloters.filter((kloter) => {
-    if (statusFilter === "Semua Status") return true;
-    return kloter.status.toLowerCase() === statusFilter.toLowerCase();
-  });
-
   return (
-    <div className="w-full max-w-7xl p-6 font-sans">
-      {/* Topbar Component */}
-      <div className="mb-6">
-        <Topbar
-          title="Kloter"
-          breadcrumbs={["Dashboard", "Kloter"]}
-        />
-      </div>
+    <>
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
 
-      {error && (
-        <div role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans">
+        {/* Topbar Persis seperti Dashboard */}
+        <Topbar title="Kloter" breadcrumbs={["Dashboard", "Kloter"]} />
 
-      {success && (
-        <div role="status" className="mb-5 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {success}
-        </div>
-      )}
-
-      {view === 0 && (
-        <div>
-          {/* Header Atas: Manajemen Kloter, Filter Status, dan Tombol Tambah Kloter Sejajar */}
-         <PageHeader
-              title="Riwayat Scan Koper"
-              description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
-              buttonText="Tambah Tour Leader"
-              buttonOnClick={() => setView(1)}
-              buttonIcon={
-                <svg
-                  className="w-[16px] h-[16px] text-[#eab308]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 11l-2 2m0-2l2 2"
-                  />
-                </svg>
-              }
-              icon={
-                <svg
-                  className="w-[26px] h-[26px] text-[#eab308]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 11l-2 2m0-2l2 2"
-                  />
-                </svg>
-              }
-            />
-
-          {/* Grid Kloter Cards (Diatur menjadi 3 Kolom) */}
-          {loading ? (
-            <div className="py-12 text-center text-gray-500">Memuat data kloter...</div>
-          ) : filteredKloters.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">Belum ada data kloter sesuai filter.</div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {filteredKloters.map((kloter) => {
-                let badgeStyle = "bg-yellow-50 text-yellow-700 border border-yellow-200";
-                if (kloter.status === "Berlangsung") {
-                  badgeStyle = "bg-emerald-50 text-emerald-700 border border-emerald-200";
-                } else if (kloter.status === "Selesai") {
-                  badgeStyle = "bg-gray-100 text-gray-600 border border-gray-200";
-                }
-
-                return (
-                  <div
-                    key={kloter.id}
-                    className="relative flex flex-col justify-between rounded-xl border border-gray-200/80 bg-white p-6 shadow-sm transition-all hover:shadow-md"
-                  >
-                    <div>
-                      {/* Top card info */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0B1E38] text-white">
-                            ✈️
-                          </div>
-                          <div>
-                            <h3 className="text-base font-bold text-gray-900">{kloter.name}</h3>
-                            <p className="text-xs text-gray-400">
-                              {kloter.gelombang || "Gelombang I"} · {kloter.code || "KLR-00X"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${badgeStyle}`}>
-                          {kloter.status}
-                        </span>
-                      </div>
-
-                      {/* Detail info */}
-                      <div className="mt-5 grid grid-cols-2 gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400">👥</span>
-                          <span>{kloter.jamaah_count || 40} jamaah</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400">👤</span>
-                          <span className="truncate">{kloter.tour_leader || "Pembimbing"}</span>
-                        </div>
-                        <div className="col-span-2 flex items-center gap-2">
-                          <span className="text-gray-400">📅</span>
-                          <span>{formatPeriod(kloter.start_date, kloter.end_date)}</span>
-                        </div>
-                      </div>
-
-                      {/* Progress */}
-                      <div className="mt-5">
-                        <div className="mb-1.5 flex justify-between text-xs font-medium">
-                          <span className="text-gray-500">Progres persiapan</span>
-                          <span className="text-gray-900 font-bold">{kloter.progress || 0}%</span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                          <div
-                            className="h-full rounded-full bg-[#E51B48] transition-all"
-                            style={{ width: `${kloter.progress || 0}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="mt-6 flex items-center gap-2 border-t border-gray-100 pt-4">
-                      <button
-                        onClick={() => openEditForm(kloter)}
-                        className="flex-1 rounded-lg bg-gray-50 py-2.5 text-center text-xs font-bold text-gray-700 transition-colors hover:bg-gray-100"
-                      >
-                        ⚙️ Edit Kloter
-                      </button>
-                      <button
-                        onClick={() => handleDelete(kloter)}
-                        className="rounded-lg bg-red-50 px-4 py-2.5 text-center text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+        {/* MAIN CONTENT AREA DENGAN NO-SCROLLBAR */}
+        <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
+          {success && (
+            <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 shadow-sm">
+              {success}
             </div>
           )}
-        </div>
-      )}
 
-      {view === 1 && (
-        <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          {/* Top Bubble Header */}
-          <div className="m-4 rounded-xl bg-[#00875a] p-6 text-white shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white font-bold text-lg">
-                +
-              </div>
-              <div>
-                <h2 className="text-lg font-bold">
-                  {editingId ? "Edit Kloter" : "Tambah Kloter"}
-                </h2>
-                <p className="text-xs text-emerald-100">
-                  Buat kloter keberangkatan umrah baru.
-                </p>
+          {/* Header Card dengan Judul, Subtitle, Icon Stack Kloter, dan Tombol Tambah Kloter */}
+          <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
+                  {/* Icon Layers Kloter */}
+                  <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="font-bold text-lg text-gray-900">Daftar Kloter</h1>
+                  <p className="text-xs text-gray-500 font-medium mt-0.5">
+                    Kelola jadwal keberangkatan kloter
+                  </p>
+                </div>
               </div>
             </div>
+
+            <button
+              onClick={openCreateForm}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-4.5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-all duration-200 active:scale-95"
+            >
+              <PlusIcon className="w-4 h-4 text-amber-400" />
+              <span>Tambah Kloter</span>
+            </button>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-6 p-8 pt-4">
-              {/* Nama Kloter */}
-              <div>
-                <label htmlFor="name" className="mb-2 block text-sm font-bold text-gray-900">
-                  Nama Kloter <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
-                    ✈️
-                  </span>
+          {/* Tabel Daftar Kloter */}
+          <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100">
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-[#1b3167] text-white text-xs font-bold tracking-wide">
+                    <th className="py-3.5 px-5 rounded-l-xl w-16 text-center">NO</th>
+                    <th className="py-3.5 px-8">NAMA KLOTER</th>
+                    <th className="py-3.5 px-8">TANGGAL</th>
+                    <th className="py-3.5 px-5 rounded-r-xl text-center">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {kloters.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="py-12 text-center text-gray-400 text-xs font-semibold">
+                        Belum ada data kloter.
+                      </td>
+                    </tr>
+                  ) : (
+                    kloters.map((kloter, index) => (
+                      <tr key={kloter.id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="py-4 px-5 text-center font-semibold text-gray-500 text-xs">
+                          {index + 1}
+                        </td>
+                        <td className="py-4 px-8 font-bold text-gray-900">
+                          {kloter.name}
+                        </td>
+                        <td className="py-4 px-8 font-medium">
+                          <span className="inline-block rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 border border-blue-200/60 shadow-2xs">
+                            {kloter.date_range || "-"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-center">
+                          <div className="inline-flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => openEditForm(kloter)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/80 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => confirmDelete(kloter)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200/80 bg-red-50/60 px-3.5 py-1.5 text-xs font-bold text-red-600 shadow-2xs hover:bg-red-100 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Modal Form Tambah / Edit Kloter */}
+      {view === 1 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
+                  <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 12l10 5 10-5" />
+                    <path d="M2 17l10 5 10-5" />
+                  </svg>
+                </div>
+                <h2 className="text-sm font-bold">
+                  {editingId ? "Edit Kloter" : "Tambah Kloter"}
+                </h2>
+              </div>
+              <button
+                onClick={closeModal}
+                className="text-gray-300 hover:text-white transition-colors p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmit}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label htmlFor="name" className="mb-1.5 block text-xs font-bold text-gray-700">
+                    Nama Kloter <span className="text-red-500">*</span>
+                  </label>
                   <input
                     id="name"
                     name="name"
                     type="text"
                     value={form.name}
                     onChange={handleChange}
-                    placeholder="Masukkan nama kloter"
+                    placeholder="Nama Kloter"
                     required
-                    className="w-full rounded-xl border border-gray-200 py-3 pl-11 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#00875a] focus:outline-none focus:ring-1 focus:ring-[#00875a]"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="date_range" className="mb-1.5 block text-xs font-bold text-gray-700">
+                    Tanggal <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="date_range"
+                    name="date_range"
+                    type="text"
+                    value={form.date_range}
+                    onChange={handleChange}
+                    placeholder="cth: 17-25 November 2026"
+                    required
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
                   />
                 </div>
               </div>
 
-              {/* Tanggal Mulai & Selesai */}
-              <div>
-                <label className="mb-2 block text-sm font-bold text-gray-900">
-                  Tanggal <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                      📅
-                    </span>
-                    <input
-                      id="start_date"
-                      name="start_date"
-                      type="date"
-                      value={form.start_date}
-                      onChange={handleChange}
-                      className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-4 text-sm text-gray-900 focus:border-[#00875a] focus:outline-none focus:ring-1 focus:ring-[#00875a]"
-                    />
-                  </div>
-                  <span className="hidden text-center text-gray-400 sm:inline">–</span>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                      📅
-                    </span>
-                    <input
-                      id="end_date"
-                      name="end_date"
-                      type="date"
-                      min={form.start_date || undefined}
-                      value={form.end_date}
-                      onChange={handleChange}
-                      className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-4 text-sm text-gray-900 focus:border-[#00875a] focus:outline-none focus:ring-1 focus:ring-[#00875a]"
-                    />
-                  </div>
-                </div>
-                <p className="mt-1.5 text-xs text-gray-400">cth: 13 - 20 September 2025</p>
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
+                >
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                  </svg>
+                  Simpan
+                </button>
               </div>
-
-              {/* Info Box */}
-              <div className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/70 p-4 text-xs text-gray-600">
-                <span className="text-blue-500 font-bold text-sm">ℹ️</span>
-                <p>
-                  Saat ini terdapat <strong className="text-gray-900">{kloters.length} kloter</strong> terdaftar. Data jamaah, tour leader, dan akomodasi dapat dilengkapi setelah kloter dibuat.
-                </p>
-              </div>
-            </div>
-
-            {/* Footer Form */}
-            <div className="flex items-center justify-between border-t border-gray-100 bg-white px-8 py-5">
-              <button
-                type="button"
-                onClick={goBack}
-                disabled={saving}
-                className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
-              >
-                ← Kembali
-              </button>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-[#00875a] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#007048] disabled:opacity-60"
-              >
-                💾 {saving ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       )}
-    </div>
+
+      {/* Modal Hapus Simple & Clean */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150">
+            {/* Modal Header Header Biru Navy Sama Seperti Modal Edit */}
+            <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
+                  <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 12l10 5 10-5" />
+                    <path d="M2 17l10 5 10-5" />
+                  </svg>
+                </div>
+                <h2 className="text-sm font-bold">Hapus Kloter</h2>
+              </div>
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                className="text-gray-300 hover:text-white transition-colors p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 text-center">
+              <p className="text-lg text-gray-600 font-medium leading-relaxed">
+                Yakin Untuk Menghapus Kloter Ini? <br />
+                <span className="text-lg font-bold text-gray-900 mt-1 block">"{kloterToDelete?.name}"</span>
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+              >
+                Tidak
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
