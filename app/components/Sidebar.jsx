@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { LuLayers3 } from "react-icons/lu";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -81,19 +82,9 @@ export default function Sidebar() {
             {isActive("/kloter") && (
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500 rounded-r-md"></div>
             )}
-            <svg
+            <LuLayers3
               className={`w-5 h-5 ${isActive("/kloter") ? "text-yellow-500" : "text-gray-400"}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            />
             Kloter
           </Link>
 

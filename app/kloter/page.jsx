@@ -2,7 +2,9 @@
 
 import React, { useState } from "react";
 import Topbar from "@/app/components/Topbar";
+import PageHeader from "@/app/components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
+import { FaLayerGroup } from "react-icons/fa6";
 
 const initialForm = {
   name: "",
@@ -80,8 +82,8 @@ export default function KloterPage() {
     if (editingId) {
       setKloters((prev) =>
         prev.map((item) =>
-          item.id === editingId ? { ...item, ...form } : item
-        )
+          item.id === editingId ? { ...item, ...form } : item,
+        ),
       );
       setSuccess("Kloter berhasil diperbarui.");
     } else {
@@ -136,38 +138,23 @@ export default function KloterPage() {
         {/* MAIN CONTENT AREA DENGAN NO-SCROLLBAR */}
         <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           {success && (
-            <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 shadow-sm">
+            <div
+              role="status"
+              className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 shadow-sm"
+            >
               {success}
             </div>
           )}
 
           {/* Header Card dengan Judul, Subtitle, Icon Stack Kloter, dan Tombol Tambah Kloter */}
-          <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
-                  {/* Icon Layers Kloter */}
-                  <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="font-bold text-lg text-gray-900">Daftar Kloter</h1>
-                  <p className="text-xs text-gray-500 font-medium mt-0.5">
-                    Kelola jadwal keberangkatan kloter
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={openCreateForm}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-4.5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-all duration-200 active:scale-95"
-            >
-              <PlusIcon className="w-4 h-4 text-amber-400" />
-              <span>Tambah Kloter</span>
-            </button>
-          </div>
+          <PageHeader
+            title="Manajemen Tour Leader"
+            description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
+            icon={<FaLayerGroup className="w-[26px] h-[26px] text-[#eab308]" />}
+            buttonText="Tambah Kloter"
+            buttonIcon={<PlusIcon />}
+            buttonOnClick={openCreateForm}
+          />
 
           {/* Tabel Daftar Kloter */}
           <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100">
@@ -175,22 +162,32 @@ export default function KloterPage() {
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-[#1b3167] text-white text-xs font-bold tracking-wide">
-                    <th className="py-3.5 px-5 rounded-l-xl w-16 text-center">NO</th>
+                    <th className="py-3.5 px-5 rounded-l-xl w-16 text-center">
+                      NO
+                    </th>
                     <th className="py-3.5 px-8">NAMA KLOTER</th>
                     <th className="py-3.5 px-8">TANGGAL</th>
-                    <th className="py-3.5 px-5 rounded-r-xl text-center">AKSI</th>
+                    <th className="py-3.5 px-5 rounded-r-xl text-center">
+                      AKSI
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {kloters.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="py-12 text-center text-gray-400 text-xs font-semibold">
+                      <td
+                        colSpan="4"
+                        className="py-12 text-center text-gray-400 text-xs font-semibold"
+                      >
                         Belum ada data kloter.
                       </td>
                     </tr>
                   ) : (
                     kloters.map((kloter, index) => (
-                      <tr key={kloter.id} className="hover:bg-gray-50/80 transition-colors">
+                      <tr
+                        key={kloter.id}
+                        className="hover:bg-gray-50/80 transition-colors"
+                      >
                         <td className="py-4 px-5 text-center font-semibold text-gray-500 text-xs">
                           {index + 1}
                         </td>
@@ -208,8 +205,18 @@ export default function KloterPage() {
                               onClick={() => openEditForm(kloter)}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/80 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
                             >
-                              <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              <svg
+                                className="w-3.5 h-3.5 text-gray-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
                               </svg>
                               Edit
                             </button>
@@ -217,8 +224,18 @@ export default function KloterPage() {
                               onClick={() => confirmDelete(kloter)}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-red-200/80 bg-red-50/60 px-3.5 py-1.5 text-xs font-bold text-red-600 shadow-2xs hover:bg-red-100 transition-colors"
                             >
-                              <svg className="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              <svg
+                                className="w-3.5 h-3.5 text-red-500"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
                               </svg>
                               Hapus
                             </button>
@@ -242,7 +259,15 @@ export default function KloterPage() {
             <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                  <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    className="w-5 h-5 text-amber-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
                     <path d="M2 12l10 5 10-5" />
                     <path d="M2 17l10 5 10-5" />
@@ -264,7 +289,10 @@ export default function KloterPage() {
             <form onSubmit={handleSubmit}>
               <div className="p-6 space-y-4">
                 <div>
-                  <label htmlFor="name" className="mb-1.5 block text-xs font-bold text-gray-700">
+                  <label
+                    htmlFor="name"
+                    className="mb-1.5 block text-xs font-bold text-gray-700"
+                  >
                     Nama Kloter <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -280,7 +308,10 @@ export default function KloterPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="date_range" className="mb-1.5 block text-xs font-bold text-gray-700">
+                  <label
+                    htmlFor="date_range"
+                    className="mb-1.5 block text-xs font-bold text-gray-700"
+                  >
                     Tanggal <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -309,8 +340,18 @@ export default function KloterPage() {
                   type="submit"
                   className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
                 >
-                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                  <svg
+                    className="w-4 h-4 text-amber-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                    />
                     <polyline points="17 21 17 13 7 13 7 21" />
                     <polyline points="7 3 7 8 15 8" />
                   </svg>
@@ -330,7 +371,15 @@ export default function KloterPage() {
             <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                  <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    className="w-5 h-5 text-amber-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M12 2L2 7l10 5 10-5-10-5z" />
                     <path d="M2 12l10 5 10-5" />
                     <path d="M2 17l10 5 10-5" />
@@ -350,7 +399,9 @@ export default function KloterPage() {
             <div className="p-6 text-center">
               <p className="text-lg text-gray-600 font-medium leading-relaxed">
                 Yakin Untuk Menghapus Kloter Ini? <br />
-                <span className="text-lg font-bold text-gray-900 mt-1 block">"{kloterToDelete?.name}"</span>
+                <span className="text-lg font-bold text-gray-900 mt-1 block">
+                  "{kloterToDelete?.name}"
+                </span>
               </p>
             </div>
 
