@@ -17,9 +17,7 @@ export default function RootLayout({ children }) {
       <body>
         {isAuthRoute ? (
           /* Layout Khusus Auth (Tanpa Sidebar) */
-          <main className="min-h-screen w-full bg-slate-50">
-            {children}
-          </main>
+          <main className="min-h-screen w-full bg-slate-50">{children}</main>
         ) : (
           /* Layout Utama Dashboard (Dengan Sidebar) */
           <div className="flex h-screen w-full overflow-hidden">
@@ -27,9 +25,7 @@ export default function RootLayout({ children }) {
             <Sidebar />
 
             {/* Main Dynamic Content Area */}
-            <main className="flex-1 bg-white overflow-y-auto">
-              {children}
-            </main>
+            <main className="flex-1 bg-white overflow-y-auto">{children}</main>
           </div>
         )}
       </body>

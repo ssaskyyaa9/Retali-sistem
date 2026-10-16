@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
-import { FaLayerGroup } from "react-icons/fa6";
+import { TbPlaneDepartureFilled } from "react-icons/tb";
 
 const initialForm = {
   name: "",
@@ -148,9 +148,11 @@ export default function KloterPage() {
 
           {/* Header Card dengan Judul, Subtitle, Icon Stack Kloter, dan Tombol Tambah Kloter */}
           <PageHeader
-            title="Manajemen Tour Leader"
+            title="Daftar Kloter"
             description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
-            icon={<FaLayerGroup className="w-[26px] h-[26px] text-[#eab308]" />}
+            icon={
+              <TbPlaneDepartureFilled className="w-[26px] h-[26px] text-[#eab308]" />
+            }
             buttonText="Tambah Kloter"
             buttonIcon={<PlusIcon />}
             buttonOnClick={openCreateForm}
