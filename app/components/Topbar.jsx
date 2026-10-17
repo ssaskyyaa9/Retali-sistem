@@ -101,7 +101,7 @@ export default function Topbar({
 
   return (
     <>
-      <header className="w-full bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <header className="w-full bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         {/* Left Section: Breadcrumb & Title */}
         <div className=" flex items-center gap-4">
           <button className="text-gray-500 hover:text-gray-800 focus:outline-none">
