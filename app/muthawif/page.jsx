@@ -69,7 +69,7 @@ export default function MuthawifPage() {
       />
 
       {/* MAIN CONTENT AREA */}
-      <main className="p-8 w-full max-w-7xl mx-auto flex-1 no-scrollbar overflow-y-auto">
+      <main className=" p-8 w-full max-w-7xl mx-auto flex-1 no-scrollbar overflow-y-auto">
         {view === 0 && (
           <div>
             {/* Header Title */}
@@ -82,7 +82,10 @@ export default function MuthawifPage() {
             />
 
             {/* MAIN CARD */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div
+              className="animate-fade-in-up bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+              style={{ animationDelay: "200ms" }}
+            >
               {/* TOOLBAR: Search, Filter, Add Button */}
               <div className="p-5 border-b border-gray-200 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1">

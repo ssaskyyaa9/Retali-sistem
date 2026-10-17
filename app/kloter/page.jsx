@@ -159,7 +159,10 @@ export default function KloterPage() {
           />
 
           {/* Tabel Daftar Kloter */}
-          <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100">
+          <div
+            className="animate-fade-in-up rounded-2xl bg-white p-6 shadow-md border border-gray-100"
+            style={{ animationDelay: "200ms" }}
+          >
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>

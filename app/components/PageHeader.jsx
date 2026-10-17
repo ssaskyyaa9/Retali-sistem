@@ -12,7 +12,7 @@ export default function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
       {/* KIRI: Icon, Judul, Deskripsi */}
-      <div className="flex items-center gap-4">
+      <div className="animate-fade-in-left flex items-center gap-4">
         {icon && (
           <div className="bg-[#1a2332] w-[56px] h-[56px] rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
             {icon}
@@ -32,7 +32,8 @@ export default function PageHeader({
       {buttonText && (
         <button
           onClick={buttonOnClick}
-          className={`${buttonBgColor} shrink-0 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors`}
+          className={`animate-fade-in-right ${buttonBgColor} shrink-0 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors`}
+          style={{ animationDelay: "400ms" }}
         >
           {buttonIcon}
           {buttonText}

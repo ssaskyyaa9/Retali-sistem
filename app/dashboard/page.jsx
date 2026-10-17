@@ -87,15 +87,18 @@ export default function DashboardPage() {
       `}</style>
 
       <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
-        {/* Topbar preserved */}
+        {/* Topbar preserved (No animation here so it stays static) */}
         <Topbar title="Dashboard" breadcrumbs={["Dashboard", "Dashboard"]} />
 
-        {/* MAIN CONTENT AREA DENGAN NO-SCROLLBAR */}
-        <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
+        {/* MAIN CONTENT AREA DENGAN NO-SCROLLBAR*/}
+        <main className=" p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           {/* 5 Card Statistik dengan Icon & Kotak Tembus Pandang Kuning */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className=" grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Card 1: Total Scan */}
-            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
+            <div
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+              style={{ animationDelay: "0ms" }}
+            >
               <div className="flex justify-between items-start">
                 <h3 className="text-3xl font-black text-[#1b3167]">
                   {stats.total_scan}
@@ -124,7 +127,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 2: Total Tour Leader */}
-            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
+            <div
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+              style={{ animationDelay: "200ms" }}
+            >
               <div className="flex justify-between items-start">
                 <h3 className="text-3xl font-black text-[#1b3167]">
                   {stats.total_tour_leader}
@@ -147,7 +153,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 3: Total Muthawif */}
-            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
+            <div
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+              style={{ animationDelay: "400ms" }}
+            >
               <div className="flex justify-between items-start">
                 <h3 className="text-3xl font-black text-[#1b3167]">
                   {stats.total_muthawif}
@@ -174,7 +183,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 4: Total Absen Jamaah */}
-            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28">
+            <div
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+              style={{ animationDelay: "600ms" }}
+            >
               <div className="flex justify-between items-start">
                 <h3 className="text-3xl font-black text-[#1b3167]">
                   {stats.total_absen_jamaah}
@@ -202,7 +214,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Card 5: Total Itinerary */}
-            <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 sm:col-span-2 md:col-span-1">
+            <div
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 sm:col-span-2 md:col-span-1"
+              style={{ animationDelay: "800ms" }}
+            >
               <div className="flex justify-between items-start">
                 <h3 className="text-3xl font-black text-[#1b3167]">
                   {stats.total_itinerary}
@@ -228,7 +243,10 @@ export default function DashboardPage() {
           {/* Status Operasional & Aktivitas Terbaru */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Status Operasional */}
-            <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100 flex flex-col justify-between">
+            <div
+              className="animate-fade-in-up rounded-2xl bg-white p-6 shadow-md border border-gray-100 flex flex-col justify-between"
+              style={{ animationDelay: "800ms" }}
+            >
               <div>
                 <h4 className="font-bold text-base text-gray-900 mb-1">
                   Status Operasional Hari Ini
@@ -286,7 +304,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Aktivitas Terbaru */}
-            <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100">
+            <div
+              className="animate-fade-in-up rounded-2xl bg-white p-6 shadow-md border border-gray-100"
+              style={{ animationDelay: "1000ms" }}
+            >
               <div className="mb-4">
                 <h4 className="font-bold text-base text-gray-900">
                   Aktivitas Terbaru
@@ -319,7 +340,10 @@ export default function DashboardPage() {
           </div>
 
           {/* Tour Leader & Muthawif Aktif */}
-          <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100">
+          <div
+            className="animate-fade-in-up rounded-2xl bg-white p-6 shadow-md border border-gray-100"
+            style={{ animationDelay: "1200ms" }}
+          >
             {/* Header section dengan Switcher */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div>

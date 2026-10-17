@@ -397,48 +397,56 @@ export default function Sidebar() {
       </aside>
 
       {/* Floating Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#121c2d] border border-[#1e2b43] p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-full bg-yellow-500/10 text-yellow-500 flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2 text-center">
-              Yakin ingin keluar?
-            </h3>
-            <p className="text-gray-400 text-sm mb-6 text-center">
-              Sesi Anda akan berakhir dan Anda harus masuk kembali untuk
-              mengakses sistem.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 px-4 py-2.5 bg-[#1e2b43] text-white rounded-xl hover:bg-[#263754] transition-colors font-medium text-sm"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex-1 px-4 py-2.5 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium text-sm shadow-lg shadow-rose-500/20"
-              >
-                Ya, Keluar
-              </button>
-            </div>
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ease-in-out ${
+          showLogoutConfirm
+            ? "opacity-100 visible pointer-events-auto"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      >
+        <div
+          className={`bg-[#121c2d] border border-[#1e2b43] p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 transition-all duration-300 ease-in-out ${
+            showLogoutConfirm ? "scale-100" : "scale-95"
+          }`}
+        >
+          <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2 text-center">
+            Yakin ingin keluar?
+          </h3>
+          <p className="text-gray-400 text-sm mb-6 text-center">
+            Sesi Anda akan berakhir dan Anda harus masuk kembali untuk mengakses
+            sistem.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="flex-1 px-4 py-2.5 bg-[#1e2b43] text-white rounded-xl hover:bg-[#263754] transition-colors font-medium text-sm"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex-1 px-4 py-2.5 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium text-sm shadow-lg shadow-rose-500/20"
+            >
+              Ya, Keluar
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Force Display Name Setup Modal */}
       {showNamePrompt && (

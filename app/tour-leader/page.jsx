@@ -80,7 +80,7 @@ export default function TourLeaderPage() {
             />
 
             {/* MAIN CARD */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="animate-fade-in-up bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               {/* TOOLBAR: Search, Filter, Add Button */}
               <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1">
