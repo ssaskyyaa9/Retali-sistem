@@ -22,9 +22,11 @@ export default function Sidebar() {
 
   const [userEmail, setUserEmail] = useState("Loading...");
   const [userName, setUserName] = useState("Loading...");
+  const [userRole, setUserRole] = useState("Loading...");
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const isActive = (path) => pathname === path;
   const isParentActive = (paths) => paths.some((p) => pathname.startsWith(p));
@@ -34,6 +36,7 @@ export default function Sidebar() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (user) {
         setUserEmail(user.email);
 
@@ -42,6 +45,17 @@ export default function Sidebar() {
           setShowNamePrompt(true);
         } else {
           setUserName(displayName);
+        }
+
+        // Fetch the user's role from the profiles table
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.role) {
+          setUserRole(profile.role);
         }
       }
     }
@@ -72,10 +86,37 @@ export default function Sidebar() {
     router.push("/");
   };
 
+  const handleCopyEmail = async () => {
+    if (userEmail && userEmail !== "Loading...") {
+      try {
+        await navigator.clipboard.writeText(userEmail);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      } catch (err) {
+        console.error("Gagal menyalin email", err);
+      }
+    }
+  };
+
   const getInitial = (name) => {
     return name !== "Loading..." && name.length > 0
       ? name.charAt(0).toUpperCase()
       : "U";
+  };
+
+  const formatRole = (role) => {
+    switch (role) {
+      case "admin":
+        return "Administrator";
+      case "tour_leader":
+        return "Tour Leader";
+      case "muthawif":
+        return "Muthawif";
+      case "Loading...":
+        return "Loading...";
+      default:
+        return "User"; // Fallback
+    }
   };
 
   return (
@@ -334,10 +375,30 @@ export default function Sidebar() {
           <div
             className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-in-out ${isProfileDropdownOpen ? "grid-rows-[1fr] opacity-100 mb-2" : "grid-rows-[0fr] opacity-0 mb-0"}`}
           >
-            <div className="overflow-hidden">
+            <div className={copied ? "overflow-visible" : "overflow-hidden"}>
               <div className="bg-[#121c2d] rounded-xl border border-[#1e2b43] p-3 shadow-inner">
-                <div className="bg-[#1a2538] text-gray-300 hover:text-white text-xs px-4 py-2.5 rounded-lg mb-2 truncate text-center">
-                  {userEmail}
+                <div className="relative w-full mb-2">
+                  {/* Copied Popup Tooltip */}
+                  <div
+                    className={`absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-[#2c3e5d] text-white text-[10px] font-medium rounded shadow-lg transition-all duration-200 pointer-events-none flex flex-col items-center z-50 ${
+                      copied
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-1"
+                    }`}
+                  >
+                    Email Copied!
+                    {/* Small downward pointing arrow */}
+                    <div className="absolute top-full w-0 h-0 border-x-[5px] border-x-transparent border-t-[5px] border-t-[#2c3e5d]"></div>
+                  </div>
+
+                  {/* Email Button */}
+                  <button
+                    onClick={handleCopyEmail}
+                    title="Klik untuk menyalin email"
+                    className="w-full bg-[#1a2538] text-gray-300 hover:bg-[#223047] hover:text-white text-xs px-4 py-2.5 rounded-lg truncate text-center cursor-pointer transition-colors active:scale-[0.98]"
+                  >
+                    {userEmail}
+                  </button>
                 </div>
                 <button
                   onClick={() => setShowLogoutConfirm(true)}
@@ -375,7 +436,7 @@ export default function Sidebar() {
                   {userName}
                 </p>
                 <p className="text-[11px] text-gray-400 font-medium truncate">
-                  Administrator
+                  {formatRole(userRole)}
                 </p>
               </div>
             </div>
@@ -450,7 +511,7 @@ export default function Sidebar() {
 
       {/* Force Display Name Setup Modal */}
       {showNamePrompt && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0d1523]/90 backdrop-blur-md">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md">
           <div className="bg-[#121c2d] border border-[#1e2b43] p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-in slide-in-from-bottom-4 duration-300">
             <h3 className="text-2xl font-bold text-white mb-2">
               Selamat Datang! 👋

@@ -5,6 +5,7 @@ import PageHeader from "../components/PageHeader";
 import { FaUserTie, FaUserPlus } from "react-icons/fa6";
 import { IoMdClose } from "react-icons/io";
 import { supabase } from "../../lib/supabase";
+import { createTourLeaderAction } from "../actions/tourLeader";
 
 export default function TourLeaderPage() {
   const [view, setView] = useState(0);
@@ -20,18 +21,14 @@ export default function TourLeaderPage() {
   const pageSize = 5;
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [kloterOptions, setKloterOptions] = useState([
-    {
-      id: "dummy-1",
-      name: "umrah plus turkey (13 febuari 2026 - 25 febuari 2026)",
-    },
-    {
-      id: "dummy-2",
-      name: "Umrah Itikaf Mandiri (21 Februari - 6 Maret 2027)",
-    },
-  ]);
+  const [kloterOptions, setKloterOptions] = useState([]);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Tambahkan 'noTelepon' ke dalam state form
+  // Modal Edit & Delete states
+  const [editingId, setEditingId] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+
   const [formData, setFormData] = useState({
     namaLengkap: "",
     email: "",
@@ -43,6 +40,7 @@ export default function TourLeaderPage() {
   // Trigger fetch ketika currentPage atau searchTerm berubah
   useEffect(() => {
     fetchTourLeaders();
+    fetchKloterOptions();
   }, [currentPage, searchTerm]);
 
   const handleInputChange = (e) => {
@@ -53,6 +51,29 @@ export default function TourLeaderPage() {
     }));
   };
 
+  const fetchKloterOptions = async () => {
+    const { data, error } = await supabase
+      .from("kloter")
+      .select("id, name, description");
+
+    if (error) {
+      console.error("Error fetching Kloter options:", error.message);
+      return;
+    }
+
+    if (data) {
+      // Map the data to match your select options format
+      const formattedKloter = data.map((kloter) => ({
+        id: kloter.id,
+        // Combines name and description to mimic your dummy data format
+        name: kloter.description
+          ? `${kloter.name} (${kloter.description})`
+          : kloter.name,
+      }));
+      setKloterOptions(formattedKloter);
+    }
+  };
+
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1); // Reset ke halaman pertama saat melakukan pencarian
@@ -61,9 +82,16 @@ export default function TourLeaderPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // SIMULASI SUBMIT (Bypass Supabase Insert agar tidak error RLS)
-    console.log("Simulasi Data Siap Dikirim ke Backend:", formData);
+    // Call the server action
+    const result = await createTourLeaderAction(formData);
 
+    if (!result.success) {
+      console.error("Error inserting Tour Leader:", result.error);
+      alert("Gagal menambahkan data: " + result.error);
+      return;
+    }
+
+    // Close modal and reset form on success
     setShowAddModal(false);
     setFormData({
       namaLengkap: "",
@@ -73,9 +101,7 @@ export default function TourLeaderPage() {
       kloterId: "",
     });
 
-    alert(
-      "Simulasi Sukses: Data form berhasil disubmit (Backend belum terhubung)",
-    );
+    // Refresh the table data
     fetchTourLeaders();
   };
 
@@ -264,7 +290,61 @@ export default function TourLeaderPage() {
                             {tl.joinDate}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            {/* Actions */}
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  // Logika untuk set data form dan buka modal edit
+                                  setEditingId(tl.id);
+                                  setFormData({
+                                    namaLengkap:
+                                      tl.name === "Unknown" ? "" : tl.name,
+                                    email: tl.email === "-" ? "" : tl.email,
+                                    noTelepon: tl.phone === "-" ? "" : tl.phone,
+                                    kloterId: "",
+                                  });
+                                  setShowAddModal(true);
+                                }}
+                                className="p-2 text-gray-400 hover:text-[#1b3167] hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  // Logika untuk set user yang akan dihapus dan buka modal hapus
+                                  setUserToDelete(tl);
+                                  setDeleteModalOpen(true);
+                                }}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Hapus"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -330,128 +410,247 @@ export default function TourLeaderPage() {
                 </div>
               </div>
             </div>
-          </>
-        )}
-
-        {/* MODAL TAMBAH TOUR LEADER */}
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ease-in-out ${showAddModal ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`}
-        >
-          <div
-            className={`bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden transition-all duration-300 ease-in-out ${showAddModal ? "scale-100" : "scale-95"}`}
-          >
-            <div className="bg-[#1a2538] p-4 flex items-center justify-between text-white">
-              <div className="flex items-center gap-3">
-                <FaUserPlus className="text-[#eab308] w-5 h-5" />
-                <h2 className="text-lg font-bold">Tambah Tour Leader</h2>
-              </div>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+            {/* Modal Tambah / Edit Tour Leader */}
+            <div
+              className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 transition-all duration-300 ease-in-out ${
+                showAddModal
+                  ? "opacity-100 visible pointer-events-auto"
+                  : "opacity-0 invisible pointer-events-none"
+              }`}
+            >
+              <div
+                className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 transition-all duration-300 ease-in-out ${
+                  showAddModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
+                }`}
               >
-                <IoMdClose size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div>
-                <input
-                  type="text"
-                  name="namaLengkap"
-                  value={formData.namaLengkap}
-                  onChange={handleInputChange}
-                  placeholder="Nama Lengkap"
-                  className="w-full placeholder:text-gray-400 text-gray-700 px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#1a2538] focus:border-[#1a2538]"
-                  required
-                />
-              </div>
-              <div>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Email"
-                  className="w-full placeholder:text-gray-400 text-gray-700 px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#1a2538] focus:border-[#1a2538]"
-                  required
-                />
-              </div>
-
-              {/* Tambahan Input Nomor Telepon */}
-              <div>
-                <input
-                  type="tel"
-                  name="noTelepon"
-                  value={formData.noTelepon}
-                  onChange={handleInputChange}
-                  placeholder="Nomor Telepon (Cth: 08123456789)"
-                  className="w-full placeholder:text-gray-400 text-gray-700 px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#1a2538] focus:border-[#1a2538]"
-                  required
-                />
-              </div>
-
-              <div>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Password"
-                  className="w-full placeholder:text-gray-400 text-gray-700 px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#1a2538] focus:border-[#1a2538]"
-                  required
-                />
-              </div>
-              <div className="relative">
-                <select
-                  name="kloterId"
-                  value={formData.kloterId}
-                  onChange={handleInputChange}
-                  className="w-full placeholder:text-gray-400 text-gray-700 px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#1a2538] focus:border-[#1a2538] bg-white"
-                  required
-                >
-                  <option value="" disabled>
-                    -- Pilih Kloter --
-                  </option>
-                  {kloterOptions.map((kloter) => (
-                    <option key={kloter.id} value={kloter.id}>
-                      {kloter.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {/* Modal Header */}
+                <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
+                      <svg
+                        className="w-5 h-5 text-amber-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </div>
+                    <h2 className="text-sm font-bold">
+                      {/* editingId adalah state penanda apakah sedang mode edit atau tambah */}
+                      {editingId ? "Edit Tour Leader" : "Tambah Tour Leader"}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowAddModal(false)}
+                    className="text-gray-300 hover:text-white transition-colors p-1"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
+                    ✕
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <form onSubmit={handleSubmit}>
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                        Nama Lengkap <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="namaLengkap"
+                        value={formData.namaLengkap}
+                        onChange={handleInputChange}
+                        placeholder="Contoh: Ahmad Fauzi"
+                        required
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="email@contoh.com"
+                          required
+                          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                          Nomor Telepon <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="tel"
+                          name="noTelepon"
+                          value={formData.noTelepon}
+                          onChange={handleInputChange}
+                          placeholder="Cth: 08123456789"
+                          required
+                          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                        Pilih Kloter <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="kloterId"
+                          value={formData.kloterId}
+                          onChange={handleInputChange}
+                          required
+                          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-900 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167] appearance-none"
+                        >
+                          <option value="" disabled>
+                            -- Pilih Kloter --
+                          </option>
+                          {kloterOptions.map((kloter) => (
+                            <option key={kloter.id} value={kloter.id}>
+                              {kloter.name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddModal(false)}
+                      className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4 text-amber-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                        />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                      </svg>
+                      Simpan
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            {/* Modal Hapus Tour Leader */}
+            <div
+              className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 ${
+                deleteModalOpen
+                  ? "opacity-100 visible pointer-events-auto"
+                  : "opacity-0 invisible pointer-events-none"
+              }`}
+            >
+              <div
+                className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150 ${
+                  deleteModalOpen
+                    ? "scale-100 opacity-100"
+                    : "scale-95 opacity-0"
+                }`}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
+                      <svg
+                        className="w-5 h-5 text-amber-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </div>
+                    <h2 className="text-sm font-bold">Hapus Tour Leader</h2>
+                  </div>
+                  <button
+                    onClick={() => setDeleteModalOpen(false)}
+                    className="text-gray-300 hover:text-white transition-colors p-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 text-center">
+                  <p className="text-sm text-gray-600 font-medium leading-relaxed">
+                    Yakin ingin menghapus akses petugas ini? <br />
+                    <span className="text-lg font-bold text-gray-900 mt-2 block">
+                      "{userToDelete?.name}"
+                    </span>
+                  </p>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteModalOpen(false)}
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Panggil fungsi handle delete Anda di sini
+                      // handleDeleteUser(userToDelete.id);
+                    }}
+                    className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
+                  >
+                    Ya, Hapus
+                  </button>
                 </div>
               </div>
-              <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#1a2538] rounded-lg hover:bg-[#2c3e5d] transition-colors"
-                >
-                  Simpan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

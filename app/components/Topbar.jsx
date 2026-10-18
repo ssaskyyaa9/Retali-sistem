@@ -14,6 +14,7 @@ export default function Topbar({
 
   const [userName, setUserName] = useState("Loading...");
   const [userEmail, setUserEmail] = useState("Loading...");
+  const [userRole, setUserRole] = useState("Loading...");
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
@@ -64,19 +65,42 @@ export default function Topbar({
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (user) {
         setUserEmail(user.email);
         setUserName(user.user_metadata?.display_name || "Pengguna");
+
+        // Fetch the role from the profiles table
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.role) {
+          setUserRole(profile.role);
+        }
       }
     }
     getUserData();
 
-    // 2. Listen for live updates (like when Sidebar saves the popup)
+    // 2. Listen for live updates
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (session?.user) {
           setUserEmail(session.user.email);
           setUserName(session.user.user_metadata?.display_name || "Pengguna");
+
+          // Fetch the role again if the session changes
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single();
+
+          if (profile?.role) {
+            setUserRole(profile.role);
+          }
         }
       },
     );
@@ -86,6 +110,22 @@ export default function Topbar({
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  // Helper function to format the role for display
+  const formatRole = (role) => {
+    switch (role) {
+      case "admin":
+        return "Administrator";
+      case "tour_leader":
+        return "Tour Leader";
+      case "muthawif":
+        return "Muthawif";
+      case "Loading...":
+        return "Loading...";
+      default:
+        return "User";
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -242,7 +282,7 @@ export default function Topbar({
                 {getInitial(userName)}
               </div>
               <div className="hidden md:block text-left leading-tight">
-                <div className="text-xs font-bold text-gray-900 flex items-center gap-1">
+                <div className="text-xs font-bold text-gray-900 flex items-center gap-2">
                   {userName}
                   <svg
                     className="w-3 h-3 text-gray-400"
@@ -259,7 +299,7 @@ export default function Topbar({
                   </svg>
                 </div>
                 <div className="text-[10px] text-gray-400 font-medium">
-                  Administrator
+                  {formatRole(userRole)}
                 </div>
               </div>
             </button>
