@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { TbPlaneDepartureFilled } from "react-icons/tb";
+import { supabase } from "@/lib/supabase"; // Sesuaikan path file supabase client kamu
 
 const initialForm = {
   name: "",
@@ -16,37 +17,36 @@ export default function KloterPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [kloterToDelete, setKloterToDelete] = useState(null);
 
-  const [kloters, setKloters] = useState([
-    {
-      id: 1,
-      name: "Umrah Ultimo Minimalis",
-      date_range: "17-25 November 2026",
-    },
-    {
-      id: 2,
-      name: "Umrah Ultimo Minimalis",
-      date_range: "8-16 September 2026",
-    },
-    {
-      id: 3,
-      name: "Umrah Ultimo Minimalis",
-      date_range: "17-25 Agustus 2026",
-    },
-    {
-      id: 4,
-      name: "Umrah Itikaf Mandiri",
-      date_range: "21 Februari - 6 Maret 2027",
-    },
-    {
-      id: 5,
-      name: "umrah plus turkey",
-      date_range: "13 februari 2026 - 25 februari 2026",
-    },
-  ]);
-
+  const [kloters, setKloters] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Ambil data dari Supabase saat komponen dimuat
+  useEffect(() => {
+    fetchKloters();
+  }, []);
+
+  async function fetchKloters() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("kloter")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Gagal memuat data kloter:", error.message);
+    } else {
+      // Mapping database description ke date_range agar sesuai dengan UI form kamu
+      const formattedData = data.map((item) => ({
+        ...item,
+        date_range: item.description || "",
+      }));
+      setKloters(formattedData);
+    }
+    setLoading(false);
+  }
 
   function openCreateForm() {
     setForm(initialForm);
@@ -58,7 +58,7 @@ export default function KloterPage() {
   function openEditForm(kloter) {
     setForm({
       name: kloter.name || "",
-      date_range: kloter.date_range || "",
+      date_range: kloter.date_range || kloter.description || "",
     });
     setEditingId(kloter.id);
     setSuccess("");
@@ -73,31 +73,50 @@ export default function KloterPage() {
     }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setSuccess("");
 
     if (!form.name.trim()) return;
 
     if (editingId) {
-      setKloters((prev) =>
-        prev.map((item) =>
-          item.id === editingId ? { ...item, ...form } : item,
-        ),
-      );
+      // Update data ke Supabase
+      const { error } = await supabase
+        .from("kloter")
+        .update({
+          name: form.name,
+          description: form.date_range, // Menyimpan date_range ke kolom description di Supabase
+        })
+        .eq("id", editingId);
+
+      if (error) {
+        console.error("Gagal memperbarui kloter:", error.message);
+        return;
+      }
+
       setSuccess("Kloter berhasil diperbarui.");
     } else {
-      const newKloter = {
-        id: Date.now(),
-        ...form,
-      };
-      setKloters((prev) => [...prev, newKloter]);
+      // Insert data baru ke Supabase
+      const { error } = await supabase.from("kloter").insert([
+        {
+          name: form.name,
+          description: form.date_range,
+          status: "aktif",
+        },
+      ]);
+
+      if (error) {
+        console.error("Gagal menambahkan kloter:", error.message);
+        return;
+      }
+
       setSuccess("Kloter berhasil ditambahkan.");
     }
 
     setForm(initialForm);
     setEditingId(null);
     setView(0);
+    fetchKloters(); // Refresh data dari database
   }
 
   function confirmDelete(kloter) {
@@ -105,12 +124,24 @@ export default function KloterPage() {
     setDeleteModalOpen(true);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!kloterToDelete) return;
-    setKloters((prev) => prev.filter((item) => item.id !== kloterToDelete.id));
+
+    // Hapus data dari Supabase
+    const { error } = await supabase
+      .from("kloter")
+      .delete()
+      .eq("id", kloterToDelete.id);
+
+    if (error) {
+      console.error("Gagal menghapus kloter:", error.message);
+      return;
+    }
+
     setSuccess("Kloter berhasil dihapus.");
     setDeleteModalOpen(false);
     setKloterToDelete(null);
+    fetchKloters(); // Refresh data dari database
   }
 
   function closeModal() {
@@ -178,7 +209,16 @@ export default function KloterPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {kloters.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan="4"
+                        className="py-12 text-center text-gray-400 text-xs font-semibold"
+                      >
+                        Memuat data dari Supabase...
+                      </td>
+                    </tr>
+                  ) : kloters.length === 0 ? (
                     <tr>
                       <td
                         colSpan="4"
@@ -201,7 +241,7 @@ export default function KloterPage() {
                         </td>
                         <td className="py-4 px-8 font-medium">
                           <span className="inline-block rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 border border-blue-200/60 shadow-2xs">
-                            {kloter.date_range || "-"}
+                            {kloter.date_range || kloter.description || "-"}
                           </span>
                         </td>
                         <td className="py-4 px-5 text-center">
@@ -372,7 +412,7 @@ export default function KloterPage() {
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150">
-            {/* Modal Header Header Biru Navy Sama Seperti Modal Edit */}
+            {/* Modal Header */}
             <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
@@ -421,6 +461,7 @@ export default function KloterPage() {
               </button>
               <button
                 type="button"
+                value="Hapus"
                 onClick={handleDelete}
                 className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
               >
