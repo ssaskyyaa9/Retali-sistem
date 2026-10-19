@@ -8,7 +8,7 @@ import {
   createMuthawifAction,
   updateMuthawifAction,
   deleteMuthawifAction,
-} from "..//actions/muthawif";
+} from "../actions/muthawif";
 
 export default function MuthawifPage() {
   const [view, setView] = useState(0);
@@ -124,9 +124,15 @@ export default function MuthawifPage() {
 
     let query = supabase
       .from("profiles")
-      .select(`id, username, email, phone, is_active, created_at`, {
-        count: "exact",
-      })
+      .select(
+        `
+        id, username, email, phone, is_active, created_at, kloter_id,
+        kloter (name, description)
+      `,
+        {
+          count: "exact",
+        },
+      )
       .eq("role", "muthawif");
 
     if (searchTerm) {
@@ -148,14 +154,16 @@ export default function MuthawifPage() {
     if (data) {
       const formattedData = data.map((profile, index) => ({
         id: `MT-${String(from + index + 1).padStart(3, "0")}`,
-        realId: profile.id, // Menyimpan ID asli dari database untuk keperluan update/delete
+        realId: profile.id,
         name: profile.username || "Unknown",
         initial: profile.username
           ? profile.username.charAt(0).toUpperCase()
           : "?",
         phone: profile.phone || "-",
         email: profile.email || "-",
-        kloter: "Belum Ditentukan",
+        kloter: profile.kloter?.name || "Belum Ditentukan",
+        kloterDate: profile.kloter?.description || "", // Menyimpan tanggal/deskripsi
+        kloterId: profile.kloter_id || "", // Menyimpan ID untuk form edit
         joinDate: new Date(profile.created_at).toLocaleDateString("id-ID", {
           day: "2-digit",
           month: "short",
@@ -318,8 +326,15 @@ export default function MuthawifPage() {
                             </p>
                             <p className="text-xs text-gray-400">{mt.email}</p>
                           </td>
-                          <td className="px-6 py-4 font-semibold text-gray-600">
-                            {mt.kloter}
+                          <td className="px-6 py-4">
+                            <p className="font-semibold text-gray-700">
+                              {mt.kloter}
+                            </p>
+                            {mt.kloterDate && (
+                              <p className="text-[11px] text-gray-400 mt-0.5">
+                                ({mt.kloterDate})
+                              </p>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-gray-500">
                             {mt.joinDate}
@@ -336,7 +351,7 @@ export default function MuthawifPage() {
                                     email: mt.email === "-" ? "" : mt.email,
                                     noTelepon: mt.phone === "-" ? "" : mt.phone,
                                     password: "",
-                                    kloterId: "", // Idealnya dari relasi data kloter
+                                    kloterId: mt.kloterId, // <--- Ambil dari mt.kloterId
                                   });
                                   setShowAddModal(true);
                                 }}

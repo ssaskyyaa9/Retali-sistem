@@ -24,19 +24,14 @@ export async function createMuthawifAction(formData) {
       username: formData.namaLengkap,
       email: formData.email,
       phone: formData.noTelepon,
-      role: "muthawif", // Role disesuaikan
+      role: "muthawif",
+      kloter_id: formData.kloterId || null, // <-- Menggunakan kloter_id langsung
     },
   ]);
 
   if (profileError) {
     await supabaseAdmin.auth.admin.deleteUser(userId);
     return { success: false, error: profileError.message };
-  }
-
-  if (formData.kloterId) {
-    await supabaseAdmin
-      .from("user_kloter")
-      .insert([{ user_id: userId, kloter_id: formData.kloterId }]);
   }
 
   return { success: true };
@@ -55,17 +50,11 @@ export async function updateMuthawifAction(userId, formData) {
       username: formData.namaLengkap,
       email: formData.email,
       phone: formData.noTelepon,
+      kloter_id: formData.kloterId || null, // <-- Menggunakan kloter_id langsung
     })
     .eq("id", userId);
 
   if (profileError) return { success: false, error: profileError.message };
-
-  if (formData.kloterId) {
-    await supabaseAdmin.from("user_kloter").delete().eq("user_id", userId);
-    await supabaseAdmin
-      .from("user_kloter")
-      .insert([{ user_id: userId, kloter_id: formData.kloterId }]);
-  }
 
   return { success: true };
 }

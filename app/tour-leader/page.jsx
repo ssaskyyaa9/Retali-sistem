@@ -138,19 +138,23 @@ export default function TourLeaderPage() {
 
   const fetchTourLeaders = async () => {
     setLoading(true);
-
     const from = (currentPage - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // Buat query dasar
+    // 1. Tambahkan "description" di dalam pemanggilan relasi kloter
     let query = supabase
       .from("profiles")
-      .select(`id, username, email, phone, is_active, created_at`, {
-        count: "exact",
-      })
+      .select(
+        `
+        id, username, email, phone, is_active, created_at, kloter_id,
+        kloter (name, description) 
+      `,
+        {
+          count: "exact",
+        },
+      )
       .eq("role", "tour_leader");
 
-    // Jika ada kata kunci pencarian, gunakan .or() untuk memfilter berdasarkan nama, email, atau telepon
     if (searchTerm) {
       query = query.or(
         `username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
@@ -175,9 +179,14 @@ export default function TourLeaderPage() {
         initial: profile.username
           ? profile.username.charAt(0).toUpperCase()
           : "?",
-        phone: profile.phone || "-", // Diambil dari database[cite: 12]
+        phone: profile.phone || "-",
         email: profile.email || "-",
-        kloter: "Belum Ditentukan",
+
+        // 2. Ambil name dan description dari relasi kloter
+        kloter: profile.kloter?.name || "Belum Ditentukan",
+        kloterDate: profile.kloter?.description || "", // <-- Simpan deskripsi/tanggal di sini
+        kloterId: profile.kloter_id || "",
+
         joinDate: new Date(profile.created_at).toLocaleDateString("id-ID", {
           day: "2-digit",
           month: "short",
@@ -186,6 +195,7 @@ export default function TourLeaderPage() {
         status: profile.is_active ? "Aktif" : "Tidak Aktif",
       }));
 
+      // Sesuaikan dengan state Anda (bisa setTourLeaders atau setMuthawifList)
       setTourLeaders(formattedData);
       setTotalItems(count || 0);
     }
@@ -315,8 +325,16 @@ export default function TourLeaderPage() {
                             </p>
                             <p className="text-xs text-gray-400">{tl.email}</p>
                           </td>
-                          <td className="px-6 py-4 font-semibold text-gray-600">
-                            {tl.kloter}
+                          <td className="px-6 py-4">
+                            <p className="font-semibold text-gray-700">
+                              {tl.kloter}
+                            </p>
+                            {/* Tampilkan tanggal dalam kurung jika kloterDate tersedia */}
+                            {tl.kloterDate && (
+                              <p className="text-[11px] text-gray-400 mt-0.5">
+                                ({tl.kloterDate})
+                              </p>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-gray-500">
                             {tl.joinDate}
@@ -332,7 +350,7 @@ export default function TourLeaderPage() {
                                       tl.name === "Unknown" ? "" : tl.name,
                                     email: tl.email === "-" ? "" : tl.email,
                                     noTelepon: tl.phone === "-" ? "" : tl.phone,
-                                    kloterId: "",
+                                    kloterId: tl.kloterId,
                                   });
                                   setShowAddModal(true);
                                 }}
