@@ -4,7 +4,11 @@ import Topbar from "../components/Topbar";
 import PageHeader from "../components/PageHeader";
 import { FaUserCheck, FaUserPlus } from "react-icons/fa6";
 import { supabase } from "../../lib/supabase";
-// import { createMuthawifAction } from "../actions/muthawif"; // Uncomment jika Anda sudah membuat server action untuk Muthawif
+import {
+  createMuthawifAction,
+  updateMuthawifAction,
+  deleteMuthawifAction,
+} from "..//actions/muthawif";
 
 export default function MuthawifPage() {
   const [view, setView] = useState(0);
@@ -80,23 +84,36 @@ export default function MuthawifPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // LOGIKA SIMPAN DATA (Sesuaikan dengan server action Anda)
-    console.log("Simulasi Data Siap Dikirim:", formData);
+    let result;
+    if (editingId) {
+      result = await updateMuthawifAction(editingId, formData);
+    } else {
+      result = await createMuthawifAction(formData);
+    }
 
-    // Jika menggunakan Server Action:
-    // const result = await createMuthawifAction(formData);
-    // if (!result.success) return alert("Gagal!");
+    if (!result.success) {
+      console.error("Error saving Muthawif:", result.error);
+      alert("Gagal menyimpan data: " + result.error);
+      return;
+    }
 
-    setShowAddModal(false);
-    setFormData({
-      namaLengkap: "",
-      email: "",
-      noTelepon: "",
-      password: "",
-      kloterId: "",
-    });
-    setEditingId(null);
+    closeAddModal();
+    fetchMuthawif();
+  };
 
+  const handleDeleteUser = async () => {
+    if (!userToDelete || !userToDelete.realId) return;
+
+    const result = await deleteMuthawifAction(userToDelete.realId);
+
+    if (!result.success) {
+      console.error("Error deleting Muthawif:", result.error);
+      alert("Gagal menghapus data: " + result.error);
+      return;
+    }
+
+    setDeleteModalOpen(false);
+    setUserToDelete(null);
     fetchMuthawif();
   };
 
@@ -107,14 +124,14 @@ export default function MuthawifPage() {
 
     let query = supabase
       .from("profiles")
-      .select(`id, full_name, email, phone, is_active, created_at`, {
+      .select(`id, username, email, phone, is_active, created_at`, {
         count: "exact",
       })
       .eq("role", "muthawif");
 
     if (searchTerm) {
       query = query.or(
-        `full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
+        `username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
       );
     }
 
@@ -132,9 +149,9 @@ export default function MuthawifPage() {
       const formattedData = data.map((profile, index) => ({
         id: `MT-${String(from + index + 1).padStart(3, "0")}`,
         realId: profile.id, // Menyimpan ID asli dari database untuk keperluan update/delete
-        name: profile.full_name || "Unknown",
-        initial: profile.full_name
-          ? profile.full_name.charAt(0).toUpperCase()
+        name: profile.username || "Unknown",
+        initial: profile.username
+          ? profile.username.charAt(0).toUpperCase()
           : "?",
         phone: profile.phone || "-",
         email: profile.email || "-",
@@ -728,10 +745,7 @@ export default function MuthawifPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                // handleDeleteUser(userToDelete.realId);
-                setDeleteModalOpen(false);
-              }}
+              onClick={handleDeleteUser}
               className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
             >
               Ya, Hapus

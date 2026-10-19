@@ -191,19 +191,19 @@ export default function KloterPage() {
 
           {/* Tabel Daftar Kloter */}
           <div
-            className="animate-fade-in-up rounded-2xl bg-white p-6 shadow-md border border-gray-100"
+            className="animate-fade-in-up rounded-2xl bg-white shadow-md border border-gray-100"
             style={{ animationDelay: "200ms" }}
           >
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="bg-[#1b3167] text-white text-xs font-bold tracking-wide">
-                    <th className="py-3.5 px-5 rounded-l-xl w-16 text-center">
+                <thead className="bg-[#121c2d] text-white text-xs font-bold tracking-wide">
+                  <tr>
+                    <th className="py-5 px-5 rounded-tl-xl w-16 text-center">
                       NO
                     </th>
-                    <th className="py-3.5 px-8">NAMA KLOTER</th>
-                    <th className="py-3.5 px-8">TANGGAL</th>
-                    <th className="py-3.5 px-5 rounded-r-xl text-center">
+                    <th className="py-5 px-8">NAMA KLOTER</th>
+                    <th className="py-5 px-8">TANGGAL</th>
+                    <th className="py-5 px-5 rounded-tr-xl text-center">
                       AKSI
                     </th>
                   </tr>
@@ -310,7 +310,7 @@ export default function KloterPage() {
           }`}
         >
           {/* Modal Header */}
-          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+          <div className="flex items-center justify-between bg-[#121c2d] px-6 py-4 text-white">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
                 <svg
@@ -392,7 +392,7 @@ export default function KloterPage() {
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#121c2d] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
               >
                 <svg
                   className="w-4 h-4 text-amber-400"

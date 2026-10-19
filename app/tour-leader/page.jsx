@@ -5,7 +5,11 @@ import PageHeader from "../components/PageHeader";
 import { FaUserTie, FaUserPlus } from "react-icons/fa6";
 import { IoMdClose } from "react-icons/io";
 import { supabase } from "../../lib/supabase";
-import { createTourLeaderAction } from "../actions/tourLeader";
+import {
+  createTourLeaderAction,
+  updateTourLeaderAction,
+  deleteTourLeaderAction,
+} from "../actions/tourLeader";
 
 export default function TourLeaderPage() {
   const [view, setView] = useState(0);
@@ -82,17 +86,26 @@ export default function TourLeaderPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Call the server action
-    const result = await createTourLeaderAction(formData);
+    let result;
+
+    // Cek apakah ini mode Edit atau mode Tambah
+    if (editingId) {
+      // Mode Edit
+      result = await updateTourLeaderAction(editingId, formData);
+    } else {
+      // Mode Tambah
+      result = await createTourLeaderAction(formData);
+    }
 
     if (!result.success) {
-      console.error("Error inserting Tour Leader:", result.error);
-      alert("Gagal menambahkan data: " + result.error);
+      console.error("Error saving Tour Leader:", result.error);
+      alert("Gagal menyimpan data: " + result.error);
       return;
     }
 
-    // Close modal and reset form on success
+    // Tutup modal dan reset form jika sukses
     setShowAddModal(false);
+    setEditingId(null); // Pastikan reset editingId
     setFormData({
       namaLengkap: "",
       email: "",
@@ -101,7 +114,25 @@ export default function TourLeaderPage() {
       kloterId: "",
     });
 
-    // Refresh the table data
+    // Refresh data tabel
+    fetchTourLeaders();
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete || !userToDelete.realId) return;
+
+    // Panggil action delete menggunakan realId (UUID asli)
+    const result = await deleteTourLeaderAction(userToDelete.realId);
+
+    if (!result.success) {
+      console.error("Error deleting Tour Leader:", result.error);
+      alert("Gagal menghapus data: " + result.error);
+      return;
+    }
+
+    // Tutup modal, reset state, dan refresh tabel
+    setDeleteModalOpen(false);
+    setUserToDelete(null);
     fetchTourLeaders();
   };
 
@@ -114,7 +145,7 @@ export default function TourLeaderPage() {
     // Buat query dasar
     let query = supabase
       .from("profiles")
-      .select(`id, full_name, email, phone, is_active, created_at`, {
+      .select(`id, username, email, phone, is_active, created_at`, {
         count: "exact",
       })
       .eq("role", "tour_leader");
@@ -122,7 +153,7 @@ export default function TourLeaderPage() {
     // Jika ada kata kunci pencarian, gunakan .or() untuk memfilter berdasarkan nama, email, atau telepon
     if (searchTerm) {
       query = query.or(
-        `full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
+        `username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`,
       );
     }
 
@@ -139,9 +170,10 @@ export default function TourLeaderPage() {
     if (data) {
       const formattedData = data.map((profile, index) => ({
         id: `TL-${String(from + index + 1).padStart(3, "0")}`,
-        name: profile.full_name || "Unknown",
-        initial: profile.full_name
-          ? profile.full_name.charAt(0).toUpperCase()
+        realId: profile.id,
+        name: profile.username || "Unknown",
+        initial: profile.username
+          ? profile.username.charAt(0).toUpperCase()
           : "?",
         phone: profile.phone || "-", // Diambil dari database[cite: 12]
         email: profile.email || "-",
@@ -294,7 +326,7 @@ export default function TourLeaderPage() {
                               <button
                                 onClick={() => {
                                   // Logika untuk set data form dan buka modal edit
-                                  setEditingId(tl.id);
+                                  setEditingId(tl.realId);
                                   setFormData({
                                     namaLengkap:
                                       tl.name === "Unknown" ? "" : tl.name,
@@ -502,6 +534,71 @@ export default function TourLeaderPage() {
                       </div>
                     </div>
 
+                    {/* Render Password HANYA saat Create (editingId bernilai null) */}
+                    {!editingId && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                          Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            placeholder="••••••••"
+                            required={!editingId} // Hanya wajib diisi saat mode tambah
+                            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167] pr-10"
+                          />
+                          <button
+                            type="button"
+                            onMouseDown={() => setShowPassword(true)}
+                            onMouseUp={() => setShowPassword(false)}
+                            onMouseLeave={() => setShowPassword(false)}
+                            onTouchStart={() => setShowPassword(true)}
+                            onTouchEnd={() => setShowPassword(false)}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                          >
+                            {showPassword ? (
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                            ) : (
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className="mb-1.5 block text-xs font-bold text-gray-700">
                         Pilih Kloter <span className="text-red-500">*</span>
@@ -638,10 +735,7 @@ export default function TourLeaderPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      // Panggil fungsi handle delete Anda di sini
-                      // handleDeleteUser(userToDelete.id);
-                    }}
+                    onClick={handleDeleteUser}
                     className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
                   >
                     Ya, Hapus

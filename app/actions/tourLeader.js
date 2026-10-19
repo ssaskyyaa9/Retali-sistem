@@ -24,7 +24,7 @@ export async function createTourLeaderAction(formData) {
   const { error: profileError } = await supabaseAdmin.from("profiles").upsert([
     {
       id: userId,
-      full_name: formData.namaLengkap,
+      username: formData.namaLengkap,
       email: formData.email,
       phone: formData.noTelepon,
       role: "tour_leader",
@@ -42,6 +42,55 @@ export async function createTourLeaderAction(formData) {
     await supabaseAdmin
       .from("user_kloter")
       .insert([{ user_id: userId, kloter_id: formData.kloterId }]);
+  }
+
+  return { success: true };
+}
+
+export async function updateTourLeaderAction(userId, formData) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
+
+  // Update tabel profiles
+  const { error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .update({
+      username: formData.namaLengkap,
+      email: formData.email,
+      phone: formData.noTelepon,
+    })
+    .eq("id", userId);
+
+  if (profileError) {
+    return { success: false, error: profileError.message };
+  }
+
+  // Update relasi kloter (opsional, sesuaikan dengan skema Anda)
+  if (formData.kloterId) {
+    // Hapus relasi lama lalu insert yang baru (cara paling aman untuk relasi 1-to-1)
+    await supabaseAdmin.from("user_kloter").delete().eq("user_id", userId);
+    await supabaseAdmin
+      .from("user_kloter")
+      .insert([{ user_id: userId, kloter_id: formData.kloterId }]);
+  }
+
+  return { success: true };
+}
+
+export async function deleteTourLeaderAction(userId) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
+
+  // Menghapus dari auth.users otomatis akan menghapus data di tabel profiles
+  // (jika foreign key diset ON DELETE CASCADE).
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+  if (error) {
+    return { success: false, error: error.message };
   }
 
   return { success: true };
