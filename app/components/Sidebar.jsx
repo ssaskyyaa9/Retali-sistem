@@ -40,22 +40,31 @@ export default function Sidebar() {
       if (user) {
         setUserEmail(user.email);
 
-        const displayName = user.user_metadata?.display_name;
-        if (!displayName) {
-          setShowNamePrompt(true);
-        } else {
-          setUserName(displayName);
-        }
-
-        // Fetch the user's role from the profiles table
+        // 1. Ambil data role dan username dari tabel profiles TERLEBIH DAHULU
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, username")
           .eq("id", user.id)
           .single();
 
-        if (profile?.role) {
-          setUserRole(profile.role);
+        const role = profile?.role || "User";
+        setUserRole(role);
+
+        // 2. Cek apakah ada display_name di metadata auth
+        const authDisplayName = user.user_metadata?.display_name;
+
+        if (authDisplayName) {
+          // Jika sudah punya nama di auth metadata, gunakan itu
+          setUserName(authDisplayName);
+        } else if (role === "admin") {
+          // JIKA ADMIN dan belum punya display_name, tampilkan pop-up wajib isi nama
+          setShowNamePrompt(true);
+        } else if (profile?.username) {
+          // JIKA BUKAN ADMIN (Tour Leader/Muthawif), langsung gunakan nama dari database profiles
+          setUserName(profile.username);
+        } else {
+          // Fallback
+          setUserName("Pengguna");
         }
       }
     }

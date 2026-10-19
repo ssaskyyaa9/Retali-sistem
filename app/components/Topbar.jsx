@@ -68,17 +68,26 @@ export default function Topbar({
 
       if (user) {
         setUserEmail(user.email);
-        setUserName(user.user_metadata?.display_name || "Pengguna");
 
-        // Fetch the role from the profiles table
+        // Fetch both role and username from the profiles table
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, username")
           .eq("id", user.id)
           .single();
 
         if (profile?.role) {
           setUserRole(profile.role);
+        }
+
+        // Set nama berdasarkan prioritas: Auth Metadata -> Profiles Table -> Fallback
+        const authDisplayName = user.user_metadata?.display_name;
+        if (authDisplayName) {
+          setUserName(authDisplayName);
+        } else if (profile?.username) {
+          setUserName(profile.username);
+        } else {
+          setUserName("Pengguna");
         }
       }
     }
@@ -89,17 +98,26 @@ export default function Topbar({
       async (event, session) => {
         if (session?.user) {
           setUserEmail(session.user.email);
-          setUserName(session.user.user_metadata?.display_name || "Pengguna");
 
-          // Fetch the role again if the session changes
+          // Fetch the role and username again if the session changes
           const { data: profile } = await supabase
             .from("profiles")
-            .select("role")
+            .select("role, username")
             .eq("id", session.user.id)
             .single();
 
           if (profile?.role) {
             setUserRole(profile.role);
+          }
+
+          // Gunakan logika prioritas yang sama untuk onAuthStateChange
+          const authDisplayName = session.user.user_metadata?.display_name;
+          if (authDisplayName) {
+            setUserName(authDisplayName);
+          } else if (profile?.username) {
+            setUserName(profile.username);
+          } else {
+            setUserName("Pengguna");
           }
         }
       },
