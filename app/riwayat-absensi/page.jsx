@@ -208,10 +208,9 @@ export default function RiwayatAbsensiPage() {
           <PageHeader
             title="Riwayat Absensi"
             description="Berisi daftar riwayat absensi tour leader, jamaah, dan muthawif yang telah dilakukan."
-            icon={<FaUserClock className="w-[26px] h-[26px] text-[#eab308]" />}
+            icon={<FaUserClock className="w-26px h-26px text-[#eab308]" />}
           />
 
-          {/* TAB NAVIGASI */}
           <div className="border-b border-gray-200 flex gap-8">
             <button
               onClick={() => {
