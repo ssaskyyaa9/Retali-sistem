@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import Topbar from "../components/Topbar";
 
 export default function DashboardPage() {
@@ -94,9 +95,11 @@ export default function DashboardPage() {
         <main className=" p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           {/* 5 Card Statistik dengan Icon & Kotak Tembus Pandang Kuning */}
           <div className=" grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {/* Card 1: Total Scan */}
-            <div
-              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+            
+            {/* Card 1: Total Scan (Route ke /riwayat-scan) */}
+            <Link
+              href="/riwayat-scan"
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
               style={{ animationDelay: "0ms" }}
             >
               <div className="flex justify-between items-start">
@@ -124,11 +127,11 @@ export default function DashboardPage() {
                   Total Scan
                 </p>
               </div>
-            </div>
+            </Link>
 
-            {/* Card 2: Total Tour Leader */}
-            <div
-              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+            <Link
+              href="/tour-leader"
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
               style={{ animationDelay: "200ms" }}
             >
               <div className="flex justify-between items-start">
@@ -150,11 +153,11 @@ export default function DashboardPage() {
                   Total Tour Leader
                 </p>
               </div>
-            </div>
+            </Link>
 
-            {/* Card 3: Total Muthawif */}
-            <div
-              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+            <Link
+              href="/muthawif"
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
               style={{ animationDelay: "400ms" }}
             >
               <div className="flex justify-between items-start">
@@ -180,11 +183,12 @@ export default function DashboardPage() {
                   Total Muthawif
                 </p>
               </div>
-            </div>
+            </Link>
 
-            {/* Card 4: Total Absen Jamaah */}
-            <div
-              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28"
+            {/* Card 4: Total Absen Jamaah (Route ke /riwayat-absensi) */}
+            <Link
+              href="/riwayat-absensi"
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
               style={{ animationDelay: "600ms" }}
             >
               <div className="flex justify-between items-start">
@@ -211,11 +215,12 @@ export default function DashboardPage() {
                   Absen Jamaah
                 </p>
               </div>
-            </div>
+            </Link>
 
-            {/* Card 5: Total Itinerary */}
-            <div
-              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 sm:col-span-2 md:col-span-1"
+            {/* Card 5: Total Itinerary (Route ke /itinerary) */}
+            <Link
+              href="/itinerary"
+              className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 sm:col-span-2 md:col-span-1 cursor-pointer"
               style={{ animationDelay: "800ms" }}
             >
               <div className="flex justify-between items-start">
@@ -237,7 +242,7 @@ export default function DashboardPage() {
                   Total Itinerary
                 </p>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Status Operasional & Aktivitas Terbaru */}

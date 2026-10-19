@@ -5,7 +5,7 @@ import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { TbPlaneDepartureFilled } from "react-icons/tb";
-import { supabase } from "@/lib/supabase"; // Sesuaikan path file supabase client kamu
+import { supabase } from "@/lib/supabase"; 
 
 const initialForm = {
   name: "",
@@ -182,7 +182,7 @@ export default function KloterPage() {
             title="Daftar Kloter"
             description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
             icon={
-              <TbPlaneDepartureFilled className="w-[26px] h-[26px] text-[#eab308]" />
+              <TbPlaneDepartureFilled className="w-26px h-26px text-[#eab308]" />
             }
             buttonText="Tambah Kloter"
             buttonIcon={<PlusIcon />}
