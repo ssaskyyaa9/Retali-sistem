@@ -94,3 +94,21 @@ body {
   opacity: 0;
   animation: fadeInLeft 0.7s ease-in-out forwards;
 }
+
+/* Memaksa semua teks di dalam React Quill berwarna hitam pekat */
+.ql-editor,
+.ql-editor p,
+.ql-editor span,
+.ql-editor strong,
+.ql-editor em,
+.ql-editor u,
+.ql-editor li {
+  color: #0f172a !important; /* Hitam gelap (slate-900) */
+  font-size: 0.875rem !important; /* 14px */
+}
+
+/* Memastikan warna placeholder tetap abu-abu agar terlihat bedanya */
+.ql-editor.ql-blank::before {
+  color: #9ca3af !important; /* Gray-400 */
+  font-style: normal !important;
+}
