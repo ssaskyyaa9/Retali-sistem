@@ -393,13 +393,6 @@ export default function RiwayatAbsensiPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="bg-[#121c2d] hover:bg-[#1f2d47] text-white px-6 py-3 rounded-lg text-[14px] font-bold transition-colors shadow-xs flex items-center gap-1.5"
-                  >
-                    <FiFilter className="w-3.5 h-3.5" />
-                    Filter
-                  </button>
 
                   <button
                     type="button"
