@@ -7,14 +7,14 @@ export default function PageHeader({
   buttonText,
   buttonIcon,
   buttonOnClick,
-  buttonBgColor = "bg-[#1a2332] hover:bg-[#253247]",
+  buttonBgColor = "bg-[#1b3167] hover:bg-[#253247]",
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
       {/* KIRI: Icon, Judul, Deskripsi */}
       <div className="animate-fade-in-left flex items-center gap-4">
         {icon && (
-          <div className="bg-[#1a2332] w-[56px] h-[56px] rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
+          <div className="bg-[#1b3167] w-[56px] h-[56px] rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
             {icon}
           </div>
         )}

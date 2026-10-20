@@ -5,7 +5,7 @@ import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { TbPlaneDepartureFilled } from "react-icons/tb";
-import { supabase } from "@/lib/supabase"; 
+import { supabase } from "@/lib/supabase";
 
 const initialForm = {
   name: "",
@@ -182,7 +182,7 @@ export default function KloterPage() {
             title="Daftar Kloter"
             description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
             icon={
-              <TbPlaneDepartureFilled className="w-26px h-26px text-[#eab308]" />
+              <TbPlaneDepartureFilled className="w-[26px] h-[26px] text-[#eab308]" />
             }
             buttonText="Tambah Kloter"
             buttonIcon={<PlusIcon />}
@@ -196,7 +196,7 @@ export default function KloterPage() {
           >
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full text-left border-collapse text-sm">
-                <thead className="bg-[#121c2d] text-white text-xs font-bold tracking-wide">
+                <thead className="bg-[#1b3167] text-white text-xs font-bold tracking-wide">
                   <tr>
                     <th className="py-5 px-5 rounded-tl-xl w-16 text-center">
                       NO
@@ -267,7 +267,7 @@ export default function KloterPage() {
                             </button>
                             <button
                               onClick={() => confirmDelete(kloter)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200/80 bg-red-50/60 px-3.5 py-1.5 text-xs font-bold text-red-600 shadow-2xs hover:bg-red-100 transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200/80 bg-rose-50/60 px-3.5 py-1.5 text-xs font-bold text-rose-600 shadow-2xs hover:bg-rose-100 transition-colors"
                             >
                               <svg
                                 className="w-3.5 h-3.5 text-red-500"
@@ -305,27 +305,15 @@ export default function KloterPage() {
         }`}
       >
         <div
-          className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 transition-all duration-300 ease-in-out ${
+          className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl  transition-all duration-300 ease-in-out ${
             view === 1 ? "scale-100 opacity-100" : "scale-95 opacity-0"
           }`}
         >
           {/* Modal Header */}
-          <div className="flex items-center justify-between bg-[#121c2d] px-6 py-4 text-white">
+          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                <svg
-                  className="w-5 h-5 text-amber-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 12l10 5 10-5" />
-                  <path d="M2 17l10 5 10-5" />
-                </svg>
+                <TbPlaneDepartureFilled className="text-[#EAB308]" />
               </div>
               <h2 className="text-sm font-bold">
                 {editingId ? "Edit Kloter" : "Tambah Kloter"}
@@ -392,7 +380,7 @@ export default function KloterPage() {
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#121c2d] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
               >
                 <svg
                   className="w-4 h-4 text-amber-400"
@@ -425,7 +413,7 @@ export default function KloterPage() {
         }`}
       >
         <div
-          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 transition-all duration-300 ease-in-out ${
+          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl  transition-all duration-300 ease-in-out ${
             deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
           }`}
         >
@@ -433,19 +421,7 @@ export default function KloterPage() {
           <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                <svg
-                  className="w-5 h-5 text-amber-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 12l10 5 10-5" />
-                  <path d="M2 17l10 5 10-5" />
-                </svg>
+                <TbPlaneDepartureFilled className="text-[#EAB308]" />
               </div>
               <h2 className="text-sm font-bold">Hapus Kloter</h2>
             </div>
@@ -480,7 +456,7 @@ export default function KloterPage() {
               type="button"
               value="Hapus"
               onClick={handleDelete}
-              className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
+              className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
             >
               Ya, Hapus
             </button>

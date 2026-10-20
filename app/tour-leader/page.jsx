@@ -260,7 +260,7 @@ export default function TourLeaderPage() {
 
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="bg-[#1a2538] hover:bg-[#2c3e5d] transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
+                  className="bg-[#1b3167] hover:bg-[#1a2538] transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
                 >
                   <FaUserPlus className="w-4 h-4" />
                   Tambah Tour Leader
@@ -377,7 +377,7 @@ export default function TourLeaderPage() {
                                   setUserToDelete(tl);
                                   setDeleteModalOpen(true);
                                 }}
-                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                 title="Hapus"
                               >
                                 <svg
@@ -433,7 +433,7 @@ export default function TourLeaderPage() {
                     <button
                       key={i + 1}
                       onClick={() => setCurrentPage(i + 1)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium ${currentPage === i + 1 ? "bg-[#1a2538] text-white" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium ${currentPage === i + 1 ? "bg-[#1b3167] text-white" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
                     >
                       {i + 1}
                     </button>
@@ -469,7 +469,7 @@ export default function TourLeaderPage() {
               }`}
             >
               <div
-                className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 transition-all duration-300 ease-in-out ${
+                className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
                   showAddModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
                 }`}
               >
@@ -700,7 +700,7 @@ export default function TourLeaderPage() {
               }`}
             >
               <div
-                className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-150 ${
+                className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl animate-in fade-in zoom-in duration-150 ${
                   deleteModalOpen
                     ? "scale-100 opacity-100"
                     : "scale-95 opacity-0"
@@ -754,7 +754,7 @@ export default function TourLeaderPage() {
                   <button
                     type="button"
                     onClick={handleDeleteUser}
-                    className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
+                    className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
                   >
                     Ya, Hapus
                   </button>

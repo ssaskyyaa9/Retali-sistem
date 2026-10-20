@@ -81,6 +81,74 @@ export default function MuthawifPage() {
     setCurrentPage(1); // Reset ke halaman pertama saat mencari
   };
 
+  const handleOpenEdit = async (task) => {
+    setEditingTaskId(task.id);
+    setTaskForm({
+      title: task.title || "",
+      opensAt: task.opens_at ? task.opens_at.slice(0, 16) : "",
+      closesAt: task.closes_at ? task.closes_at.slice(0, 16) : "",
+    });
+    setSearchQuery("");
+    setSelectedKloterFilter("all");
+
+    // 1. Load Soal dari DB
+    const { data: qData } = await supabase
+      .from("checklist_questions")
+      .select("*")
+      .eq("task_id", task.id)
+      .order("sort_order", { ascending: true });
+
+    if (qData && qData.length > 0) {
+      setQuestions(
+        qData.map((q) => ({
+          text: q.question_text || q.text || "",
+        })),
+      );
+    } else {
+      setQuestions([{ text: "" }]);
+    }
+
+    // 2. Load Penerima Tugas dari checklist_assignments
+    const rawAssignments = await fetchTaskAssignments(task.id);
+    const assignedIds = rawAssignments.map((a) => a.recipient_id);
+    setSelectedRecipients(assignedIds);
+
+    // 3. Ambil ID Berdasarkan Role
+    const allTLIds = tourLeaders
+      .filter((p) => p.role === "tour_leader")
+      .map((p) => p.id);
+    const allMuthawifIds = tourLeaders
+      .filter((p) => p.role === "muthawif")
+      .map((p) => p.id);
+
+    const isOnlyMuthawif =
+      allMuthawifIds.length > 0 &&
+      assignedIds.length === allMuthawifIds.length &&
+      allMuthawifIds.every((id) => assignedIds.includes(id));
+
+    const isOnlyTL =
+      allTLIds.length > 0 &&
+      assignedIds.length === allTLIds.length &&
+      allTLIds.every((id) => assignedIds.includes(id));
+
+    const isAllUsers =
+      tourLeaders.length > 0 &&
+      assignedIds.length === tourLeaders.length &&
+      tourLeaders.every((p) => assignedIds.includes(p.id));
+
+    if (isOnlyMuthawif) {
+      setSelectedTarget("all_muthawif");
+    } else if (isOnlyTL) {
+      setSelectedTarget("all_tour_leader");
+    } else if (isAllUsers) {
+      setSelectedTarget("all_petugas");
+    } else {
+      setSelectedTarget("custom");
+    }
+
+    setView(1);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -261,7 +329,7 @@ export default function MuthawifPage() {
                     });
                     setShowAddModal(true);
                   }}
-                  className="bg-[#1a2538] hover:bg-[#2c3e5d] transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
+                  className="bg-[#1b3167] hover:bg-[#1a2538] transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
                 >
                   <FaUserPlus className="w-4 h-4" />
                   Tambah Muthawif
@@ -379,7 +447,7 @@ export default function MuthawifPage() {
                                   setUserToDelete(mt);
                                   setDeleteModalOpen(true);
                                 }}
-                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                 title="Hapus"
                               >
                                 <svg
@@ -435,7 +503,7 @@ export default function MuthawifPage() {
                     <button
                       key={i + 1}
                       onClick={() => setCurrentPage(i + 1)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium ${currentPage === i + 1 ? "bg-[#1a2538] text-white" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium ${currentPage === i + 1 ? "bg-[#1b3167] text-white" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
                     >
                       {i + 1}
                     </button>
@@ -475,7 +543,7 @@ export default function MuthawifPage() {
         }`}
       >
         <div
-          className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 transition-all duration-300 ease-in-out ${
+          className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
             showAddModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
           }`}
         >
@@ -557,73 +625,70 @@ export default function MuthawifPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                  Password{" "}
-                  {editingId && (
-                    <span className="text-gray-400 font-normal">
-                      (Kosongkan jika tidak diubah)
-                    </span>
-                  )}{" "}
-                  {!editingId && <span className="text-red-500">*</span>}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="••••••••"
-                    required={!editingId}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167] pr-10"
-                  />
-                  <button
-                    type="button"
-                    onMouseDown={() => setShowPassword(true)}
-                    onMouseUp={() => setShowPassword(false)}
-                    onMouseLeave={() => setShowPassword(false)}
-                    onTouchStart={() => setShowPassword(true)}
-                    onTouchEnd={() => setShowPassword(false)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  >
-                    {showPassword ? (
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        />
-                      </svg>
-                    )}
-                  </button>
+              {/* Render Password HANYA saat Create (editingId bernilai null) */}
+              {!editingId && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="••••••••"
+                      required={!editingId} // Hanya wajib diisi saat mode tambah
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167] pr-10"
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      onTouchStart={() => setShowPassword(true)}
+                      onTouchEnd={() => setShowPassword(false)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    >
+                      {showPassword ? (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700">
@@ -666,7 +731,7 @@ export default function MuthawifPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4">
+            <div className="flex items-center justify-end gap-3 bg-gray-50/70 px-6 py-4">
               <button
                 type="button"
                 onClick={closeAddModal}
@@ -709,12 +774,12 @@ export default function MuthawifPage() {
         }`}
       >
         <div
-          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl border border-gray-100 transition-all duration-300 ease-in-out ${
+          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
             deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
           }`}
         >
           {/* Modal Header */}
-          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+          <div className="flex items-center justify-between bg-[#1B3167] px-6 py-4 text-white">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
                 <svg
@@ -761,7 +826,7 @@ export default function MuthawifPage() {
             <button
               type="button"
               onClick={handleDeleteUser}
-              className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-red-700 transition-colors"
+              className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
             >
               Ya, Hapus
             </button>
