@@ -9,7 +9,7 @@ const supabase = createClient(
 export async function createCeklisAction(
   taskData,
   questionsData,
-  recipientIds,
+  recipients, // Diubah namanya agar lebih merepresentasikan array of objects
 ) {
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -49,10 +49,12 @@ export async function createCeklisAction(
         throw new Error("Gagal menyimpan soal: " + questionError.message);
     }
 
-    if (recipientIds && recipientIds.length > 0) {
-      const assignmentsToInsert = recipientIds.map((recipientId) => ({
+    if (recipients && recipients.length > 0) {
+      // PERBAIKAN: Mapping dari object ke struktur database
+      const assignmentsToInsert = recipients.map((user) => ({
         task_id: taskId,
-        recipient_id: recipientId,
+        recipient_id: user.recipient_id,
+        status: user.status || "assigned",
       }));
 
       const { error: assignError } = await supabaseAdmin
@@ -93,8 +95,8 @@ export const updateCeklisAction = async (
 
     const questionsData = questions.map((q, idx) => ({
       task_id: taskId,
-      question_text: q.text, // <-- PERBAIKAN: Gunakan q.text, karena dari frontend dikirim sebagai 'text'
-      sort_order: idx + 1, // (Tambahkan ini agar urutannya sama seperti fungsi create)
+      question_text: q.text,
+      sort_order: idx + 1,
     }));
 
     const { error: qError } = await supabase
@@ -103,20 +105,21 @@ export const updateCeklisAction = async (
 
     if (qError) throw new Error("Gagal update soal: " + qError.message);
 
-    await supabase.from("checklist_questions").insert(questionsData);
-    // A. Hapus semua penerima lama untuk tugas ini
+    // PERBAIKAN: Menghapus baris duplikat await supabase.from("checklist_questions").insert(questionsData);
+
+    // 3. Update Penerima Tugas
     await supabase.from("checklist_assignments").delete().eq("task_id", taskId);
 
-    // B. Masukkan penerima yang baru dicentang
-    const assignmentsData = recipients.map((recipientId) => ({
+    // PERBAIKAN: Hanya gunakan blok ini untuk mapping assignment, membuang blok lama yang error
+    const assignmentPayload = recipients.map((user) => ({
       task_id: taskId,
-      recipient_id: recipientId,
-      status: "pending", // Reset status ke pending jika tugas diubah
+      recipient_id: user.recipient_id,
+      status: user.status,
     }));
 
     const { error: assignError } = await supabase
       .from("checklist_assignments")
-      .insert(assignmentsData);
+      .insert(assignmentPayload);
 
     if (assignError)
       throw new Error("Gagal update penerima: " + assignError.message);

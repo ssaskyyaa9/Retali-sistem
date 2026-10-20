@@ -20,6 +20,10 @@ import {
   FaRegCalendarAlt,
   FaRegQuestionCircle,
   FaRegCalendarTimes,
+  FaHistory,
+  FaFileAlt,
+  FaArrowRight,
+  FaPlus,
 } from "react-icons/fa";
 import { FaUserGraduate } from "react-icons/fa6";
 import { PlusIcon } from "@/app/components/CustomIcons";
@@ -28,7 +32,9 @@ import { createCeklisAction, updateCeklisAction } from "../actions/ceklis";
 import { supabase } from "@/lib/supabase";
 
 export default function TugasCeklisPage() {
-  const [view, setView] = useState(0); // 0: List, 1: Form (Tambah/Edit), 2: Hasil Tugas
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
+  const [view, setView] = useState(0); // 0: List, 1: Form (Tambah/Edit), 2: Hasil Tugas, 3: Pilihan Buat Baru / Riwayat
   const [loading, setLoading] = useState(false);
   const [tourLeaders, setTourLeaders] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -38,7 +44,7 @@ export default function TugasCeklisPage() {
   const [selectedTaskResult, setSelectedTaskResult] = useState(null);
   const [assignmentsData, setAssignmentsData] = useState([]);
 
-  // State Form
+  // State Form & Pengingat Status Lama
   const [selectedTarget, setSelectedTarget] = useState("all_tour_leader");
   const [taskForm, setTaskForm] = useState({
     title: "",
@@ -47,13 +53,44 @@ export default function TugasCeklisPage() {
   });
   const [questions, setQuestions] = useState([{ text: "" }]);
   const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [originalAssignments, setOriginalAssignments] = useState([]);
 
-  // State Pop-up Modal Detail Tugas
+  // State Pop-up Modal Detail Tugas & Status Penyelesaian
   const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
+  const [isTaskCompleted, setIsTaskCompleted] = useState(false);
+  const [markingDone, setMarkingDone] = useState(false);
 
   // State "Pengguna Tertentu" Tambahan
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKloterFilter, setSelectedKloterFilter] = useState("all");
+
+  // State Toggle Riwayat
+  const [showHistoryList, setShowHistoryList] = useState(false);
+
+  // 1. Fetch Logged In User
+  useEffect(() => {
+    const fetchAuth = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        setCurrentUser(profile);
+      }
+      setIsUserLoaded(true);
+    };
+    fetchAuth();
+  }, []);
+
+  // Periksa apakah user login adalah admin (bukan TL / Muthawif)
+  const isAdmin =
+    currentUser &&
+    currentUser.role !== "tour_leader" &&
+    currentUser.role !== "muthawif";
 
   // Fetch Data Petugas
   useEffect(() => {
@@ -75,18 +112,65 @@ export default function TugasCeklisPage() {
     fetchData();
   }, []);
 
-  // Fetch Data Daftar Tugas ketika di halaman depan (view === 0)
+  // Fetch Data Daftar Tugas
   useEffect(() => {
-    if (view === 0) {
+    if (view === 0 && isUserLoaded) {
       fetchTasks();
     }
-  }, [view]);
+  }, [view, isUserLoaded, currentUser]);
 
   const fetchTasks = async () => {
-    const { data: tasksData, error: taskError } = await supabase
-      .from("checklist_tasks")
-      .select("id, title, opens_at, closes_at")
-      .order("created_at", { ascending: false });
+    let tasksData = [];
+    let taskError = null;
+
+    if (isAdmin) {
+      // Jika Admin, tarik semua tugas
+      const { data, error } = await supabase
+        .from("checklist_tasks")
+        .select("id, title, opens_at, closes_at, created_at")
+        .order("created_at", { ascending: false });
+
+      tasksData = data;
+      taskError = error;
+    } else {
+      // Jika Tour Leader / Muthawif, tarik tugas dan status dari assignment
+      const { data, error } = await supabase
+        .from("checklist_assignments")
+        .select(
+          `
+          status,
+          checklist_tasks (
+            id, title, opens_at, closes_at, created_at
+          )
+        `,
+        )
+        .eq("recipient_id", currentUser?.id);
+
+      taskError = error;
+
+      if (data) {
+        // Ekstrak data dan masukkan personal_status
+        const extractedTasks = data
+          .map((a) => {
+            const t = Array.isArray(a.checklist_tasks)
+              ? a.checklist_tasks[0]
+              : a.checklist_tasks;
+            if (t) {
+              t.personal_status = a.status; // Simpan status personal user ke objek task
+            }
+            return t;
+          })
+          .filter((t) => t != null);
+
+        const uniqueTasksMap = new Map();
+        extractedTasks.forEach((t) => uniqueTasksMap.set(t.id, t));
+        tasksData = Array.from(uniqueTasksMap.values());
+
+        tasksData.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at),
+        );
+      }
+    }
 
     if (taskError) {
       console.error("Gagal menarik data tugas:", taskError.message);
@@ -136,12 +220,66 @@ export default function TugasCeklisPage() {
     return data || [];
   };
 
-  // Handler Buka Form Tambah Baru
-  const handleOpenCreate = () => {
+  // Handler Buka Detail & Cek Status Penyelesaian User
+  const handleOpenDetail = async (task) => {
+    setSelectedTaskDetail(task);
+
+    if (!isAdmin && currentUser) {
+      const { data } = await supabase
+        .from("checklist_assignments")
+        .select("status")
+        .eq("task_id", task.id)
+        .eq("recipient_id", currentUser.id)
+        .maybeSingle();
+
+      setIsTaskCompleted(
+        data?.status === "completed" || data?.status === "submitted",
+      );
+    }
+  };
+
+  // Handler Tombol Tandai Selesai (Khusus TL / Muthawif)
+  const handleMarkDone = async () => {
+    if (!currentUser) return;
+    setMarkingDone(true);
+
+    const { error } = await supabase
+      .from("checklist_assignments")
+      .update({ status: "completed" })
+      .eq("task_id", selectedTaskDetail.id)
+      .eq("recipient_id", currentUser.id);
+
+    if (error) {
+      alert("Gagal menandai tugas selesai: " + error.message);
+    } else {
+      setIsTaskCompleted(true);
+      alert("Tugas berhasil ditandai selesai!");
+
+      // Update UI List seketika menjadi hijau tanpa harus refresh halaman
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === selectedTaskDetail.id
+            ? { ...t, personal_status: "completed" }
+            : t,
+        ),
+      );
+    }
+    setMarkingDone(false);
+  };
+
+  // Handler Buka Opsi Pembuatan Tugas
+  const handleOpenCreateOptions = () => {
+    setShowHistoryList(false);
+    setView(3);
+  };
+
+  // Handler Buka Form Tugas Kosong Baru
+  const handleCreateNew = () => {
     setEditingTaskId(null);
     setTaskForm({ title: "", opensAt: "", closesAt: "" });
     setQuestions([{ text: "" }]);
     setSelectedTarget("all_tour_leader");
+    setOriginalAssignments([]);
     const defaultTL = tourLeaders
       .filter((p) => p.role === "tour_leader")
       .map((p) => p.id);
@@ -151,17 +289,18 @@ export default function TugasCeklisPage() {
     setView(1);
   };
 
-  const handleOpenEdit = async (task) => {
-    setEditingTaskId(task.id);
+  // Handler Load Tugas dari Riwayat
+  const handleLoadFromHistory = async (task) => {
+    setEditingTaskId(null);
     setTaskForm({
       title: task.title || "",
-      opensAt: task.opens_at ? task.opens_at.slice(0, 16) : "",
-      closesAt: task.closes_at ? task.closes_at.slice(0, 16) : "",
+      opensAt: "",
+      closesAt: "",
     });
     setSearchQuery("");
     setSelectedKloterFilter("all");
+    setOriginalAssignments([]);
 
-    // 1. Load Soal dari DB
     const { data: qData } = await supabase
       .from("checklist_questions")
       .select("*")
@@ -178,12 +317,77 @@ export default function TugasCeklisPage() {
       setQuestions([{ text: "" }]);
     }
 
-    // 2. Load Penerima Tugas dari checklist_assignments
     const rawAssignments = await fetchTaskAssignments(task.id);
     const assignedIds = rawAssignments.map((a) => a.recipient_id);
     setSelectedRecipients(assignedIds);
 
-    // 3. Ambil ID Berdasarkan Role
+    const allTLIds = tourLeaders
+      .filter((p) => p.role === "tour_leader")
+      .map((p) => p.id);
+    const allMuthawifIds = tourLeaders
+      .filter((p) => p.role === "muthawif")
+      .map((p) => p.id);
+
+    const isOnlyMuthawif =
+      allMuthawifIds.length > 0 &&
+      assignedIds.length === allMuthawifIds.length &&
+      allMuthawifIds.every((id) => assignedIds.includes(id));
+
+    const isOnlyTL =
+      allTLIds.length > 0 &&
+      assignedIds.length === allTLIds.length &&
+      allTLIds.every((id) => assignedIds.includes(id));
+
+    const isAllUsers =
+      tourLeaders.length > 0 &&
+      assignedIds.length === tourLeaders.length &&
+      tourLeaders.every((p) => assignedIds.includes(p.id));
+
+    if (isOnlyMuthawif) {
+      setSelectedTarget("all_muthawif");
+    } else if (isOnlyTL) {
+      setSelectedTarget("all_tour_leader");
+    } else if (isAllUsers) {
+      setSelectedTarget("all_petugas");
+    } else {
+      setSelectedTarget("custom");
+    }
+
+    setView(1);
+  };
+
+  // Handler Buka Mode Edit
+  const handleOpenEdit = async (task) => {
+    setEditingTaskId(task.id);
+    setTaskForm({
+      title: task.title || "",
+      opensAt: task.opens_at ? task.opens_at.slice(0, 16) : "",
+      closesAt: task.closes_at ? task.closes_at.slice(0, 16) : "",
+    });
+    setSearchQuery("");
+    setSelectedKloterFilter("all");
+
+    const { data: qData } = await supabase
+      .from("checklist_questions")
+      .select("*")
+      .eq("task_id", task.id)
+      .order("sort_order", { ascending: true });
+
+    if (qData && qData.length > 0) {
+      setQuestions(
+        qData.map((q) => ({
+          text: q.question_text || q.text || "",
+        })),
+      );
+    } else {
+      setQuestions([{ text: "" }]);
+    }
+
+    const rawAssignments = await fetchTaskAssignments(task.id);
+    setOriginalAssignments(rawAssignments);
+    const assignedIds = rawAssignments.map((a) => a.recipient_id);
+    setSelectedRecipients(assignedIds);
+
     const allTLIds = tourLeaders
       .filter((p) => p.role === "tour_leader")
       .map((p) => p.id);
@@ -286,7 +490,8 @@ export default function TugasCeklisPage() {
     setQuestions(newQuestions);
   };
 
-  const getTaskStatusInfo = (opensAt, closesAt) => {
+  // FUNGSI INI DITAMBAHKAN PARAMETER isDone
+  const getTaskStatusInfo = (opensAt, closesAt, isDone = false) => {
     const now = new Date().getTime();
     const openTime = opensAt ? new Date(opensAt).getTime() : 0;
     const closeTime = closesAt ? new Date(closesAt).getTime() : 0;
@@ -299,6 +504,16 @@ export default function TugasCeklisPage() {
         accentBorder: "border-l-4 border-l-slate-300",
       };
     } else if (now >= openTime && now <= closeTime) {
+      // Jika Sedang Dibuka tapi SUDAH SELESAI, override warna ke Hijau
+      if (isDone) {
+        return {
+          label: "Sedang dibuka",
+          badgeBg:
+            "bg-emerald-50 text-emerald-700 border border-emerald-200/80",
+          dotBg: "bg-emerald-500",
+          accentBorder: "border-l-4 border-l-emerald-500",
+        };
+      }
       return {
         label: "Sedang dibuka",
         badgeBg: "bg-amber-50 text-amber-700 border border-amber-200/80",
@@ -306,6 +521,15 @@ export default function TugasCeklisPage() {
         accentBorder: "border-l-4 border-l-[#eab308]",
       };
     } else {
+      if (isDone) {
+        return {
+          label: "Sudah ditutup",
+          badgeBg:
+            "bg-emerald-50 text-emerald-700 border border-emerald-200/60",
+          dotBg: "bg-emerald-500",
+          accentBorder: "border-l-4 border-l-emerald-500",
+        };
+      }
       return {
         label: "Sudah ditutup",
         badgeBg: "bg-slate-100 text-slate-500 border border-slate-200/60",
@@ -364,12 +588,22 @@ export default function TugasCeklisPage() {
       return;
     }
 
+    const recipientsPayload = selectedRecipients.map((id) => {
+      const existingAssignment = originalAssignments.find(
+        (a) => a.recipient_id === id,
+      );
+      return {
+        recipient_id: id,
+        status: existingAssignment ? existingAssignment.status : "assigned",
+      };
+    });
+
     if (editingTaskId) {
       const result = await updateCeklisAction(
         editingTaskId,
         taskForm,
         validQuestions,
-        selectedRecipients,
+        recipientsPayload,
       );
 
       if (!result.success) {
@@ -383,7 +617,7 @@ export default function TugasCeklisPage() {
       const result = await createCeklisAction(
         taskForm,
         validQuestions,
-        selectedRecipients,
+        recipientsPayload,
       );
 
       if (!result.success) {
@@ -397,6 +631,7 @@ export default function TugasCeklisPage() {
 
     setTaskForm({ title: "", opensAt: "", closesAt: "" });
     setQuestions([{ text: "" }]);
+    setOriginalAssignments([]);
     setEditingTaskId(null);
     setLoading(false);
     setView(0);
@@ -461,24 +696,24 @@ export default function TugasCeklisPage() {
 
   const totalAssigned = assignmentsData.length;
   const totalSelesai = assignmentsData.filter(
-    (a) =>
-      a.status === "completed" ||
-      a.status === "submitted" ||
-      a.status === "assigned",
+    (a) => a.status === "completed" || a.status === "submitted",
   ).length;
 
   const tlSelesai = assignedTourLeaders.filter(
-    (p) =>
-      p.status === "completed" ||
-      p.status === "submitted" ||
-      p.status === "assigned",
+    (p) => p.status === "completed" || p.status === "submitted",
   ).length;
+
   const muthawifSelesai = assignedMuthawif.filter(
-    (p) =>
-      p.status === "completed" ||
-      p.status === "submitted" ||
-      p.status === "assigned",
+    (p) => p.status === "completed" || p.status === "submitted",
   ).length;
+
+  if (!isUserLoaded) {
+    return (
+      <div className="w-full bg-[#f8fafc] h-screen flex items-center justify-center">
+        <p className="text-slate-500 font-bold">Memuat...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col relative font-sans">
@@ -496,21 +731,27 @@ export default function TugasCeklisPage() {
               icon={
                 <FaClipboardCheck className="w-[26px] h-[26px] text-[#eab308]" />
               }
-              buttonText="Tambah Tugas Ceklis"
-              buttonIcon={<PlusIcon />}
-              buttonOnClick={handleOpenCreate}
+              buttonText={isAdmin ? "Tambah Tugas Ceklis" : undefined}
+              buttonIcon={isAdmin ? <PlusIcon /> : undefined}
+              buttonOnClick={isAdmin ? handleOpenCreateOptions : undefined}
             />
 
             <div className="mt-8 space-y-4">
               {tasks.length === 0 ? (
                 <div className="text-gray-500 text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
-                  Belum ada tugas yang dibuat.
+                  Belum ada tugas yang diberikan.
                 </div>
               ) : (
                 tasks.map((task) => {
+                  // Cek apakah user telah menandai tugas sebagai selesai
+                  const isDone =
+                    !isAdmin &&
+                    (task.personal_status === "completed" ||
+                      task.personal_status === "submitted");
                   const statusInfo = getTaskStatusInfo(
                     task.opens_at,
                     task.closes_at,
+                    isDone,
                   );
 
                   return (
@@ -523,6 +764,8 @@ export default function TugasCeklisPage() {
                           <h3 className="text-base font-bold text-gray-900 tracking-tight">
                             {task.title}
                           </h3>
+
+                          {/* Lencana Status Waktu (Berubah Hijau jika Selesai) */}
                           <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.badgeBg}`}
                           >
@@ -531,6 +774,24 @@ export default function TugasCeklisPage() {
                             ></span>
                             {statusInfo.label}
                           </span>
+
+                          {/* INDIKATOR STATUS KHUSUS UNTUK TL/MUTHAWIF */}
+                          {!isAdmin && (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                                isDone
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : "bg-slate-100 text-slate-500 border border-slate-200"
+                              }`}
+                            >
+                              {isDone ? (
+                                <FaCheckCircle className="text-emerald-500" />
+                              ) : (
+                                <FaClock className="text-slate-400" />
+                              )}
+                              {isDone ? "Sudah dikerjakan" : "Belum dikerjakan"}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 text-xs font-medium text-slate-500 flex-wrap">
@@ -553,30 +814,35 @@ export default function TugasCeklisPage() {
 
                       <div className="flex gap-2 items-center flex-wrap justify-end">
                         <button
-                          onClick={() => setSelectedTaskDetail(task)}
+                          onClick={() => handleOpenDetail(task)}
                           className="px-3.5 py-2 text-xs font-bold bg-slate-50 text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-100 flex items-center gap-1.5 transition-colors"
                         >
                           <FaEye /> Detail Soal
                         </button>
-                        <button
-                          onClick={() => handleOpenEdit(task)}
-                          className="px-3.5 py-2 text-xs font-bold bg-white text-[#111c2e] border border-[#111c2e]/20 rounded-xl hover:bg-[#111c2e]/5 flex items-center gap-1.5 transition-colors"
-                        >
-                          <FaPen className="w-3 h-3 text-[#eab308]" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleOpenResult(task)}
-                          className="px-3.5 py-2 text-xs font-bold bg-[#1B3167] text-white rounded-xl hover:bg-[#1e2e46] flex items-center gap-1.5 transition-colors"
-                        >
-                          <FaChartBar className="w-3 h-3 text-[#facc15]" />{" "}
-                          Hasil
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="px-3.5 py-2 text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100/50 flex items-center gap-1.5 transition-colors"
-                        >
-                          <FaTrash className="w-3 h-3" /> Hapus
-                        </button>
+
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => handleOpenEdit(task)}
+                              className="px-3.5 py-2 text-xs font-bold bg-white text-[#111c2e] border border-[#111c2e]/20 rounded-xl hover:bg-[#111c2e]/5 flex items-center gap-1.5 transition-colors"
+                            >
+                              <FaPen className="w-3 h-3 text-[#eab308]" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleOpenResult(task)}
+                              className="px-3.5 py-2 text-xs font-bold bg-[#1B3167] text-white rounded-xl hover:bg-[#1e2e46] flex items-center gap-1.5 transition-colors"
+                            >
+                              <FaChartBar className="w-3 h-3 text-[#facc15]" />{" "}
+                              Hasil
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="px-3.5 py-2 text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100/50 flex items-center gap-1.5 transition-colors"
+                            >
+                              <FaTrash className="w-3 h-3" /> Hapus
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -586,8 +852,105 @@ export default function TugasCeklisPage() {
           </div>
         )}
 
-        {/* VIEW 1: FORM VIEW (Tambah / Edit) - DENGAN CONTAINER IKON */}
-        {view === 1 && (
+        {/* VIEW 3: OPSI PEMBUATAN TUGAS (BARU / RIWAYAT) */}
+        {view === 3 && isAdmin && (
+          <div className="bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 p-8 space-y-8">
+            <div className="bg-[#1B3167] border-2 border-black/10 text-white p-6 rounded-2xl shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-black/10 rounded-2xl flex items-center justify-center border border-white/10 shrink-0">
+                  <FaPlus className="text-2xl text-[#facc15]" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest bg-black/20 text-white px-2.5 py-1 rounded-md">
+                    Opsi Pembuatan
+                  </span>
+                  <h1 className="text-3xl font-bold mt-2">
+                    Tambah Tugas Ceklis
+                  </h1>
+                </div>
+              </div>
+              <button
+                onClick={() => setView(0)}
+                className="bg-black/30 border border-[#1B3167] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-black/90 flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <FaArrowLeft /> Kembali
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <button
+                onClick={handleCreateNew}
+                className="p-8 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center text-center hover:border-[#1B3167] hover:bg-slate-50 transition-all group"
+              >
+                <div className="w-16 h-16 bg-slate-100 text-slate-400 group-hover:bg-[#1B3167] group-hover:text-white rounded-full flex items-center justify-center text-2xl mb-4 transition-all">
+                  <FaFileAlt />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">
+                  Buat Tugas Baru
+                </h3>
+                <p className="text-sm text-slate-500 px-4">
+                  Mulai dari awal dengan formulir kosong. Anda akan mengatur
+                  semuanya dari nol.
+                </p>
+              </button>
+
+              <button
+                onClick={() => setShowHistoryList(!showHistoryList)}
+                disabled={tasks.length === 0}
+                className={`p-8 border-2 border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center transition-all group ${tasks.length === 0 ? "opacity-50 cursor-not-allowed" : "hover:border-[#eab308] hover:bg-amber-50"}`}
+              >
+                <div
+                  className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-4 transition-all ${tasks.length === 0 ? "bg-slate-100 text-slate-400" : "bg-amber-100 text-amber-600 group-hover:bg-[#eab308] group-hover:text-white"}`}
+                >
+                  <FaHistory />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">
+                  Pilih dari Riwayat
+                </h3>
+                <p className="text-sm text-slate-500 px-4">
+                  {tasks.length === 0
+                    ? "Belum ada riwayat tugas ceklis yang pernah dibuat sebelumnya."
+                    : "Gunakan pengaturan, daftar soal, dan sasaran dari tugas sebelumnya."}
+                </p>
+              </button>
+            </div>
+
+            {showHistoryList && tasks.length > 0 && (
+              <div className="mt-8 border-t border-slate-200 pt-8 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">
+                  Pilih Tugas Sebelumnya
+                </h3>
+                <div className="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                  {tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="bg-white border border-slate-200 p-4 rounded-xl flex justify-between items-center hover:border-[#1B3167] transition-all"
+                    >
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-sm">
+                          {task.title}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <FaRegQuestionCircle className="text-slate-400" />{" "}
+                          {task.checklist_questions?.length || 0} soal
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleLoadFromHistory(task)}
+                        className="px-4 py-2 bg-[#1B3167] text-white text-xs font-bold rounded-lg hover:bg-[#152654] transition-all flex items-center gap-2"
+                      >
+                        Gunakan ini <FaArrowRight />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* VIEW 1: FORM VIEW (Tambah / Edit) */}
+        {view === 1 && isAdmin && (
           <div className="bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100 p-8 space-y-8">
             <div className="bg-[#1B3167] border-2 border-black/10 text-white p-6 rounded-2xl shadow-sm flex items-center">
               <div className="flex items-center gap-4">
@@ -773,7 +1136,6 @@ export default function TugasCeklisPage() {
                     </div>
 
                     <div className="space-y-4">
-                      {/* Section Tour Leader */}
                       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
                         <div className="bg-[#1B3167] px-4 py-4 border-b border-slate-100 flex justify-between items-center font-bold text-xs">
                           <span className="flex items-center gap-2 text-white">
@@ -785,7 +1147,7 @@ export default function TugasCeklisPage() {
                         </div>
                         <div className="divide-y divide-slate-100 max-h-56 overflow-y-auto">
                           {filteredTLs.length === 0 ? (
-                            <p className="text-center py- text-xs text-slate-400">
+                            <p className="text-center py-6 text-xs text-slate-400">
                               Tidak ada Tour Leader yang cocok.
                             </p>
                           ) : (
@@ -824,7 +1186,6 @@ export default function TugasCeklisPage() {
                         </div>
                       </div>
 
-                      {/* Section Muthawif */}
                       <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
                         <div className="bg-[#1B3167] px-4 py-4 border-b border-slate-100 flex justify-between items-center font-bold text-xs">
                           <span className="flex items-center gap-2 text-white">
@@ -931,12 +1292,13 @@ export default function TugasCeklisPage() {
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-8">
+              {/* TOMBOL KEMBALI DIPERBAIKI MENJADI setView(0) AGAR KEMBALI KE LIST */}
               <button
                 type="button"
                 onClick={() => setView(0)}
                 className="px-5 py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
               >
-                &larr; Kembali
+                &larr; Batal & Kembali
               </button>
               <button
                 type="button"
@@ -954,8 +1316,8 @@ export default function TugasCeklisPage() {
           </div>
         )}
 
-        {/* VIEW 2: HASIL TUGAS CEKLIS - DENGAN CONTAINER IKON */}
-        {view === 2 && selectedTaskResult && (
+        {/* VIEW 2: HASIL TUGAS CEKLIS */}
+        {view === 2 && selectedTaskResult && isAdmin && (
           <div className="space-y-6">
             <div className="bg-[#1B3167] border-2 border-black/10 text-white p-6 rounded-2xl shadow-sm flex justify-between items-center">
               <div className="flex items-center gap-4">
@@ -979,8 +1341,7 @@ export default function TugasCeklisPage() {
               </button>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols- md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="bg-[#1B3167] border-2 border-black/10 text-white p-6 rounded-2xl  shadow-sm relative overflow-hidden flex flex-col justify-between h-56">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold tracking-wider uppercase opacity-100">
@@ -1021,7 +1382,7 @@ export default function TugasCeklisPage() {
                   </div>
                 </div>
                 <div>
-                  <h2 className="text-4xl font-extrabold text-white-2xl font-extrabold text-slate-900">
+                  <h2 className="text-4xl font-extrabold text-slate-900">
                     {tlSelesai} / {assignedTourLeaders.length}
                   </h2>
                   <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2">
@@ -1076,7 +1437,6 @@ export default function TugasCeklisPage() {
               </div>
             </div>
 
-            {/* SECTION 1: TABEL TOUR LEADER */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-[#1B3167] text-white px-6 py-4  flex justify-between items-center border-b border-slate-200">
                 <div className="flex items-center gap-2 font-bold text-sm">
@@ -1126,11 +1486,10 @@ export default function TugasCeklisPage() {
                             </td>
                             <td className="py-3 px-4 text-right">
                               {tl.status === "completed" ||
-                              tl.status === "submitted" ||
-                              tl.status === "assigned" ? (
+                              tl.status === "submitted" ? (
                                 <span className="bg-amber-50 text-amber-700 border border-amber-200/50 px-3 py-1 rounded-full font-bold inline-flex items-center gap-1 text-[10px]">
                                   <FaCheckCircle className="text-[#eab308]" />{" "}
-                                  Aktif / Selesai
+                                  Selesai
                                 </span>
                               ) : (
                                 <span className="bg-slate-50 text-slate-600 border border-slate-100 px-3 py-1 rounded-full font-bold inline-flex items-center gap-1 text-[10px]">
@@ -1147,7 +1506,6 @@ export default function TugasCeklisPage() {
               </div>
             </div>
 
-            {/* SECTION 2: TABEL MUTHAWIF */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-[#1B3167] text-white px-6 py-4 flex justify-between items-center border-b border-slate-200">
                 <div className="flex items-center gap-2 font-bold text-sm">
@@ -1197,11 +1555,10 @@ export default function TugasCeklisPage() {
                             </td>
                             <td className="py-3 px-4 text-right">
                               {m.status === "completed" ||
-                              m.status === "submitted" ||
-                              m.status === "assigned" ? (
+                              m.status === "submitted" ? (
                                 <span className="bg-amber-50 text-amber-700 border border-amber-200/50 px-3 py-1 rounded-full font-bold inline-flex items-center gap-1 text-[10px]">
                                   <FaCheckCircle className="text-[#eab308]" />{" "}
-                                  Aktif / Selesai
+                                  Selesai
                                 </span>
                               ) : (
                                 <span className="bg-slate-50 text-slate-600 border border-slate-100 px-3 py-1 rounded-full font-bold inline-flex items-center gap-1 text-[10px]">
@@ -1225,7 +1582,6 @@ export default function TugasCeklisPage() {
       {selectedTaskDetail && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl overflow-hidden">
-            {/* HEADER MODAL (Dark Navy dengan gaya seperti gambar referensi) */}
             <div className="bg-[#1B3167] text-white px-6 py-4 flex justify-between items-center border-b border-slate-800">
               <div className="flex items-center gap-3">
                 <span className="bg-[#eab308] text-[#111c2e] w-6 h-6 rounded-full flex items-center justify-center text-xs font-extrabold shadow-sm">
@@ -1243,7 +1599,6 @@ export default function TugasCeklisPage() {
               </button>
             </div>
 
-            {/* KONTEN MODAL */}
             <div className="p-6 space-y-4">
               <div>
                 <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
@@ -1306,7 +1661,28 @@ export default function TugasCeklisPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-slate-100">
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                {!isAdmin && (
+                  <button
+                    onClick={handleMarkDone}
+                    disabled={isTaskCompleted || markingDone}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-2 ${
+                      isTaskCompleted
+                        ? "bg-emerald-100 text-emerald-700 cursor-not-allowed"
+                        : "bg-[#eab308] text-[#111c2e] hover:bg-amber-400"
+                    }`}
+                  >
+                    {markingDone ? (
+                      "Menyimpan..."
+                    ) : isTaskCompleted ? (
+                      <>
+                        <FaCheckCircle /> Selesai Dikerjakan
+                      </>
+                    ) : (
+                      "Tandai Selesai"
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => setSelectedTaskDetail(null)}
                   className="px-5 py-2.5 bg-[#1B3167] text-white rounded-xl text-xs font-bold hover:bg-[#1a2b44] transition-colors shadow-sm"
