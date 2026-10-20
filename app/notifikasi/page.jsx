@@ -8,20 +8,14 @@ import { IoMdNotificationsOutline } from "react-icons/io";
 import { supabase } from "@/lib/supabase";
 
 export default function NotifikasiPage() {
-  // 0 = Daftar Notifikasi (List), 1 = Buat Notifikasi Baru (Form)
   const [view, setView] = useState(0);
-
-  // State Data Database
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // State Form
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [isRead, setIsRead] = useState("true");
 
-  // Fetch Data dari Supabase
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -117,7 +111,7 @@ export default function NotifikasiPage() {
                 title="Daftar Notifikasi"
                 description="Berisi daftar notifikasi yang dikirimkan kepada tour leader."
                 icon={
-                  <IoMdNotificationsOutline className="w-26px h-26px text-[#eab308]" />
+                  <IoMdNotificationsOutline className="w-[26px] h-[26px] text-[#eab308]" />
                 }
                 buttonIcon={<PlusIcon />}
                 buttonOnClick={() => setView(1)}

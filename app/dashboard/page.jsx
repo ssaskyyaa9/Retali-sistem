@@ -5,7 +5,6 @@ import Link from "next/link";
 import Topbar from "../components/Topbar";
 
 export default function DashboardPage() {
-  // State untuk switcher Tour Leader & Muthawif Aktif
   const [activeTab, setActiveTab] = useState("tour_leader");
 
   const [stats] = useState({
