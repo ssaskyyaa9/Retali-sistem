@@ -168,7 +168,7 @@ export default function DetailMateriPage() {
                   {/* 1. Judul BAB (kolom title) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Judul BAB (title)
+                      Judul BAB
                     </label>
                     <input
                       type="text"
@@ -182,7 +182,7 @@ export default function DetailMateriPage() {
                   {/* 2. Subjudul (kolom sub_title) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Subjudul (sub_title)
+                      Subjudul 
                     </label>
                     <input
                       type="text"
@@ -196,7 +196,7 @@ export default function DetailMateriPage() {
                   {/* 3. Child Subjudul / Deskripsi (kolom description) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Child Subjudul / Deskripsi Singkat (description)
+                       Deskripsi Singkat
                     </label>
                     <input
                       type="text"
@@ -210,7 +210,7 @@ export default function DetailMateriPage() {
                   {/* 4. Content (Materi Penjelasan / Rich Text Editor) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                      Materi Penjelasan (content)
+                      Materi Penjelasan 
                     </label>
                     <div className="bg-white rounded-xl overflow-hidden border border-gray-300 [&_.ql-editor]:text-gray-900 [&_.ql-editor.ql-blank::before]:text-gray-400">
                       <ReactQuill

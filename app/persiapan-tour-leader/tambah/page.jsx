@@ -52,17 +52,13 @@ export default function TambahMateriPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      // Gabungkan subjudul & anak subjudul untuk mengisi kolom description
-      const textDescription = [form.subjudul, form.anakSubjudul]
-        .filter(Boolean)
-        .join(" - ");
-
-      // SIMPAN SESUAI PERSIAPAN KOLOM TABEL SUPABASE:
-      // title, description, content, category, visibility, is_published, created_by
+      // SIMPAN MASING-MASING KE KOLOM SUPABASE YANG SESUAI:
+      // title, sub_title, description, content
       const { error } = await supabase.from("preparation_materials").insert([
         {
           title: form.bab,
-          description: textDescription || null,
+          sub_title: form.subjudul || null,
+          description: form.anakSubjudul || null,
           content: form.deskripsi,
           category: "Tour Leader",
           visibility: "public",
@@ -117,7 +113,7 @@ export default function TambahMateriPage() {
             {/* Input Judul BAB -> kolom title */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Judul BAB (Contoh: BAB 1)
+                Judul BAB 
               </label>
               <input
                 type="text"
@@ -125,28 +121,28 @@ export default function TambahMateriPage() {
                 value={form.bab}
                 onChange={(e) => setForm({ ...form, bab: e.target.value })}
                 placeholder="Masukkan judul BAB..."
-                className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#263754] focus:border-transparent outline-none transition"
+                className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#263754] focus:border-transparent outline-none transition bg-white"
               />
             </div>
 
-            {/* Input Subjudul -> masuk ke description */}
+            {/* Input Subjudul -> kolom sub_title */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Subjudul (Opsional)
+                Subjudul
               </label>
               <input
                 type="text"
                 value={form.subjudul}
                 onChange={(e) => setForm({ ...form, subjudul: e.target.value })}
                 placeholder="Masukkan subjudul..."
-                className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#263754] focus:border-transparent outline-none transition"
+                className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#263754] focus:border-transparent outline-none transition bg-white"
               />
             </div>
 
-            {/* Input Anak Subjudul -> masuk ke description */}
+            {/* Input Anak Subjudul -> kolom description */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Anak Subjudul / Poin Detail (Opsional)
+                Deskripsi
               </label>
               <input
                 type="text"
@@ -155,14 +151,14 @@ export default function TambahMateriPage() {
                   setForm({ ...form, anakSubjudul: e.target.value })
                 }
                 placeholder="Masukkan anak subjudul..."
-                className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#263754] focus:border-transparent outline-none transition"
+                className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#263754] focus:border-transparent outline-none transition bg-white"
               />
             </div>
 
             {/* Editor Word -> kolom content */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Materi Penjelasan
+                Materi Penjelasan 
               </label>
               <div className="bg-white rounded-xl overflow-hidden border border-gray-300 [&_.ql-editor]:text-gray-900 [&_.ql-editor.ql-blank::before]:text-gray-400">
                 <ReactQuill
