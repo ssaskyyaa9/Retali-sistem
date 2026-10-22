@@ -145,10 +145,11 @@ export default function Topbar({
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
-    router.push("/");
+    window.location.href = "/login";
   };
 
   const getInitial = (name) => {
