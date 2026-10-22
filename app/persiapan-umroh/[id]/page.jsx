@@ -1,19 +1,19 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Topbar from "@/app/components/Topbar";
-import { FaArrowLeft, FaPenToSquare, FaRegFilePdf, FaCheck } from "react-icons/fa6";
+import {
+  FaArrowLeft,
+  FaPenToSquare,
+  FaRegFilePdf,
+  FaCheck,
+} from "react-icons/fa6";
 import { useRouter, useParams } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
 
 // Load React Quill secara dinamis agar kompatibel dengan Next.js App Router
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
 
 export default function DetailMateriPage() {
   const router = useRouter();
@@ -51,7 +51,9 @@ export default function DetailMateriPage() {
         setLoading(true);
 
         // 1. Cek Role User Login
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -115,7 +117,9 @@ export default function DetailMateriPage() {
       }
 
       if (!data || data.length === 0) {
-        alert("Gagal update: Terhalang aturan RLS Supabase (Pastikan Policy UPDATE sudah dibuat).");
+        alert(
+          "Gagal update: Terhalang aturan RLS Supabase (Pastikan Policy UPDATE sudah dibuat).",
+        );
         return;
       }
 
@@ -143,7 +147,12 @@ export default function DetailMateriPage() {
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
         title="Persiapan Tour Leader"
-        breadcrumbs={["Dashboard", "Persiapan", "Persiapan Tour Leader", materi.title || `BAB ${id}`]}
+        breadcrumbs={[
+          "Dashboard",
+          "Persiapan",
+          "Persiapan Tour Leader",
+          materi.title || `BAB ${id}`,
+        ]}
       />
 
       <div className="flex-1 overflow-y-auto p-10 w-full max-w-5xl no-scrollbar mx-auto">
@@ -160,7 +169,6 @@ export default function DetailMateriPage() {
 
         {/* CONTAINER UTAMA DETAIL MATERI */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 md:p-10 relative">
-          
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="w-full mr-4">
               {isEditing ? (
@@ -173,7 +181,9 @@ export default function DetailMateriPage() {
                     <input
                       type="text"
                       value={materi.title}
-                      onChange={(e) => setMateri({ ...materi, title: e.target.value })}
+                      onChange={(e) =>
+                        setMateri({ ...materi, title: e.target.value })
+                      }
                       className="text-xl font-bold text-gray-900 border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#263754] w-full bg-white"
                       placeholder="Judul BAB..."
                     />
@@ -182,12 +192,14 @@ export default function DetailMateriPage() {
                   {/* 2. Subjudul (kolom sub_title) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Subjudul 
+                      Subjudul
                     </label>
                     <input
                       type="text"
                       value={materi.sub_title}
-                      onChange={(e) => setMateri({ ...materi, sub_title: e.target.value })}
+                      onChange={(e) =>
+                        setMateri({ ...materi, sub_title: e.target.value })
+                      }
                       className="text-sm text-gray-900 border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#263754] w-full bg-white"
                       placeholder="Masukkan subjudul..."
                     />
@@ -196,12 +208,14 @@ export default function DetailMateriPage() {
                   {/* 3. Child Subjudul / Deskripsi (kolom description) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                       Deskripsi Singkat
+                      Deskripsi Singkat
                     </label>
                     <input
                       type="text"
                       value={materi.description}
-                      onChange={(e) => setMateri({ ...materi, description: e.target.value })}
+                      onChange={(e) =>
+                        setMateri({ ...materi, description: e.target.value })
+                      }
                       className="text-sm text-gray-900 border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#263754] w-full bg-white"
                       placeholder="Masukkan child subjudul..."
                     />
@@ -210,13 +224,15 @@ export default function DetailMateriPage() {
                   {/* 4. Content (Materi Penjelasan / Rich Text Editor) */}
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                      Materi Penjelasan 
+                      Materi Penjelasan
                     </label>
                     <div className="bg-white rounded-xl overflow-hidden border border-gray-300 [&_.ql-editor]:text-gray-900 [&_.ql-editor.ql-blank::before]:text-gray-400">
                       <ReactQuill
                         theme="snow"
                         value={materi.content}
-                        onChange={(value) => setMateri({ ...materi, content: value })}
+                        onChange={(value) =>
+                          setMateri({ ...materi, content: value })
+                        }
                         modules={modules}
                         placeholder="Tuliskan materi penjelasan di sini..."
                         className="h-64 mb-12"
@@ -251,7 +267,7 @@ export default function DetailMateriPage() {
                   <h1 className="text-3xl font-extrabold text-[#0f172a] tracking-tight mt-2">
                     {materi.title || `BAB ${id}`}
                   </h1>
-                  
+
                   {/* Menampilkan Sub Title & Description */}
                   {(materi.sub_title || materi.description) && (
                     <div className="text-sm text-gray-500 font-semibold mt-1 space-x-2">
@@ -260,12 +276,14 @@ export default function DetailMateriPage() {
                       {materi.description && <span>{materi.description}</span>}
                     </div>
                   )}
-                  
+
                   {/* Menampilkan Content (Materi Penjelasan HTML) */}
-                  <div 
+                  <div
                     className="text-sm text-gray-600 mt-4 font-medium leading-relaxed prose max-w-none border-t border-gray-100 pt-4"
-                    dangerouslySetInnerHTML={{ 
-                      __html: materi.content || "Belum ada materi penjelasan yang diisi." 
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        materi.content ||
+                        "Belum ada materi penjelasan yang diisi.",
                     }}
                   />
                 </div>
@@ -296,7 +314,6 @@ export default function DetailMateriPage() {
               )}
             </div>
           </div>
-
         </div>
       </div>
     </div>
