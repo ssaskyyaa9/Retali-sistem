@@ -4,21 +4,7 @@ import React, { useState } from "react";
 import PageHeader from "@/app/components/PageHeader";
 import Topbar from "@/app/components/Topbar";
 import { FaUserClock } from "react-icons/fa";
-import {
-  FiFilter,
-  FiRefreshCw,
-  FiDownload,
-  FiPlus,
-  FiArrowLeft,
-  FiX,
-  FiEdit3,
-  FiTrash2,
-  FiMapPin,
-  FiList,
-  FiUsers,
-  FiFileText,
-  FiChevronDown,
-} from "react-icons/fi";
+import { FiFilter, FiRefreshCw, FiDownload, FiPlus, FiArrowLeft, FiX, FiEdit3, FiTrash2, FiMapPin, FiList, FiUsers, FiFileText, FiChevronDown, } from "react-icons/fi";
 
 const initialTourLeaderData = [
   {
@@ -195,6 +181,11 @@ export default function RiwayatAbsensiPage() {
   const [muthawifData, setMuthawifData] = useState(initialMuthawifData);
   const [jamaahList, setJamaahList] = useState(initialJamaahList);
   const [sesiList, setSesiList] = useState(initialSesiList);
+
+  const handleTambahJamaah = (dataBaru) => {
+    // Menaruh data baru di posisi paling atas (paling depan array)
+    setJamaahList([dataBaru, ...jamaahList]);
+  };
 
   const handleFilter = (e) => {
     e.preventDefault();
@@ -437,11 +428,7 @@ export default function RiwayatAbsensiPage() {
                           ? filteredTlData
                           : filteredMuthawifData
                         ).map((item, index) => {
-                          const currentList =
-                            activeTab === "tour_leader"
-                              ? filteredTlData
-                              : filteredMuthawifData;
-                          const rowNumber = currentList.length - index;
+                          const rowNumber = index + 1;
 
                           return (
                             <tr
@@ -552,7 +539,7 @@ export default function RiwayatAbsensiPage() {
                   </div>
 
                   <div className="space-y-4">
-                    {jamaahList.map((item) => (
+                    {jamaahList.map((item, index) => (
                       <div
                         key={item.id}
                         className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-sm transition-all"
@@ -560,7 +547,7 @@ export default function RiwayatAbsensiPage() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2.5 flex-wrap">
                             <h4 className="font-bold text-gray-900 text-lg">
-                              {item.kloter}
+                              {index + 1}. {item.kloter}
                             </h4>
                             <span className="text-sm text-gray-500 font-semibold">
                               ({item.kloterDate})

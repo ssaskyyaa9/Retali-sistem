@@ -9,8 +9,19 @@ import { supabase } from "@/lib/supabase";
 
 const initialForm = {
   name: "",
-  date_range: "",
+  start_date: "",
+  end_date: "",
 };
+
+// Fungsi helper untuk mengubah format tanggal dari "2026-11-01" menjadi "01 November 2026"
+function formatDateIndonesian(dateString) {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+
+  const options = { day: "2-digit", month: "long", year: "numeric" };
+  return date.toLocaleDateString("id-ID", options);
+}
 
 export default function KloterPage() {
   const [view, setView] = useState(0); // 0 = Tabel List, 1 = Modal Form Tambah/Edit
@@ -30,6 +41,8 @@ export default function KloterPage() {
 
   async function fetchKloters() {
     setLoading(true);
+    // Diurutkan berdasarkan created_at terbaru (data baru di atas)
+    // Jika tidak ada kolom created_at, bisa diganti "start_date" atau "id"
     const { data, error } = await supabase
       .from("kloter")
       .select("*")
@@ -38,10 +51,10 @@ export default function KloterPage() {
     if (error) {
       console.error("Gagal memuat data kloter:", error.message);
     } else {
-      // Mapping database description ke date_range agar sesuai dengan UI form kamu
       const formattedData = data.map((item) => ({
         ...item,
-        date_range: item.description || "",
+        start_date: item.start_date || "",
+        end_date: item.end_date || "",
       }));
       setKloters(formattedData);
     }
@@ -58,7 +71,8 @@ export default function KloterPage() {
   function openEditForm(kloter) {
     setForm({
       name: kloter.name || "",
-      date_range: kloter.date_range || kloter.description || "",
+      start_date: kloter.start_date || "",
+      end_date: kloter.end_date || "",
     });
     setEditingId(kloter.id);
     setSuccess("");
@@ -80,12 +94,12 @@ export default function KloterPage() {
     if (!form.name.trim()) return;
 
     if (editingId) {
-      // Update data ke Supabase
       const { error } = await supabase
         .from("kloter")
         .update({
           name: form.name,
-          description: form.date_range, // Menyimpan date_range ke kolom description di Supabase
+          start_date: form.start_date || null,
+          end_date: form.end_date || null,
         })
         .eq("id", editingId);
 
@@ -96,11 +110,11 @@ export default function KloterPage() {
 
       setSuccess("Kloter berhasil diperbarui.");
     } else {
-      // Insert data baru ke Supabase
       const { error } = await supabase.from("kloter").insert([
         {
           name: form.name,
-          description: form.date_range,
+          start_date: form.start_date || null,
+          end_date: form.end_date || null,
           status: "aktif",
         },
       ]);
@@ -116,7 +130,7 @@ export default function KloterPage() {
     setForm(initialForm);
     setEditingId(null);
     setView(0);
-    fetchKloters(); // Refresh data dari database
+    fetchKloters();
   }
 
   function confirmDelete(kloter) {
@@ -127,7 +141,6 @@ export default function KloterPage() {
   async function handleDelete() {
     if (!kloterToDelete) return;
 
-    // Hapus data dari Supabase
     const { error } = await supabase
       .from("kloter")
       .delete()
@@ -141,7 +154,7 @@ export default function KloterPage() {
     setSuccess("Kloter berhasil dihapus.");
     setDeleteModalOpen(false);
     setKloterToDelete(null);
-    fetchKloters(); // Refresh data dari database
+    fetchKloters();
   }
 
   function closeModal() {
@@ -163,10 +176,8 @@ export default function KloterPage() {
       `}</style>
 
       <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans">
-        {/* Topbar Persis seperti Dashboard */}
         <Topbar title="Kloter" breadcrumbs={["Dashboard", "Kloter"]} />
 
-        {/* MAIN CONTENT AREA DENGAN NO-SCROLLBAR */}
         <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           {success && (
             <div
@@ -177,10 +188,9 @@ export default function KloterPage() {
             </div>
           )}
 
-          {/* Header Card dengan Judul, Subtitle, Icon Stack Kloter, dan Tombol Tambah Kloter */}
           <PageHeader
             title="Daftar Kloter"
-            description="Kelola data tour leader yang mendampingi jamaah pada setiap kloter perjalanan umrah."
+            description={`Kelola data kloter perjalanan umrah. Total kloter saat ini: ${kloters.length}`}
             icon={
               <TbPlaneDepartureFilled className="w-[26px] h-[26px] text-[#eab308]" />
             }
@@ -201,9 +211,10 @@ export default function KloterPage() {
                     <th className="py-5 px-5 rounded-tl-xl w-16 text-center">
                       NO
                     </th>
-                    <th className="py-5 px-8">NAMA KLOTER</th>
-                    <th className="py-5 px-8">TANGGAL</th>
-                    <th className="py-5 px-5 rounded-tr-xl text-center">
+                    <th className="py-5 px-6">NAMA KLOTER</th>
+                    <th className="py-5 px-6">TANGGAL MULAI</th>
+                    <th className="py-5 px-6">TANGGAL BERAKHIR</th>
+                    <th className="py-5 px-6 rounded-tr-xl text-center w-48">
                       AKSI
                     </th>
                   </tr>
@@ -212,7 +223,7 @@ export default function KloterPage() {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="py-12 text-center text-gray-400 text-xs font-semibold"
                       >
                         Memuat data dari Supabase...
@@ -221,7 +232,7 @@ export default function KloterPage() {
                   ) : kloters.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="py-12 text-center text-gray-400 text-xs font-semibold"
                       >
                         Belum ada data kloter.
@@ -231,27 +242,35 @@ export default function KloterPage() {
                     kloters.map((kloter, index) => (
                       <tr
                         key={kloter.id}
-                        className="hover:bg-gray-50/80 transition-colors"
+                        className="hover:bg-gray-50/85 transition-colors"
                       >
                         <td className="py-4 px-5 text-center font-semibold text-gray-500 text-xs">
                           {index + 1}
                         </td>
-                        <td className="py-4 px-8 font-bold text-gray-900">
+                        <td className="py-4 px-6 font-bold text-gray-900">
                           {kloter.name}
                         </td>
-                        <td className="py-4 px-8 font-medium">
-                          <span className="inline-block rounded-full bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 border border-blue-200/60 shadow-2xs">
-                            {kloter.date_range || kloter.description || "-"}
+                        {/* Badge Tanggal Mulai (Biru) */}
+                        <td className="py-4 px-6 font-medium">
+                          <span className="inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200/60 shadow-2xs">
+                            {formatDateIndonesian(kloter.start_date)}
                           </span>
                         </td>
-                        <td className="py-4 px-5 text-center">
+                        {/* Badge Tanggal Berakhir (Amber/Kuning) */}
+                        <td className="py-4 px-6 font-medium">
+                          <span className="inline-block rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 border border-amber-200/60 shadow-2xs">
+                            {formatDateIndonesian(kloter.end_date)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-center">
                           <div className="inline-flex items-center justify-center gap-2">
+                            {/* Tombol Edit */}
                             <button
                               onClick={() => openEditForm(kloter)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/80 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200/80 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
                             >
                               <svg
-                                className="w-3.5 h-3.5 text-gray-500"
+                                className="w-3.5 h-3.5 text-gray-500 shrink-0"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -265,12 +284,13 @@ export default function KloterPage() {
                               </svg>
                               Edit
                             </button>
+                            {/* Tombol Hapus */}
                             <button
                               onClick={() => confirmDelete(kloter)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200/80 bg-rose-50/60 px-3.5 py-1.5 text-xs font-bold text-rose-600 shadow-2xs hover:bg-rose-100 transition-colors"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-rose-200/80 bg-rose-50/60 px-3.5 py-1.5 text-xs font-bold text-rose-600 shadow-2xs hover:bg-rose-100 transition-colors"
                             >
                               <svg
-                                className="w-3.5 h-3.5 text-red-500"
+                                className="w-3.5 h-3.5 text-red-500 shrink-0"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -305,11 +325,10 @@ export default function KloterPage() {
         }`}
       >
         <div
-          className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl  transition-all duration-300 ease-in-out ${
+          className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
             view === 1 ? "scale-100 opacity-100" : "scale-95 opacity-0"
           }`}
         >
-          {/* Modal Header */}
           <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
@@ -327,7 +346,6 @@ export default function KloterPage() {
             </button>
           </div>
 
-          {/* Modal Body */}
           <form onSubmit={handleSubmit}>
             <div className="p-6 space-y-4">
               <div>
@@ -349,27 +367,45 @@ export default function KloterPage() {
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="date_range"
-                  className="mb-1.5 block text-xs font-bold text-gray-700"
-                >
-                  Tanggal <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="date_range"
-                  name="date_range"
-                  type="text"
-                  value={form.date_range}
-                  onChange={handleChange}
-                  placeholder="cth: 17-25 November 2026"
-                  required
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="start_date"
+                    className="mb-1.5 block text-xs font-bold text-gray-700"
+                  >
+                    Tanggal Mulai <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="start_date"
+                    name="start_date"
+                    type="date"
+                    value={form.start_date}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="end_date"
+                    className="mb-1.5 block text-xs font-bold text-gray-700"
+                  >
+                    Tanggal Berakhir <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="end_date"
+                    name="end_date"
+                    type="date"
+                    value={form.end_date}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Modal Footer */}
             <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4">
               <button
                 type="button"
@@ -382,21 +418,6 @@ export default function KloterPage() {
                 type="submit"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
               >
-                <svg
-                  className="w-4 h-4 text-amber-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
-                  />
-                  <polyline points="17 21 17 13 7 13 7 21" />
-                  <polyline points="7 3 7 8 15 8" />
-                </svg>
                 Simpan
               </button>
             </div>
@@ -404,7 +425,7 @@ export default function KloterPage() {
         </div>
       </div>
 
-      {/* Modal Hapus Simple & Clean */}
+      {/* Modal Hapus */}
       <div
         className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 transition-all duration-300 ease-in-out ${
           deleteModalOpen
@@ -413,11 +434,10 @@ export default function KloterPage() {
         }`}
       >
         <div
-          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl  transition-all duration-300 ease-in-out ${
+          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
             deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
           }`}
         >
-          {/* Modal Header */}
           <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
@@ -433,7 +453,6 @@ export default function KloterPage() {
             </button>
           </div>
 
-          {/* Modal Body */}
           <div className="p-6 text-center">
             <p className="text-lg text-gray-600 font-medium leading-relaxed">
               Yakin Untuk Menghapus Kloter Ini? <br />
@@ -443,7 +462,6 @@ export default function KloterPage() {
             </p>
           </div>
 
-          {/* Modal Footer */}
           <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
             <button
               type="button"
@@ -454,7 +472,6 @@ export default function KloterPage() {
             </button>
             <button
               type="button"
-              value="Hapus"
               onClick={handleDelete}
               className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
             >
