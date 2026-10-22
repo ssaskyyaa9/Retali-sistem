@@ -60,7 +60,7 @@ export default function TambahMateriPage() {
           sub_title: form.subjudul || null,
           description: form.anakSubjudul || null,
           content: form.deskripsi,
-          category: "Tour Leader",
+          category: "umroh",
           visibility: "public",
           is_published: true,
           created_by: user ? user.id : null,

@@ -68,7 +68,7 @@ export default function DetailMateriPage() {
 
         // 2. Ambil Data Detail Materi dari Supabase (Langsung 4 Kolom)
         const { data: dataMateri, error } = await supabase
-          .from("preparation_materials")
+          .from("preparation_assignments")
           .select("id, title, sub_title, description, content")
           .eq("id", id)
           .single();
@@ -105,7 +105,7 @@ export default function DetailMateriPage() {
       };
 
       const { data, error } = await supabase
-        .from("preparation_materials")
+        .from("preparation_assignments")
         .update(payload)
         .eq("id", id)
         .select();
@@ -146,11 +146,11 @@ export default function DetailMateriPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
-        title="Persiapan Tour Leader"
+        title="Persiapan Umroh"
         breadcrumbs={[
           "Dashboard",
           "Persiapan",
-          "Persiapan Tour Leader",
+          "Persiapan Umroh",
           materi.title || `BAB ${id}`,
         ]}
       />
@@ -159,7 +159,7 @@ export default function DetailMateriPage() {
         {/* Tombol Kembali */}
         <div className="mb-6 print:hidden">
           <button
-            onClick={() => router.push("/persiapan-tour-leader")}
+            onClick={() => router.push("/persiapan-umroh")}
             className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white hover:bg-gray-50 flex items-center gap-2 transition font-medium shadow-sm group cursor-pointer"
           >
             <FaArrowLeft className="w-4 h-4 text-gray-500 group-hover:-translate-x-0.5 transition-transform" />
