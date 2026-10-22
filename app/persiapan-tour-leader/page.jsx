@@ -5,12 +5,7 @@ import PageHeader from "@/app/components/PageHeader";
 import { FaBook } from "react-icons/fa6";
 import { HiDocumentText } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { supabase } from "@/lib/supabase";
 
 export default function PersiapanTourLeaderPage() {
   const router = useRouter();
@@ -25,7 +20,9 @@ export default function PersiapanTourLeaderPage() {
         setLoading(true);
 
         // 1. Cek Role User Login
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
             .from("profiles")
@@ -77,7 +74,9 @@ export default function PersiapanTourLeaderPage() {
           description="Materi persiapan untuk tour leader, termasuk panduan dan tips untuk menjalankan tour dengan efektif."
           icon={<FaBook className="w-[26px] h-[26px] text-[#eab308]" />}
           buttonText={isAdmin ? "Tambah Materi" : undefined}
-          buttonIcon={isAdmin ? <FaBook className="w-[16px] h-[16px]" /> : undefined}
+          buttonIcon={
+            isAdmin ? <FaBook className="w-[16px] h-[16px]" /> : undefined
+          }
           buttonOnClick={
             isAdmin
               ? () => router.push("/persiapan-tour-leader/tambah")
@@ -90,13 +89,19 @@ export default function PersiapanTourLeaderPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mb-3"></div>
-              <p className="text-sm text-gray-500 font-medium">Memuat daftar materi...</p>
+              <p className="text-sm text-gray-500 font-medium">
+                Memuat daftar materi...
+              </p>
             </div>
           ) : materiList.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm px-4">
               <HiDocumentText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-              <h3 className="text-base font-semibold text-gray-800">Belum ada materi</h3>
-              <p className="text-sm text-gray-500 mt-1">Belum ada materi persiapan tour leader yang tersedia saat ini.</p>
+              <h3 className="text-base font-semibold text-gray-800">
+                Belum ada materi
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Belum ada materi persiapan tour leader yang tersedia saat ini.
+              </p>
             </div>
           ) : (
             materiList.map((item) => (
@@ -106,14 +111,14 @@ export default function PersiapanTourLeaderPage() {
                 className="bg-white rounded-2xl shadow-xs border border-gray-200/80 p-6 md:p-7 relative transition-all duration-200 cursor-pointer hover:border-gray-300 hover:shadow-md hover:-translate-y-0.5 group"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  
                   {/* Bagian Kiri: Judul & Deskripsi */}
                   <div className="space-y-1 flex-1 min-w-0 pr-2">
                     <h2 className="text-xl md:text-2xl font-bold text-[#0f172a] tracking-tight group-hover:text-amber-600 transition-colors">
                       {item.title}
                     </h2>
                     <p className="text-sm text-gray-500 font-normal leading-relaxed line-clamp-2">
-                      {item.description || "Belum ada deskripsi untuk materi ini."}
+                      {item.description ||
+                        "Belum ada deskripsi untuk materi ini."}
                     </p>
                   </div>
 
@@ -126,7 +131,6 @@ export default function PersiapanTourLeaderPage() {
                       Export to pdf
                     </button>
                   </div>
-
                 </div>
               </div>
             ))
