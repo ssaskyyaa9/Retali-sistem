@@ -37,7 +37,7 @@ export default function PersiapanUmrohPage() {
 
         // 2. Ambil data daftar materi persiapan umroh dari Supabase
         const { data, error } = await supabase
-          .from("preparation_materials")
+          .from("preparation_assignments")
           .select("id, title, description")
           .order("created_at", { ascending: true });
 

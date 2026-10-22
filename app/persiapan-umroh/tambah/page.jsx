@@ -11,7 +11,7 @@ const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
 export default function TambahMateriPage() {
@@ -54,7 +54,7 @@ export default function TambahMateriPage() {
 
       // SIMPAN MASING-MASING KE KOLOM SUPABASE YANG SESUAI:
       // title, sub_title, description, content
-      const { error } = await supabase.from("preparation_materials").insert([
+      const { error } = await supabase.from("preparation_assignments").insert([
         {
           title: form.bab,
           sub_title: form.subjudul || null,
@@ -113,7 +113,7 @@ export default function TambahMateriPage() {
             {/* Input Judul BAB -> kolom title */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Judul BAB 
+                Judul BAB
               </label>
               <input
                 type="text"
@@ -158,7 +158,7 @@ export default function TambahMateriPage() {
             {/* Editor Word -> kolom content */}
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                Materi Penjelasan 
+                Materi Penjelasan
               </label>
               <div className="bg-white rounded-xl overflow-hidden border border-gray-300 [&_.ql-editor]:text-gray-900 [&_.ql-editor.ql-blank::before]:text-gray-400">
                 <ReactQuill
