@@ -8,26 +8,17 @@ import * as XLSX from "xlsx";
 
 export default function RiwayatScanPage() {
   const [activeTab, setActiveTab] = useState("koper");
-  
-  // State Data terpisah untuk Koper & Paspor agar perpindahan tab instant & smooth
   const [dataKoper, setDataKoper] = useState([]);
   const [dataPaspor, setDataPaspor] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // State Input Search & Tanggal
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTanggal, setFilterTanggal] = useState("");
-
-  // State Pagination (10 item per halaman)
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
-  // State untuk Modal Hapus Custom
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Handler Ganti Tab
   const handleTabChange = (tab) => {
     if (tab === activeTab) return;
     setLoading(true);
@@ -35,7 +26,6 @@ export default function RiwayatScanPage() {
     setCurrentPage(1);
   };
 
-  // Fungsi Fetch Data dari Supabase
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -69,12 +59,9 @@ export default function RiwayatScanPage() {
     }
   };
 
-  // Live Search & Tab Change Effect
   useEffect(() => {
     setLoading(true);
-    const delayDebounce = setTimeout(() => {
-      fetchData();
-    }, 250);
+    const delayDebounce = setTimeout(() => { fetchData(); }, 250);
 
     return () => clearTimeout(delayDebounce);
   }, [activeTab, searchQuery, filterTanggal]);
@@ -85,10 +72,8 @@ export default function RiwayatScanPage() {
     setCurrentPage(1);
   };
 
-  // Data aktif saat ini berdasarkan tab
   const activeData = activeTab === "koper" ? dataKoper : dataPaspor;
 
-  // Fungsional Export Excel (.xlsx) dengan Header Biru Navy (#263754)
   const handleExportExcel = () => {
     if (activeData.length === 0) {
       alert("Tidak ada data untuk diexport!");
@@ -126,7 +111,6 @@ export default function RiwayatScanPage() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, activeTab === "koper" ? "Riwayat Koper" : "Riwayat Paspor");
 
-    // Styling Header Excel (Background Biru Navy #263754, Teks Putih Tebal)
     const headerStyle = {
       fill: { fgColor: { rgb: "263754" } },
       font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 },
@@ -140,7 +124,6 @@ export default function RiwayatScanPage() {
       worksheet[address].s = headerStyle;
     }
 
-    // Atur Lebar Kolom Otomatis
     worksheet['!cols'] = [
       { wch: 6 },  // No
       { wch: 18 }, // Kode Koper / Paspor
@@ -154,7 +137,6 @@ export default function RiwayatScanPage() {
     XLSX.writeFile(workbook, fileName);
   };
 
-  // Hapus Data Modal
   const openDeleteModal = (id) => {
     setSelectedIdToDelete(id);
     setShowDeleteModal(true);
@@ -180,7 +162,6 @@ export default function RiwayatScanPage() {
     }
   };
 
-  // Kalkulasi Pagination (10 data per halaman)
   const totalPages = Math.ceil(activeData.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -188,14 +169,9 @@ export default function RiwayatScanPage() {
 
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
-      <Topbar
-        title="Riwayat Scan"
-        breadcrumbs={["Dashboard", "Riwayat Scan"]}
-      />
+      <Topbar title="Riwayat Scan" breadcrumbs={["Dashboard", "Riwayat Scan"]} />
 
       <div className="flex-1 overflow-y-auto p-6 w-full max-w-7xl mx-auto no-scrollbar">
-        
-        {/* Banner Header */}
         <div className="bg-gradient-to-r from-[#1e293b] to-[#263754] text-white p-6 rounded-xl shadow-md flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-wide">
@@ -209,11 +185,8 @@ export default function RiwayatScanPage() {
           </div>
         </div>
 
-        {/* Tab Switcher */}
         <div className="flex items-center gap-2 border-b border-gray-200 mt-6 mb-5">
-          <button
-            onClick={() => handleTabChange("koper")}
-            className={`pb-2.5 px-5 text-sm font-bold border-b-2 transition-all duration-200 ${
+          <button onClick={() => handleTabChange("koper")} className={`pb-2.5 px-5 text-sm font-bold border-b-2 transition-all duration-200 ${
               activeTab === "koper"
                 ? "border-[#263754] text-[#263754]"
                 : "border-transparent text-gray-400 hover:text-gray-600"
@@ -233,10 +206,7 @@ export default function RiwayatScanPage() {
           </button>
         </div>
 
-        {/* Container Utama */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8 transition-all duration-200">
-          
-          {/* Header Bar (Search, Tanggal, Reset, Export) */}
           <div className="p-5 border-b border-gray-100 flex flex-wrap gap-4 items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center flex-1">
               <div className="w-77">
@@ -244,10 +214,7 @@ export default function RiwayatScanPage() {
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                     <TbSearch className="w-4 h-4" />
                   </span>
-                  <input
-                    type="text"
-                    placeholder={activeTab === "koper" ? "Cari pemilik koper..." : "Cari pemilik paspor..."}
-                    value={searchQuery}
+                  <input type="text" placeholder={activeTab === "koper" ? "Cari pemilik koper..." : "Cari pemilik paspor..."} value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full border border-gray-200 rounded-lg pl-9 pr-3.5 py-2 text-xs text-gray-700 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors"
                   />
@@ -255,33 +222,21 @@ export default function RiwayatScanPage() {
               </div>
 
               <div className="w-48">
-                <input
-                  type="date"
-                  value={filterTanggal}
-                  onChange={(e) => setFilterTanggal(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2 text-xs text-gray-600 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors"
-                />
+                <input type="date" value={filterTanggal} onChange={(e) => setFilterTanggal(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3.5 py-2 text-xs text-gray-600 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors" />
               </div>
 
-              <button 
-                onClick={handleReset}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
-              >
+              <button onClick={handleReset} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all" >
                 <TbRefresh className="w-4 h-4" /> Reset
               </button>
             </div>
 
             <div>
-              <button 
-                onClick={handleExportExcel}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
-              >
+              <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all" >
                 <TbDownload className="w-4 h-4" /> Export Excel
               </button>
             </div>
           </div>
 
-          {/* Tabel Data (Fleksibel & Rapi Merata) */}
           <table className="w-full text-left border-collapse">
             <thead className="bg-gray-50/50 border-b border-gray-100 text-gray-400 text-[11px] uppercase tracking-wider font-semibold">
               {activeTab === "koper" ? (
@@ -376,7 +331,6 @@ export default function RiwayatScanPage() {
             </tbody>
           </table>
 
-          {/* Footer Pagination */}
           {activeData.length > 0 && !loading && (
             <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
               <div>
@@ -395,9 +349,7 @@ export default function RiwayatScanPage() {
                 </button>
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
+                  <button key={pageNum} onClick={() => setCurrentPage(pageNum)}
                     className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
                       currentPage === pageNum
                         ? "bg-[#263754] text-white"
@@ -408,21 +360,15 @@ export default function RiwayatScanPage() {
                   </button>
                 ))}
 
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
+                <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" >
                   <TbChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           )}
-
         </div>
       </div>
 
-      {/* Modal Konfirmasi Hapus Custom */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs transition-all">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5 m-4 transform transition-all animate-in fade-in zoom-in-95 border border-gray-100">
@@ -430,35 +376,19 @@ export default function RiwayatScanPage() {
               <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500">
                 <TbAlertTriangle className="w-5 h-5" />
               </div>
-              <button 
-                onClick={() => setShowDeleteModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-md transition-colors"
-              >
+              <button onClick={() => setShowDeleteModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-md transition-colors" >
                 <TbX className="w-4 h-4" />
               </button>
             </div>
 
-            <h3 className="text-base font-bold text-gray-900 mb-1">
-              Konfirmasi Hapus Data
-            </h3>
-            <p className="text-xs text-gray-500 mb-5 leading-relaxed">
-              Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.
-            </p>
+            <h3 className="text-base font-bold text-gray-900 mb-1"> Konfirmasi Hapus Data </h3>
+            <p className="text-xs text-gray-500 mb-5 leading-relaxed"> Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan. </p>
 
             <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                className="px-3.5 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 transition-colors"
-              >
+              <button type="button" onClick={() => setShowDeleteModal(false)} className="px-3.5 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 transition-colors" >
                 Batal
               </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors shadow-xs disabled:opacity-50"
-              >
+              <button type="button" onClick={confirmDelete} disabled={isDeleting} className="px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors shadow-xs disabled:opacity-50" >
                 {isDeleting ? "Menghapus..." : "Ya, Hapus"}
               </button>
             </div>
