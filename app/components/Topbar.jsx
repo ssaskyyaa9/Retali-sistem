@@ -338,7 +338,13 @@ export default function Topbar({
               </div>
 
               <div className="py-1">
-                <button className="w-full text-left px-4 py-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    router.push("/profile");
+                    setIsProfileOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2.5"
+                >
                   <svg
                     className="w-4 h-4 text-gray-500"
                     fill="none"
