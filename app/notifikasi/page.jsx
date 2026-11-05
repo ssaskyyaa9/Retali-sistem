@@ -20,7 +20,6 @@ export default function NotifikasiPage() {
   const [message, setMessage] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  
   const [recipientType, setRecipientType] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [searchStaff, setSearchStaff] = useState("");
@@ -28,7 +27,6 @@ export default function NotifikasiPage() {
   const [detailModalItem, setDetailModalItem] = useState(null);
   const [hasilModalItem, setHasilModalItem] = useState(null);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
-
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   const [confirmModal, setConfirmModal] = useState({ show: false, id: null, title: "" });
 
@@ -64,16 +62,10 @@ export default function NotifikasiPage() {
         const matchingRecipients = recipientData.filter((r) => r.notification_id === item.id);
         const recipientsWithProfiles = matchingRecipients.map((r) => {
           const userProfile = profileData.find((p) => p.id === r.user_id) || null;
-          return {
-            ...r,
-            profiles: userProfile
-          };
+          return { ...r, profiles: userProfile };
         });
 
-        return {
-          ...item,
-          notification_recipients: recipientsWithProfiles
-        };
+        return { ...item, notification_recipients: recipientsWithProfiles };
       });
 
       setNotifications(combined || []);
@@ -175,7 +167,6 @@ export default function NotifikasiPage() {
     const allTlIds = staffList.filter((s) => s.role === "tour_leader").map((s) => s.id);
     const allMuthawifIds = staffList.filter((s) => s.role === "muthawif").map((s) => s.id);
     const allUserIds = staffList.map((s) => s.id);
-
     const isSameElements = (a, b) => a.length === b.length && a.every((val) => b.includes(val));
 
     if (isSameElements(recipientIds, allTlIds) && allTlIds.length > 0) {
@@ -224,9 +215,7 @@ export default function NotifikasiPage() {
         await supabase.from("notification_recipients").delete().eq("notification_id", editId);
 
         const newRecipients = selectedUserIds.map((userId) => ({
-          notification_id: editId,
-          user_id: userId,
-          is_read: false,
+          notification_id: editId, user_id: userId, is_read: false,
         }));
 
         await supabase.from("notification_recipients").insert(newRecipients);
@@ -241,9 +230,7 @@ export default function NotifikasiPage() {
         if (notifError) throw notifError;
 
         const recipients = selectedUserIds.map((userId) => ({
-          notification_id: newNotif.id,
-          user_id: userId,
-          is_read: false,
+          notification_id: newNotif.id, user_id: userId, is_read: false,
         }));
         await supabase.from("notification_recipients").insert(recipients);
         showToast("Notifikasi berhasil dikirim!");
@@ -253,9 +240,7 @@ export default function NotifikasiPage() {
       fetchNotifications();
     } catch (err) {
       showToast("Terjadi kesalahan: " + err.message, "error");
-    } finally {
-      setIsSubmitting(false);
-    }
+    } finally { setIsSubmitting(false); }
   };
 
   const executeDeleteNotification = async () => {
@@ -327,11 +312,7 @@ export default function NotifikasiPage() {
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
     });
   };
 
@@ -346,7 +327,6 @@ export default function NotifikasiPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans relative">
       <Topbar title="Notifikasi" breadcrumbs={["Dashboard", "Notifikasi"]} />
-
       {toast.show && (
         <div className="fixed top-6 right-6 z-50 animate-bounce">
           <div className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
@@ -362,22 +342,13 @@ export default function NotifikasiPage() {
         {view === 0 && (
           <div className="space-y-6">
             <div className="relative">
-              <PageHeader 
-                title="Daftar Notifikasi" 
-                description="Berisi daftar notifikasi dan pengingat yang dikirimkan kepada tour leader dan muthawif." 
+              <PageHeader title="Daftar Notifikasi" description="Berisi daftar notifikasi dan pengingat yang dikirimkan kepada tour leader dan muthawif." 
                 icon={<IoMdNotificationsOutline className="w-[26px] h-[26px] text-[#eab308]" />} 
-                buttonIcon={<FiPlus className="w-4 h-4" />} 
-                buttonOnClick={handleOpenAdd} 
-                buttonText="Buat Notifikasi Baru" 
+                buttonIcon={<FiPlus className="w-4 h-4" />} buttonOnClick={handleOpenAdd} buttonText="Buat Notifikasi Baru" 
               />
               
-              {/* Tombol Icon Panduan Warna diposisikan rapi di sebelah kiri tombol Buat Notifikasi */}
               <div className="absolute right-[215px] top-1/2 -translate-y-1/2 hidden md:block">
-                <button 
-                  onClick={() => setGuideModalOpen(true)}
-                  title="Panduan Status Warna"
-                  className="p-3 bg-white border border-gray-200 hover:border-amber-400 hover:bg-amber-50/50 text-amber-500 hover:text-amber-600 rounded-xl transition-all shadow-2xs"
-                >
+                <button onClick={() => setGuideModalOpen(true)} title="Panduan Status Warna" className="p-3 bg-white border border-gray-200 hover:border-amber-400 hover:bg-amber-50/50 text-amber-500 hover:text-amber-600 rounded-xl transition-all shadow-2xs" >
                   <FiHelpCircle className="w-5 h-5" />
                 </button>
               </div>
@@ -463,23 +434,13 @@ export default function NotifikasiPage() {
                   <label className="mb-1.5 block text-xs font-bold text-gray-700 flex items-center gap-1.5">
                     <FiCalendar className="text-amber-500" /> Tanggal & Waktu Mulai Kegiatan
                   </label>
-                  <input 
-                    type="datetime-local" 
-                    value={startDate} 
-                    onChange={(e) => setStartDate(e.target.value)} 
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:outline-none focus:border-[#121c2d]" 
-                  />
+                  <input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:outline-none focus:border-[#121c2d]" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-gray-700 flex items-center gap-1.5">
                     <FiClock className="text-amber-500" /> Tanggal & Waktu Selesai Kegiatan
                   </label>
-                  <input 
-                    type="datetime-local" 
-                    value={endDate} 
-                    onChange={(e) => setEndDate(e.target.value)} 
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:outline-none focus:border-[#121c2d]" 
-                  />
+                  <input type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:outline-none focus:border-[#121c2d]" />
                 </div>
               </div>
 
@@ -584,7 +545,6 @@ export default function NotifikasiPage() {
         )}
       </main>
 
-      {/* MODAL KECIL: PANDUAN STATUS WARNA */}
       {guideModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-100 animate-scale-up space-y-4">
@@ -635,19 +595,12 @@ export default function NotifikasiPage() {
             </div>
 
             <div className="pt-2">
-              <button 
-                type="button" 
-                onClick={() => setGuideModalOpen(false)} 
-                className="w-full py-2.5 text-xs font-bold text-white bg-[#121c2d] hover:bg-[#1a2942] rounded-xl transition-colors"
-              >
-                Mengerti
-              </button>
+              <button type="button" onClick={() => setGuideModalOpen(false)} className="w-full py-2.5 text-xs font-bold text-white bg-[#121c2d] hover:bg-[#1a2942] rounded-xl transition-colors" > Mengerti </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Detail & Penerima */}
       {detailModalItem && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-gray-100 animate-scale-up space-y-4 max-h-[85vh] flex flex-col">
@@ -704,7 +657,6 @@ export default function NotifikasiPage() {
         </div>
       )}
 
-      {/* Modal Statistik Status Baca */}
       {hasilModalItem && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-gray-100 max-h-[85vh] flex flex-col space-y-4 animate-scale-up">
@@ -764,20 +716,8 @@ export default function NotifikasiPage() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <button 
-                type="button" 
-                onClick={() => setConfirmModal({ show: false, id: null, title: "" })} 
-                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
-              > 
-                Batal 
-              </button>
-              <button 
-                type="button" 
-                onClick={executeDeleteNotification} 
-                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors"
-              > 
-                Ya, Hapus 
-              </button>
+              <button type="button" onClick={() => setConfirmModal({ show: false, id: null, title: "" })} className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors" > Batal </button>
+              <button type="button" onClick={executeDeleteNotification} className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors" > Ya, Hapus </button>
             </div>
           </div>
         </div>
