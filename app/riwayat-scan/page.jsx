@@ -246,7 +246,7 @@ export default function RiwayatScanPage() {
                   <th className="px-5 py-4">Nama Pemilik</th>
                   <th className="px-5 py-4">No Telepon</th>
                   <th className="px-5 py-4">Kloter</th>
-                  <th className="px-5 py-4 text-center">Status Scan</th>
+                  <th className="px-5 py-4 text-center">Waktu Scan</th>
                   <th className="px-5 py-4 text-center w-20">Aksi</th>
                 </tr>
               ) : (
