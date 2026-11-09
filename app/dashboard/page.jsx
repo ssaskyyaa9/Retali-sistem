@@ -29,38 +29,32 @@ export default function DashboardPage() {
   const [tourLeadersActive, setTourLeadersActive] = useState([]);
   const [muthawifActive, setMuthawifActive] = useState([]);
 
-  // Fungsi untuk mengambil data asli dari Supabase
   const fetchDashboardData = async () => {
     try {
-      // 1. Total Scan = Jumlah baris dari tabel 'scans' + 'passport_scans'[cite: 2]
-      const { count: scanCount } = await supabase
-        .from("scans")
+      const { count: koperScanCount } = await supabase
+        .from("koper")
         .select("*", { count: "exact", head: true });
 
       const { count: passportScanCount } = await supabase
         .from("passport_scans")
         .select("*", { count: "exact", head: true });
 
-      const totalScanCombined = (scanCount || 0) + (passportScanCount || 0);
+      const totalScanCombined = (koperScanCount || 0) + (passportScanCount || 0);
 
-      // 2. Total Tour Leader dari tabel 'profiles' (berdasarkan role)[cite: 2]
       const { count: tlCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .ilike("role", "%tour_leader%");
 
-      // 3. Total Muthawif dari tabel 'profiles' (berdasarkan role)[cite: 2]
       const { count: muthawifCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .ilike("role", "%muthawif%");
 
-      // 4. Total Absen Jamaah dari tabel 'attendance_user'[cite: 2]
       const { count: absenCount } = await supabase
         .from("attendance_user")
         .select("*", { count: "exact", head: true });
 
-      // 5. Total Itinerary dari tabel 'itinerary_activities'[cite: 2]
       const { count: itineraryActivityCount } = await supabase
         .from("itinerary_activities")
         .select("*", { count: "exact", head: true });
@@ -73,7 +67,6 @@ export default function DashboardPage() {
         total_itinerary: itineraryActivityCount || 0,
       });
 
-      // 6. Status Operasional (Tugas, Checklist, Absensi dari database asli)[cite: 2]
       const { count: taskTotal } = await supabase
         .from("tasks")
         .select("*", { count: "exact", head: true });
@@ -107,9 +100,8 @@ export default function DashboardPage() {
         attendanceTotal: attendanceTotal || 0,
       });
 
-      // 7. Aktivitas Terbaru (Murni dari tabel 'scans' dan relasi 'profiles')[cite: 2]
       const { data: activitiesData } = await supabase
-        .from("scans")
+        .from("koper")
         .select("id, created_at, koper_id, profiles(full_name)")
         .order("created_at", { ascending: false })
         .limit(5);
@@ -120,16 +112,15 @@ export default function DashboardPage() {
           const timeString = dateObj.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
           return {
             title: item.profiles?.full_name || "Petugas",
-            desc: item.koper_id ? `Scan koper ${item.koper_id}` : "Aktivitas scan",
+            desc: item.koper_id ? `Scan koper ${item.koper_id}` : "Aktivitas scan koper",
             time: `${timeString} WIB`,
           };
         });
         setRecentActivities(formattedActivities);
       } else {
-        setRecentActivities([]); // Kosong murni tanpa teks dummy jika belum ada data
+        setRecentActivities([]);
       }
 
-      // 8. Ambil Data Petugas Aktif (Tour Leader & Muthawif dari tabel 'profiles')[cite: 2]
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("full_name, role, status, last_activity, last_activity_time")
@@ -169,10 +160,9 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
 
-    // Realtime subscription agar otomatis memperbarui data saat ada perubahan di database
     const channel = supabase
       .channel("realtime-dashboard")
-      .on("postgres_changes", { event: "*", schema: "public", table: "scans" }, () => fetchDashboardData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "koper" }, () => fetchDashboardData())
       .on("postgres_changes", { event: "*", schema: "public", table: "passport_scans" }, () => fetchDashboardData())
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchDashboardData())
       .on("postgres_changes", { event: "*", schema: "public", table: "attendance_user" }, () => fetchDashboardData())
@@ -199,16 +189,12 @@ export default function DashboardPage() {
       `}</style>
 
       <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
-        {/* Topbar */}
         <Topbar title="Dashboard" breadcrumbs={["Dashboard", "Dashboard"]} />
 
-        {/* MAIN CONTENT AREA */}
         <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           
-          {/* 5 Card Statistik */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             
-            {/* Card 1: Total Scan */}
             <Link
               href="/riwayat-scan"
               className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
@@ -224,7 +210,6 @@ export default function DashboardPage() {
               <p className="text-xs font-semibold text-gray-500">Total Scan</p>
             </Link>
 
-            {/* Card 2: Total Tour Leader */}
             <Link
               href="/tour-leader"
               className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
@@ -240,7 +225,6 @@ export default function DashboardPage() {
               <p className="text-xs font-semibold text-gray-500">Total Tour Leader</p>
             </Link>
 
-            {/* Card 3: Total Muthawif */}
             <Link
               href="/muthawif"
               className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
@@ -256,7 +240,6 @@ export default function DashboardPage() {
               <p className="text-xs font-semibold text-gray-500">Total Muthawif</p>
             </Link>
 
-            {/* Card 4: Absen Jamaah */}
             <Link
               href="/riwayat-absensi"
               className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
@@ -273,7 +256,6 @@ export default function DashboardPage() {
               <p className="text-xs font-semibold text-gray-500">Absen Jamaah</p>
             </Link>
 
-            {/* Card 5: Total Itinerary */}
             <Link
               href="/itinerary"
               className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 sm:col-span-2 md:col-span-1 cursor-pointer"
@@ -290,16 +272,13 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Status Operasional & Aktivitas Terbaru */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* Status Operasional */}
             <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100 flex flex-col justify-between">
               <div>
                 <h4 className="font-bold text-base text-gray-900 mb-1">Status Operasional Hari Ini</h4>
                 <div className="space-y-5 mt-5">
                   
-                  {/* Tugas Tour Leader */}
                   <div>
                     <div className="flex justify-between text-sm font-bold mb-1.5">
                       <span className="text-gray-800">Tugas Tour Leader</span>
@@ -318,7 +297,6 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  {/* Checklist */}
                   <div>
                     <div className="flex justify-between text-sm font-bold mb-1.5">
                       <span className="text-gray-800">Checklist</span>
@@ -337,7 +315,6 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  {/* Absensi Jamaah */}
                   <div>
                     <div className="flex justify-between text-sm font-bold mb-1.5">
                       <span className="text-gray-800">Absensi Jamaah</span>
@@ -360,7 +337,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Aktivitas Terbaru */}
             <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100">
               <div className="mb-4">
                 <h4 className="font-bold text-base text-gray-900">Aktivitas Terbaru</h4>
@@ -388,7 +364,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Tour Leader & Muthawif Aktif */}
           <div className="rounded-2xl bg-white p-6 shadow-md border border-gray-100">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div>
@@ -401,7 +376,6 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-500 mt-0.5 font-medium">Status dan aktivitas terakhir petugas di lapangan</p>
               </div>
 
-              {/* Modern Segmented Tab Switcher */}
               <div className="flex bg-gray-100/80 p-1.5 rounded-xl text-xs font-semibold">
                 <button
                   onClick={() => setActiveTab("tour_leader")}
@@ -414,7 +388,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => setActiveTab("muthawif")}
                   className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                    activeTab === "muthawif" ? "bg-[#1b3167]  text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+                    activeTab === "muthawif" ? "bg-[#1b3167] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
                   }`}
                 >
                   Muthawif
@@ -422,7 +396,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Clean Table */}
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
