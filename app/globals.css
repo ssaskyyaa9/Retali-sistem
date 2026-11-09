@@ -112,3 +112,12 @@ body {
   color: #9ca3af !important; /* Gray-400 */
   font-style: normal !important;
 }
+
+
+@media print {
+  aside,
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+}

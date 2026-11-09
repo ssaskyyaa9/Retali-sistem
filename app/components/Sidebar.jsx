@@ -28,7 +28,7 @@ export default function Sidebar() {
   const [isSavingName, setIsSavingName] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const isActive = (path) => pathname === path;
+  const isActive = (path) => pathname === path || pathname.startsWith(path + "/");
   const isParentActive = (paths) => paths.some((p) => pathname.startsWith(p));
 
   useEffect(() => {

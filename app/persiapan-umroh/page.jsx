@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from "react";
 import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
-import { FaKaaba } from "react-icons/fa6";
+import { FaKaaba, FaRegFilePdf } from "react-icons/fa6";
 import { HiDocumentText } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { exportMateriToPDF } from "@/lib/exportPdf";
 
 export default function PersiapanUmrohPage() {
   const router = useRouter();
@@ -35,10 +36,10 @@ export default function PersiapanUmrohPage() {
           }
         }
 
-        // 2. Ambil data daftar materi persiapan umroh dari Supabase
+        // 2. Ambil data daftar materi persiapan umroh dari Supabase (termasuk sub_title dan content)
         const { data, error } = await supabase
           .from("preparation_assignments")
-          .select("id, title, description")
+          .select("id, title, sub_title, description, content")
           .order("created_at", { ascending: true });
 
         if (error) throw error;
@@ -56,9 +57,33 @@ export default function PersiapanUmrohPage() {
     fetchData();
   }, []);
 
-  const handleExportPDF = (e) => {
+  // Export PDF yang mencetak isi materi lengkap yang ada di dalam (Judul, Subjudul, Deskripsi, & Isi Konten)
+  const handleExportPDF = async (item, e) => {
     e.stopPropagation(); // Mencegah pindah halaman saat tombol export diklik
-    window.print();
+
+    let dataToExport = item;
+    // Fallback: Jika content belum terisi di object item, ambil detail lengkap dari Supabase
+    if (!dataToExport.content && dataToExport.id) {
+      try {
+        const { data } = await supabase
+          .from("preparation_assignments")
+          .select("id, title, sub_title, description, content")
+          .eq("id", dataToExport.id)
+          .single();
+        if (data) {
+          dataToExport = data;
+        }
+      } catch (err) {
+        console.error("Gagal memuat detail materi untuk PDF:", err);
+      }
+    }
+
+    exportMateriToPDF({
+      title: dataToExport.title || dataToExport.bab,
+      sub_title: dataToExport.sub_title,
+      description: dataToExport.description || dataToExport.anakSubjudul,
+      content: dataToExport.content,
+    });
   };
 
   return (
@@ -124,9 +149,10 @@ export default function PersiapanUmrohPage() {
                   {/* Bagian Kanan: Tombol Export */}
                   <div className="shrink-0 self-end md:self-center pt-2 md:pt-0">
                     <button
-                      onClick={handleExportPDF}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent"
+                      onClick={(e) => handleExportPDF(item, e)}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2"
                     >
+                      <FaRegFilePdf className="w-3.5 h-3.5 text-red-500" />
                       Export to pdf
                     </button>
                   </div>
