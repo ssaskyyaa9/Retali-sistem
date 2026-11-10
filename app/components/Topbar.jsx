@@ -27,7 +27,6 @@ export default function Topbar({
 
   // Ref untuk menampung item yang terview selama dropdown sedang terbuka
   const pendingViewedRef = useRef(new Set());
-  const prevIsOpenRef = useRef(false);
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
@@ -43,23 +42,6 @@ export default function Topbar({
     } catch (e) {
       console.error("Gagal membaca localStorage:", e);
     }
-  }, []);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
-        setIsNotifOpen(false);
-      }
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setIsProfileOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
   }, []);
 
   const loadNotifications = async () => {
@@ -160,64 +142,111 @@ export default function Topbar({
     };
   }, []);
 
-  // Mengecek notifikasi mana saja yang berada dalam viewport scroll container
-  // Item yang terlihat dimasukkan ke pendingViewedRef (BELUM langsung di-greyout atau dikurangi nomornya saat masih terbuka)
+  // Mengecek notifikasi mana saja yang sedang terlihat (terview) di scroll container
+  // Item yang terlihat dimasukkan ke pendingViewedRef (BELUM langsung di-greyout atau dikurangi saat masih terbuka)
   const checkVisibleItems = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
+    const scrollTop = container.scrollTop;
+    const clientHeight = container.clientHeight > 0 ? container.clientHeight : 320;
+    const scrollBottom = scrollTop + clientHeight;
+
     const items = container.querySelectorAll("[data-notif-id]");
 
     items.forEach((item) => {
       const id = item.getAttribute("data-notif-id");
       if (!id || viewedIds.has(id)) return;
 
-      const itemRect = item.getBoundingClientRect();
-      const isVisible =
-        itemRect.bottom > containerRect.top + 10 &&
-        itemRect.top < containerRect.bottom - 10;
+      // Cek 1: Berdasarkan offsetTop relatif terhadap scroll container
+      const itemTop = item.offsetTop;
+      const itemHeight = item.offsetHeight || 65;
+      const itemBottom = itemTop + itemHeight;
+      const isVisibleOffset = itemBottom > scrollTop && itemTop < scrollBottom;
 
-      if (isVisible) {
+      // Cek 2: Berdasarkan getBoundingClientRect
+      let isVisibleRect = false;
+      if (containerRect.height > 0) {
+        const itemRect = item.getBoundingClientRect();
+        isVisibleRect =
+          itemRect.bottom > containerRect.top &&
+          itemRect.top < containerRect.bottom;
+      }
+
+      if (isVisibleOffset || isVisibleRect) {
         pendingViewedRef.current.add(id);
       }
     });
   }, [viewedIds]);
 
-  // Saat dropdown terbuka, deteksi item yang terlihat awal dan saat scroll
+  // Fungsi komit: saat dropdown ditutup, item yang terview baru diubah ke viewedIds & disimpan ke localStorage
+  const commitPendingViewed = useCallback(() => {
+    checkVisibleItems();
+
+    if (pendingViewedRef.current.size > 0) {
+      const newItems = Array.from(pendingViewedRef.current);
+      setViewedIds((prev) => {
+        const updated = new Set([...prev, ...newItems]);
+        try {
+          localStorage.setItem(
+            VIEWED_STORAGE_KEY,
+            JSON.stringify(Array.from(updated))
+          );
+        } catch (e) {
+          console.error("Gagal menyimpan ke localStorage:", e);
+        }
+        return updated;
+      });
+      pendingViewedRef.current = new Set();
+    }
+  }, [checkVisibleItems]);
+
+  // Handler buka/tutup dropdown lonceng notifikasi
+  const handleToggleNotif = () => {
+    if (isNotifOpen) {
+      // Saat ditutup sehabis diopen: baru greyout dan nomor berkurang!
+      commitPendingViewed();
+      setIsNotifOpen(false);
+    } else {
+      setIsNotifOpen(true);
+      setIsProfileOpen(false);
+    }
+  };
+
+  // Click outside listener: bila klik di luar saat dropdown terbuka, komit & tutup
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        if (isNotifOpen) {
+          commitPendingViewed();
+          setIsNotifOpen(false);
+        }
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isNotifOpen, commitPendingViewed]);
+
+  // Saat dropdown terbuka, deteksi item mana saja yang terlihat
   useEffect(() => {
     if (isNotifOpen) {
-      const t1 = setTimeout(checkVisibleItems, 100);
-      const t2 = setTimeout(checkVisibleItems, 250);
+      checkVisibleItems();
+      const t1 = setTimeout(checkVisibleItems, 80);
+      const t2 = setTimeout(checkVisibleItems, 200);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
       };
     }
   }, [isNotifOpen, notificationList, checkVisibleItems]);
-
-  // Saat dropdown DITUTUP (dari terbuka ke tertutup):
-  // "saat tutup abis diopen baru greyout dan nomornya kurang"
-  useEffect(() => {
-    if (prevIsOpenRef.current && !isNotifOpen) {
-      if (pendingViewedRef.current.size > 0) {
-        setViewedIds((prev) => {
-          const updated = new Set([...prev, ...pendingViewedRef.current]);
-          try {
-            localStorage.setItem(
-              VIEWED_STORAGE_KEY,
-              JSON.stringify(Array.from(updated))
-            );
-          } catch (e) {
-            console.error("Gagal menyimpan ke localStorage:", e);
-          }
-          return updated;
-        });
-        pendingViewedRef.current = new Set();
-      }
-    }
-    prevIsOpenRef.current = isNotifOpen;
-  }, [isNotifOpen]);
 
   const formatRole = (role) => {
     switch (role) {
@@ -299,10 +328,7 @@ export default function Topbar({
         <div className="flex items-center gap-4">
           <div ref={notifRef} className="relative">
             <button
-              onClick={() => {
-                setIsNotifOpen((prev) => !prev);
-                setIsProfileOpen(false);
-              }}
+              onClick={handleToggleNotif}
               className="relative cursor-pointer p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-600 transition-colors focus:outline-none"
             >
               <svg
@@ -343,7 +369,7 @@ export default function Topbar({
               <div
                 ref={scrollContainerRef}
                 onScroll={checkVisibleItems}
-                className="max-h-80 overflow-y-auto divide-y divide-gray-50 no-scrollbar"
+                className="max-h-80 overflow-y-auto divide-y divide-gray-50 no-scrollbar relative"
               >
                 {notificationList.length === 0 ? (
                   <div className="py-8 text-center text-xs text-gray-400 font-medium">
@@ -361,7 +387,7 @@ export default function Topbar({
                           isViewed ? "bg-white" : "bg-amber-50/30"
                         }`}
                       >
-                        {/* Ikon biru jika belum dilihat sebelumnya, sedikit greyed-out jika sudah pernah terview */}
+                        {/* Ikon biru jika belum pernah dilihat, sedikit greyed-out jika sudah terview di sesi sebelumnya */}
                         <div
                           className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors duration-300 ${
                             isViewed
@@ -412,6 +438,7 @@ export default function Topbar({
               <div className="pt-2 px-4 border-t border-gray-100 text-center">
                 <button
                   onClick={() => {
+                    commitPendingViewed();
                     setIsNotifOpen(false);
                     router.push("/notifikasi");
                   }}
