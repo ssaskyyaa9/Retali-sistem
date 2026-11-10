@@ -32,6 +32,7 @@ export default function MuthawifPage() {
   const [editingId, setEditingId] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     namaLengkap: "",
@@ -81,74 +82,6 @@ export default function MuthawifPage() {
     setCurrentPage(1); // Reset ke halaman pertama saat mencari
   };
 
-  const handleOpenEdit = async (task) => {
-    setEditingTaskId(task.id);
-    setTaskForm({
-      title: task.title || "",
-      opensAt: task.opens_at ? task.opens_at.slice(0, 16) : "",
-      closesAt: task.closes_at ? task.closes_at.slice(0, 16) : "",
-    });
-    setSearchQuery("");
-    setSelectedKloterFilter("all");
-
-    // 1. Load Soal dari DB
-    const { data: qData } = await supabase
-      .from("checklist_questions")
-      .select("*")
-      .eq("task_id", task.id)
-      .order("sort_order", { ascending: true });
-
-    if (qData && qData.length > 0) {
-      setQuestions(
-        qData.map((q) => ({
-          text: q.question_text || q.text || "",
-        })),
-      );
-    } else {
-      setQuestions([{ text: "" }]);
-    }
-
-    // 2. Load Penerima Tugas dari checklist_assignments
-    const rawAssignments = await fetchTaskAssignments(task.id);
-    const assignedIds = rawAssignments.map((a) => a.recipient_id);
-    setSelectedRecipients(assignedIds);
-
-    // 3. Ambil ID Berdasarkan Role
-    const allTLIds = tourLeaders
-      .filter((p) => p.role === "tour_leader")
-      .map((p) => p.id);
-    const allMuthawifIds = tourLeaders
-      .filter((p) => p.role === "muthawif")
-      .map((p) => p.id);
-
-    const isOnlyMuthawif =
-      allMuthawifIds.length > 0 &&
-      assignedIds.length === allMuthawifIds.length &&
-      allMuthawifIds.every((id) => assignedIds.includes(id));
-
-    const isOnlyTL =
-      allTLIds.length > 0 &&
-      assignedIds.length === allTLIds.length &&
-      allTLIds.every((id) => assignedIds.includes(id));
-
-    const isAllUsers =
-      tourLeaders.length > 0 &&
-      assignedIds.length === tourLeaders.length &&
-      tourLeaders.every((p) => assignedIds.includes(p.id));
-
-    if (isOnlyMuthawif) {
-      setSelectedTarget("all_muthawif");
-    } else if (isOnlyTL) {
-      setSelectedTarget("all_tour_leader");
-    } else if (isAllUsers) {
-      setSelectedTarget("all_petugas");
-    } else {
-      setSelectedTarget("custom");
-    }
-
-    setView(1);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -172,17 +105,25 @@ export default function MuthawifPage() {
   const handleDeleteUser = async () => {
     if (!userToDelete || !userToDelete.realId) return;
 
-    const result = await deleteMuthawifAction(userToDelete.realId);
+    try {
+      setIsDeleting(true);
+      const result = await deleteMuthawifAction(userToDelete.realId);
 
-    if (!result.success) {
-      console.error("Error deleting Muthawif:", result.error);
-      alert("Gagal menghapus data: " + result.error);
-      return;
+      if (!result.success) {
+        console.error("Error deleting Muthawif:", result.error);
+        alert("Gagal menghapus data: " + result.error);
+        return;
+      }
+
+      setDeleteModalOpen(false);
+      setUserToDelete(null);
+      fetchMuthawif();
+    } catch (err) {
+      console.error("Error deleting Muthawif:", err);
+      alert("Gagal menghapus data: " + (err.message || "Terjadi kesalahan."));
+    } finally {
+      setIsDeleting(false);
     }
-
-    setDeleteModalOpen(false);
-    setUserToDelete(null);
-    fetchMuthawif();
   };
 
   const fetchMuthawif = async () => {
@@ -818,17 +759,19 @@ export default function MuthawifPage() {
           <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
             <button
               type="button"
+              disabled={isDeleting}
               onClick={() => setDeleteModalOpen(false)}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="button"
+              disabled={isDeleting}
               onClick={handleDeleteUser}
-              className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
+              className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
-              Ya, Hapus
+              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
             </button>
           </div>
         </div>
