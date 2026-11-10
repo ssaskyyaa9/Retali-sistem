@@ -21,13 +21,19 @@ export default function Topbar({
 
   // Daftar notifikasi yang dibaca oleh petugas (Tour Leader / Muthawif)
   const [notificationList, setNotificationList] = useState([]);
+
+  // Set ID notifikasi yang sudah permanen dilihat (greyed-out)
   const [viewedIds, setViewedIds] = useState(new Set());
+
+  // Ref untuk menampung item yang terview selama dropdown sedang terbuka
+  const pendingViewedRef = useRef(new Set());
+  const prevIsOpenRef = useRef(false);
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
-  // Load viewed IDs dari localStorage
+  // Load viewed IDs dari localStorage saat pertama kali dimuat
   useEffect(() => {
     try {
       const stored = localStorage.getItem(VIEWED_STORAGE_KEY);
@@ -35,7 +41,7 @@ export default function Topbar({
         setViewedIds(new Set(JSON.parse(stored)));
       }
     } catch (e) {
-      console.error(e);
+      console.error("Gagal membaca localStorage:", e);
     }
   }, []);
 
@@ -154,67 +160,64 @@ export default function Topbar({
     };
   }, []);
 
-  // Fungsi untuk mengecek notifikasi mana saja yang sedang terlihat (terview) di scroll container
+  // Mengecek notifikasi mana saja yang berada dalam viewport scroll container
+  // Item yang terlihat dimasukkan ke pendingViewedRef (BELUM langsung di-greyout atau dikurangi nomornya saat masih terbuka)
   const checkVisibleItems = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
     const items = container.querySelectorAll("[data-notif-id]");
-    const newlyViewed = [];
 
     items.forEach((item) => {
       const id = item.getAttribute("data-notif-id");
       if (!id || viewedIds.has(id)) return;
 
       const itemRect = item.getBoundingClientRect();
-      // Elemen dianggap terview bila sebagian besar terlihat di viewport container
       const isVisible =
-        itemRect.bottom > containerRect.top + 15 &&
-        itemRect.top < containerRect.bottom - 15;
+        itemRect.bottom > containerRect.top + 10 &&
+        itemRect.top < containerRect.bottom - 10;
 
       if (isVisible) {
-        newlyViewed.push(id);
+        pendingViewedRef.current.add(id);
       }
     });
-
-    if (newlyViewed.length > 0) {
-      setViewedIds((prev) => {
-        const updated = new Set(prev);
-        let changed = false;
-        newlyViewed.forEach((id) => {
-          if (!updated.has(id)) {
-            updated.add(id);
-            changed = true;
-          }
-        });
-        if (changed) {
-          try {
-            localStorage.setItem(
-              VIEWED_STORAGE_KEY,
-              JSON.stringify(Array.from(updated))
-            );
-          } catch (e) {
-            console.error(e);
-          }
-          return updated;
-        }
-        return prev;
-      });
-    }
   }, [viewedIds]);
 
-  // Saat dropdown notifikasi dibuka, periksa item yang langsung terlihat
+  // Saat dropdown terbuka, deteksi item yang terlihat awal dan saat scroll
   useEffect(() => {
     if (isNotifOpen) {
       const t1 = setTimeout(checkVisibleItems, 100);
-      const t2 = setTimeout(checkVisibleItems, 300);
+      const t2 = setTimeout(checkVisibleItems, 250);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
       };
     }
   }, [isNotifOpen, notificationList, checkVisibleItems]);
+
+  // Saat dropdown DITUTUP (dari terbuka ke tertutup):
+  // "saat tutup abis diopen baru greyout dan nomornya kurang"
+  useEffect(() => {
+    if (prevIsOpenRef.current && !isNotifOpen) {
+      if (pendingViewedRef.current.size > 0) {
+        setViewedIds((prev) => {
+          const updated = new Set([...prev, ...pendingViewedRef.current]);
+          try {
+            localStorage.setItem(
+              VIEWED_STORAGE_KEY,
+              JSON.stringify(Array.from(updated))
+            );
+          } catch (e) {
+            console.error("Gagal menyimpan ke localStorage:", e);
+          }
+          return updated;
+        });
+        pendingViewedRef.current = new Set();
+      }
+    }
+    prevIsOpenRef.current = isNotifOpen;
+  }, [isNotifOpen]);
 
   const formatRole = (role) => {
     switch (role) {
@@ -297,7 +300,7 @@ export default function Topbar({
           <div ref={notifRef} className="relative">
             <button
               onClick={() => {
-                setIsNotifOpen(!isNotifOpen);
+                setIsNotifOpen((prev) => !prev);
                 setIsProfileOpen(false);
               }}
               className="relative cursor-pointer p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-600 transition-colors focus:outline-none"
@@ -358,7 +361,7 @@ export default function Topbar({
                           isViewed ? "bg-white" : "bg-amber-50/30"
                         }`}
                       >
-                        {/* Ikon biru jika belum dilihat, sedikit greyed-out jika sudah terview */}
+                        {/* Ikon biru jika belum dilihat sebelumnya, sedikit greyed-out jika sudah pernah terview */}
                         <div
                           className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors duration-300 ${
                             isViewed
