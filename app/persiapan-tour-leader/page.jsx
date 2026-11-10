@@ -89,14 +89,14 @@ export default function PersiapanTourLeaderPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
-        title="Persiapan Tour Leader"
-        breadcrumbs={["Dashboard", "Persiapan", "Persiapan Tour Leader"]}
+        title="Persiapan Diniyah"
+        breadcrumbs={["Dashboard", "Persiapan", "Persiapan Diniyah"]}
       />
 
       <div className="flex-1 overflow-y-auto px-6 py-8 md:p-10 w-full max-w-5xl no-scrollbar mx-auto">
         <PageHeader
-          title="Materi Persiapan Tour Leader"
-          description="Materi persiapan untuk tour leader, termasuk panduan dan tips untuk menjalankan tour dengan efektif."
+          title="Materi Persiapan Diniyah"
+          description="Berisi materi persiapan diniyah untuk calon jamaah umroh, termasuk informasi penting dan panduan yang perlu diketahui sebelum keberangkatan."
           icon={<FaBook className="w-[26px] h-[26px] text-[#eab308]" />}
           buttonText={isAdmin ? "Tambah Materi" : undefined}
           buttonIcon={

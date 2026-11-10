@@ -89,14 +89,14 @@ export default function PersiapanUmrohPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
-        title="Persiapan Umroh"
-        breadcrumbs={["Dashboard", "Persiapan", "Persiapan Umroh"]}
+        title="Persiapan Teknis"
+        breadcrumbs={["Dashboard", "Persiapan", "Persiapan Teknis"]}
       />
 
       <div className="flex-1 overflow-y-auto px-6 py-8 md:p-10 w-full max-w-5xl no-scrollbar mx-auto">
         <PageHeader
-          title="Materi Persiapan Umroh"
-          description="Materi panduan dan tips untuk menjalankan ibadah umroh dengan baik untuk diajari ke jamaah."
+          title="Materi Persiapan Teknis"
+          description="Berisi materi persiapan teknis untuk calon jamaah umroh, termasuk informasi penting dan panduan yang perlu diketahui sebelum keberangkatan."
           icon={<FaKaaba className="w-[26px] h-[26px] text-[#eab308]" />}
           buttonText={isAdmin ? "Tambah Materi" : undefined}
           buttonIcon={
