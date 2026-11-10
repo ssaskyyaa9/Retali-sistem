@@ -13,6 +13,8 @@ export default function RiwayatScanPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTanggal, setFilterTanggal] = useState("");
+  const [filterKloter, setFilterKloter] = useState("");
+  const [listKloter, setListKloter] = useState([]); // <-- State untuk menampung kloter unik dari database
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -23,7 +25,27 @@ export default function RiwayatScanPage() {
     if (tab === activeTab) return;
     setLoading(true);
     setActiveTab(tab);
+    setFilterKloter("");
     setCurrentPage(1);
+  };
+
+  // Fungsi untuk mengambil SEMUA daftar kloter unik yang ada di Supabase
+  const fetchAllKloterList = async () => {
+    try {
+      const tableName = activeTab === "koper" ? "koper" : "passport_scans";
+      const { data, error } = await supabase.from(tableName).select("kloter");
+      
+      if (!error && data) {
+        // Ambil nilai kloter yang unik, buang yang null/kosong, lalu urutkan
+        const uniqueKloter = [...new Set(data.map((item) => item.kloter).filter(Boolean))].sort((a, b) => {
+          // Sorting natural agar urut misal Kloter 1, Kloter 2, dst atau angka biasa
+          return String(a).localeCompare(String(b), undefined, { numeric: true });
+        });
+        setListKloter(uniqueKloter);
+      }
+    } catch (err) {
+      console.error("Error fetching unique kloter:", err);
+    }
   };
 
   const fetchData = async () => {
@@ -36,7 +58,10 @@ export default function RiwayatScanPage() {
         }
         if (filterTanggal) {
           queryKoper = queryKoper.gte("created_at", `${filterTanggal}T00:00:00`)
-                               .lte("created_at", `${filterTanggal}T23:59:59`);
+                                 .lte("created_at", `${filterTanggal}T23:59:59`);
+        }
+        if (filterKloter) {
+          queryKoper = queryKoper.eq("kloter", filterKloter);
         }
         const { data: resKoper } = await queryKoper.order("created_at", { ascending: false });
         setDataKoper(resKoper || []);
@@ -47,7 +72,10 @@ export default function RiwayatScanPage() {
         }
         if (filterTanggal) {
           queryPaspor = queryPaspor.gte("scanned_at", `${filterTanggal}T00:00:00`)
-                               .lte("scanned_at", `${filterTanggal}T23:59:59`);
+                                 .lte("scanned_at", `${filterTanggal}T23:59:59`);
+        }
+        if (filterKloter) {
+          queryPaspor = queryPaspor.eq("kloter", filterKloter);
         }
         const { data: resPaspor } = await queryPaspor.order("scanned_at", { ascending: false });
         setDataPaspor(resPaspor || []);
@@ -59,16 +87,22 @@ export default function RiwayatScanPage() {
     }
   };
 
+  // Jalankan fetch list kloter setiap kali tab berubah
+  useEffect(() => {
+    fetchAllKloterList();
+  }, [activeTab]);
+
   useEffect(() => {
     setLoading(true);
     const delayDebounce = setTimeout(() => { fetchData(); }, 250);
 
     return () => clearTimeout(delayDebounce);
-  }, [activeTab, searchQuery, filterTanggal]);
+  }, [activeTab, searchQuery, filterTanggal, filterKloter]);
 
   const handleReset = () => {
     setSearchQuery("");
     setFilterTanggal("");
+    setFilterKloter("");
     setCurrentPage(1);
   };
 
@@ -155,6 +189,7 @@ export default function RiwayatScanPage() {
       setShowDeleteModal(false);
       setSelectedIdToDelete(null);
       fetchData();
+      fetchAllKloterList(); // Refresh list kloter jika data terhapus
     } catch (err) {
       alert("Gagal menghapus data: " + err.message);
     } finally {
@@ -207,31 +242,53 @@ export default function RiwayatScanPage() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8 transition-all duration-200">
-          <div className="p-5 border-b border-gray-100 flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex flex-wrap gap-3 items-center flex-1">
-              <div className="w-77">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 flex-nowrap">
+              {/* Search Box */}
+              <div className="w-64">
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                     <TbSearch className="w-4 h-4" />
                   </span>
                   <input type="text" placeholder={activeTab === "koper" ? "Cari pemilik koper..." : "Cari pemilik paspor..."} value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg pl-9 pr-3.5 py-2 text-xs text-gray-700 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors"
+                    className="w-full border border-gray-200 rounded-lg pl-9 pr-3.5 py-2.5 text-xs text-gray-700 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors"
                   />
                 </div>
               </div>
 
-              <div className="w-48">
-                <input type="date" value={filterTanggal} onChange={(e) => setFilterTanggal(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3.5 py-2 text-xs text-gray-600 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors" />
+              {/* Tanggal */}
+              <div className="w-40">
+                <input type="date" value={filterTanggal} onChange={(e) => setFilterTanggal(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-xs text-gray-600 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors" />
               </div>
 
-              <button onClick={handleReset} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all" >
-                <TbRefresh className="w-4 h-4" /> Reset
-              </button>
+              {/* Kloter - Dinamis mengambil seluruh opsi unik dari database */}
+              <div className="w-40">
+                <select
+                  value={filterKloter}
+                  onChange={(e) => setFilterKloter(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-xs text-gray-600 bg-gray-50 focus:outline-none focus:border-[#263754] transition-colors"
+                >
+                  <option value="">Semua Kloter</option>
+                  {listKloter.map((kloterVal, idx) => (
+                    <option key={idx} value={kloterVal}>
+                      {kloterVal}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Reset */}
+              <div>
+                <button onClick={handleReset} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap" >
+                  <TbRefresh className="w-4 h-4" /> Reset
+                </button>
+              </div>
             </div>
 
+            {/* Export Excel */}
             <div>
-              <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all" >
+              <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap" >
                 <TbDownload className="w-4 h-4" /> Export Excel
               </button>
             </div>
@@ -274,7 +331,7 @@ export default function RiwayatScanPage() {
               ) : currentData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-gray-400 text-sm">
-                    {activeTab === "koper" ? "Belum ada data scan koper" : "Data kosong"}
+                    {filterKloter ? `Belum ada data pada ${filterKloter}` : (activeTab === "koper" ? "Belum ada data scan koper" : "Data kosong")}
                   </td>
                 </tr>
               ) : (
