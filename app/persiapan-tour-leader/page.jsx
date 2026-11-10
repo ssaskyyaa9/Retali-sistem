@@ -38,7 +38,7 @@ export default function PersiapanTourLeaderPage() {
 
         // 2. Ambil data daftar materi dari Supabase (termasuk sub_title dan content)
         const { data, error } = await supabase
-          .from("preparation_materials")
+          .from("persiapan_diniyah")
           .select("id, title, sub_title, description, content")
           .order("created_at", { ascending: true });
 

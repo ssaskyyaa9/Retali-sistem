@@ -255,7 +255,7 @@ export default function Sidebar() {
                   <HiOutlineLightBulb
                     className={`w-5 h-5 ${isParentActive(["/persiapan-tour-leader", "/persiapan-umroh"]) ? "text-yellow-500" : "text-gray-400"}`}
                   />
-                  <span>Persiapan</span>
+                  <span>Persiapan Umroh</span>
                 </div>
                 <svg
                   className={`w-4 h-4 transition-transform duration-300 ${isPersiapanOpen ? "rotate-180" : "rotate-0"} ${isParentActive(["/persiapan-tour-leader", "/persiapan-umroh"]) ? "text-yellow-500" : "text-gray-400"}`}
@@ -280,13 +280,13 @@ export default function Sidebar() {
                       href="/persiapan-tour-leader"
                       className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isActive("/persiapan-tour-leader") ? "text-white font-medium bg-[#1e2b43]/50" : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"}`}
                     >
-                      Persiapan Tour Leader
+                      Persiapan Diniyah
                     </Link>
                     <Link
                       href="/persiapan-umroh"
                       className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isActive("/persiapan-umroh") ? "text-white font-medium bg-[#1e2b43]/50" : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"}`}
                     >
-                      Persiapan Umroh
+                      Persiapan Teknis
                     </Link>
                   </div>
                 </div>

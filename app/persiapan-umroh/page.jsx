@@ -38,7 +38,7 @@ export default function PersiapanUmrohPage() {
 
         // 2. Ambil data daftar materi persiapan umroh dari Supabase (termasuk sub_title dan content)
         const { data, error } = await supabase
-          .from("preparation_assignments")
+          .from("persiapan_teknis")
           .select("id, title, sub_title, description, content")
           .order("created_at", { ascending: true });
 
@@ -66,7 +66,7 @@ export default function PersiapanUmrohPage() {
     if (!dataToExport.content && dataToExport.id) {
       try {
         const { data } = await supabase
-          .from("preparation_assignments")
+          .from("persiapan_diniyah")
           .select("id, title, sub_title, description, content")
           .eq("id", dataToExport.id)
           .single();
