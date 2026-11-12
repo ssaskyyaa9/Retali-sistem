@@ -4,6 +4,9 @@ import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
 import { FaKaaba, FaRegFilePdf } from "react-icons/fa6";
 import { HiDocumentText } from "react-icons/hi2";
+import { PlusIcon } from "@/app/components/CustomIcons";
+import { FaPassport } from "react-icons/fa";
+
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { exportMateriToPDF } from "@/lib/exportPdf";
@@ -97,10 +100,10 @@ export default function PersiapanUmrohPage() {
         <PageHeader
           title="Materi Persiapan Teknis"
           description="Berisi materi persiapan teknis untuk calon jamaah umroh, termasuk informasi penting dan panduan yang perlu diketahui sebelum keberangkatan."
-          icon={<FaKaaba className="w-[26px] h-[26px] text-[#eab308]" />}
+          icon={<FaPassport className="w-[26px] h-[26px] text-[#eab308]" />}
           buttonText={isAdmin ? "Tambah Materi" : undefined}
           buttonIcon={
-            isAdmin ? <FaKaaba className="w-[16px] h-[16px]" /> : undefined
+            isAdmin ? <PlusIcon className="w-[16px] h-[16px]" /> : undefined
           }
           buttonOnClick={
             isAdmin ? () => router.push("/persiapan-umroh/tambah") : undefined

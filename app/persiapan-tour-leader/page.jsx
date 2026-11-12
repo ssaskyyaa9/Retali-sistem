@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
 import { FaBook, FaRegFilePdf } from "react-icons/fa6";
+import { PlusIcon } from "@/app/components/CustomIcons";
+import { BsMoonStarsFill } from "react-icons/bs";
 import { HiDocumentText } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -97,10 +99,10 @@ export default function PersiapanTourLeaderPage() {
         <PageHeader
           title="Materi Persiapan Diniyah"
           description="Berisi materi persiapan diniyah untuk calon jamaah umroh, termasuk informasi penting dan panduan yang perlu diketahui sebelum keberangkatan."
-          icon={<FaBook className="w-[26px] h-[26px] text-[#eab308]" />}
+          icon={<BsMoonStarsFill className="w-[26px] h-[26px] text-[#eab308]" />}
           buttonText={isAdmin ? "Tambah Materi" : undefined}
           buttonIcon={
-            isAdmin ? <FaBook className="w-[16px] h-[16px]" /> : undefined
+            isAdmin ? <PlusIcon className="w-[16px] h-[16px]" /> : undefined
           }
           buttonOnClick={
             isAdmin

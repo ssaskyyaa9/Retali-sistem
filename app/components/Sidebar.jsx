@@ -8,6 +8,8 @@ import { LiaUserClockSolid } from "react-icons/lia";
 import { IoCalendarOutline } from "react-icons/io5";
 import { HiOutlineLightBulb } from "react-icons/hi";
 import { TbPlaneDeparture } from "react-icons/tb";
+import { LuBookText } from "react-icons/lu";
+
 
 import { supabase } from "@/lib/supabase";
 
@@ -293,6 +295,19 @@ export default function Sidebar() {
                 </div>
               </div>
             </div>
+
+            <Link
+              href="/curriculum-tour-leader"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${isActive("/curriculum-tour-leader") ? "bg-[#1e2b43] text-white relative overflow-hidden" : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"}`}
+            >
+              {isActive("/curriculum-tour-leader") && (
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500 rounded-r-md"></div>
+              )}
+              <LuBookText
+                className={`w-5 h-5 shrink-0 ${isActive("/curriculum-tour-leader") ? "text-yellow-500" : "text-gray-400"}`}
+              />
+              <span className="truncate">Curriculum Tour Leader</span>
+            </Link>
 
             <Link
               href="/tugas-ceklis"

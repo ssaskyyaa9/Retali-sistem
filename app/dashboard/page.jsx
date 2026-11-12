@@ -145,10 +145,13 @@ export default function DashboardPage() {
               // Cek waktu updated_at (atau created_at sebagai fallback)
               const targetTime = p.updated_at || p.created_at;
               let jamString = "-";
+              let tanggalString = "-";
               let isActive = false;
+              let timestamp = 0;
 
               if (targetTime) {
                 const activeDate = new Date(targetTime);
+                timestamp = isNaN(activeDate.getTime()) ? 0 : activeDate.getTime();
                 const diffMs = now - activeDate;
                 const diffMinutes = diffMs / (1000 * 60);
 
@@ -162,15 +165,33 @@ export default function DashboardPage() {
                   minute: "2-digit",
                   hour12: false,
                 }).replace(".", ":");
+
+                const isToday = activeDate.toDateString() === now.toDateString();
+                const formattedDate = activeDate.toLocaleDateString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                });
+                tanggalString = isToday ? `Hari ini (${formattedDate})` : formattedDate;
               }
 
               return {
                 name: name,
                 aktivitas: isActive ? "Membuka Aplikasi" : "Tidak Aktif",
                 jam: jamString,
+                tanggal: tanggalString,
                 status: isActive ? "Aktif" : "Tidak Aktif",
                 isActive: isActive,
+                timestamp: timestamp,
               };
+            })
+            .sort((a, b) => {
+              // 1. Yang sedang aktif ditempatkan paling atas
+              if (a.isActive !== b.isActive) {
+                return a.isActive ? -1 : 1;
+              }
+              // 2. Diurutkan dari yang aktif paling terbaru sampai yang terlama
+              return b.timestamp - a.timestamp;
             });
         };
 
@@ -437,7 +458,7 @@ export default function DashboardPage() {
                   <tr className="bg-[#1b3167] text-white text-xs font-bold tracking-wide">
                     <th className="py-3.5 px-5 rounded-l-xl">NAMA PETUGAS</th>
                     <th className="py-3.5 px-5">AKTIVITAS TERAKHIR</th>
-                    <th className="py-3.5 px-5">JAM</th>
+                    <th className="py-3.5 px-5">WAKTU & TANGGAL</th>
                     <th className="py-3.5 px-5 rounded-r-xl text-right">STATUS HARI INI</th>
                   </tr>
                 </thead>
@@ -460,8 +481,19 @@ export default function DashboardPage() {
                             <span className="text-gray-300 font-semibold text-base">-</span>
                           )}
                         </td>
-                        <td className="py-4 px-5 text-gray-700 font-semibold text-sm">
-                          {item.jam !== "-" ? item.jam : <span className="text-gray-300 text-base font-semibold">-</span>}
+                        <td className="py-4 px-5 text-gray-700">
+                          {item.jam !== "-" ? (
+                            <div className="flex flex-col">
+                              <span className="font-bold text-gray-900 text-sm leading-tight">
+                                {item.jam} <span className="text-[11px] font-normal text-gray-500">WIB</span>
+                              </span>
+                              <span className="text-[11px] text-gray-400 font-medium mt-0.5">
+                                {item.tanggal}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-300 text-base font-semibold">-</span>
+                          )}
                         </td>
                         <td className="py-4 px-5 text-right">
                           <span

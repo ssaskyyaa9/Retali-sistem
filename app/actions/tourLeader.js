@@ -145,6 +145,10 @@ export async function deleteTourLeaderAction(userId) {
       .from("persiapan_diniyah")
       .update({ created_by: null })
       .eq("created_by", userId);
+    await supabaseAdmin
+      .from("curriculum_tour_leader")
+      .update({ created_by: null })
+      .eq("created_by", userId);
 
     // 9. Hapus dari tabel public.profiles di Supabase
     const { error: profileError } = await supabaseAdmin
