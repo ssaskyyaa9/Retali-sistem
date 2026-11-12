@@ -44,12 +44,12 @@ export default function DashboardPage() {
       const { count: tlCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
-        .ilike("role", "%tour_leader%");
+        .eq("role", "tour_leader");
 
       const { count: muthawifCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
-        .ilike("role", "%muthawif%");
+        .eq("role", "muthawif");
 
       const { count: absenCount } = await supabase
         .from("attendance_user")
@@ -100,9 +100,10 @@ export default function DashboardPage() {
         attendanceTotal: attendanceTotal || 0,
       });
 
+      // Mengambil aktivitas koper dengan relasi ke profiles (mengambil kolom username)
       const { data: activitiesData } = await supabase
         .from("koper")
-        .select("id, created_at, koper_id, profiles(full_name)")
+        .select("id, created_at, koper_id, profiles(username)")
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -110,8 +111,9 @@ export default function DashboardPage() {
         const formattedActivities = activitiesData.map((item) => {
           const dateObj = new Date(item.created_at);
           const timeString = dateObj.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+          const name = item.profiles?.username || "Petugas";
           return {
-            title: item.profiles?.full_name || "Petugas",
+            title: name,
             desc: item.koper_id ? `Scan koper ${item.koper_id}` : "Aktivitas scan koper",
             time: `${timeString} WIB`,
           };
@@ -121,32 +123,59 @@ export default function DashboardPage() {
         setRecentActivities([]);
       }
 
-      const { data: profilesData } = await supabase
+      // Ambil data dari tabel profiles khusus role tour_leader dan muthawif
+      const { data: profilesData, error: profileErr } = await supabase
         .from("profiles")
-        .select("full_name, role, status, last_activity, last_activity_time")
-        .or("role.ilike.%tour_leader%,role.ilike.%muthawif%");
+        .select("username, role, updated_at, created_at")
+        .in("role", ["tour_leader", "muthawif"]);
+
+      if (profileErr) {
+        console.error("Error fetching profiles:", profileErr.message);
+      }
 
       if (profilesData && profilesData.length > 0) {
-        const tlList = profilesData
-          .filter((p) => p.role?.toLowerCase().includes("tour_leader"))
-          .map((p) => ({
-            name: p.full_name,
-            aktivitas: p.last_activity || "-",
-            jam: p.last_activity_time || "-",
-            status: p.status || "Tidak Aktif",
-          }));
+        const now = new Date();
 
-        const muthawifList = profilesData
-          .filter((p) => p.role?.toLowerCase().includes("muthawif"))
-          .map((p) => ({
-            name: p.full_name,
-            aktivitas: p.last_activity || "-",
-            jam: p.last_activity_time || "-",
-            status: p.status || "Tidak Aktif",
-          }));
+        const processProfiles = (targetRole) => {
+          return profilesData
+            .filter((p) => p.role === targetRole)
+            .map((p) => {
+              const name = p.username || "Tanpa Nama";
+              
+              // Cek waktu updated_at (atau created_at sebagai fallback)
+              const targetTime = p.updated_at || p.created_at;
+              let jamString = "-";
+              let isActive = false;
 
-        setTourLeadersActive(tlList);
-        setMuthawifActive(muthawifList);
+              if (targetTime) {
+                const activeDate = new Date(targetTime);
+                const diffMs = now - activeDate;
+                const diffMinutes = diffMs / (1000 * 60);
+
+                // Jika kurang dari atau sama dengan 3 menit, status Aktif (Hijau)
+                if (diffMinutes <= 3) {
+                  isActive = true;
+                }
+
+                jamString = activeDate.toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                }).replace(".", ":");
+              }
+
+              return {
+                name: name,
+                aktivitas: isActive ? "Membuka Aplikasi" : "Tidak Aktif",
+                jam: jamString,
+                status: isActive ? "Aktif" : "Tidak Aktif",
+                isActive: isActive,
+              };
+            });
+        };
+
+        setTourLeadersActive(processProfiles("tour_leader"));
+        setMuthawifActive(processProfiles("muthawif"));
       } else {
         setTourLeadersActive([]);
         setMuthawifActive([]);
@@ -160,6 +189,11 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
 
+    // Interval setiap 10 detik untuk memperbarui status waktu secara otomatis
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 10000);
+
     const channel = supabase
       .channel("realtime-dashboard")
       .on("postgres_changes", { event: "*", schema: "public", table: "koper" }, () => fetchDashboardData())
@@ -172,6 +206,7 @@ export default function DashboardPage() {
       .subscribe();
 
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -429,8 +464,18 @@ export default function DashboardPage() {
                           {item.jam !== "-" ? item.jam : <span className="text-gray-300 text-base font-semibold">-</span>}
                         </td>
                         <td className="py-4 px-5 text-right">
-                          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200/60">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          <span
+                            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border ${
+                              item.isActive
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                                : "bg-slate-100 text-slate-500 border-slate-200/60"
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                item.isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                              }`}
+                            ></span>
                             {item.status}
                           </span>
                         </td>
@@ -439,7 +484,7 @@ export default function DashboardPage() {
                   ) : (
                     <tr>
                       <td colSpan={4} className="py-8 text-center text-xs text-gray-400">
-                        Tidak ada data petugas aktif di database.
+                        Tidak ada data petugas di database.
                       </td>
                     </tr>
                   )}
