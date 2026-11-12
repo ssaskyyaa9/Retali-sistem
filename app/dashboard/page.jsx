@@ -126,7 +126,7 @@ export default function DashboardPage() {
       // Ambil data dari tabel profiles khusus role tour_leader dan muthawif
       const { data: profilesData, error: profileErr } = await supabase
         .from("profiles")
-        .select("username, role, updated_at, created_at")
+        .select("username, role, updated_at, created_at, is_active")
         .in("role", ["tour_leader", "muthawif"]);
 
       if (profileErr) {
@@ -152,8 +152,8 @@ export default function DashboardPage() {
                 const diffMs = now - activeDate;
                 const diffMinutes = diffMs / (1000 * 60);
 
-                // Jika kurang dari atau sama dengan 3 menit, status Aktif (Hijau)
-                if (diffMinutes <= 3) {
+                // Jika is_active bernilai true DAN waktu heartbeat <= 3 menit, status Aktif (Hijau)
+                if (p.is_active && diffMinutes <= 3) {
                   isActive = true;
                 }
 
