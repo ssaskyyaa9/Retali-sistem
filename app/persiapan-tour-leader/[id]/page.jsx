@@ -67,9 +67,9 @@ export default function DetailMateriTourLeaderPage() {
           }
         }
 
-        // 2. Ambil Data Detail Materi dari Supabase (preparation_materials)
+        // 2. Ambil Data Detail Materi dari Supabase (persiapan_diniyah)
         const { data: dataMateri, error } = await supabase
-          .from("preparation_materials")
+          .from("persiapan_diniyah")
           .select("id, title, sub_title, description, content")
           .eq("id", id)
           .single();
@@ -112,7 +112,7 @@ export default function DetailMateriTourLeaderPage() {
       };
 
       const { data, error } = await supabase
-        .from("preparation_materials")
+        .from("persiapan_diniyah")
         .update(payload)
         .eq("id", id)
         .select();
@@ -158,11 +158,11 @@ export default function DetailMateriTourLeaderPage() {
   return (
     <div className="w-full bg-[#f8fafc] min-h-screen overflow-x-hidden flex flex-col">
       <Topbar
-        title="Persiapan Tour Leader"
+        title="Persiapan Diniyah"
         breadcrumbs={[
           "Dashboard",
           "Persiapan",
-          "Persiapan Tour Leader",
+          "Persiapan Diniyah",
           materi.title || `BAB ${id}`,
         ]}
       />

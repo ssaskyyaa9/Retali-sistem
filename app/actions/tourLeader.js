@@ -138,11 +138,11 @@ export async function deleteTourLeaderAction(userId) {
       .update({ created_by: null })
       .eq("created_by", userId);
     await supabaseAdmin
-      .from("preparation_assignments")
+      .from("persiapan_teknis")
       .update({ created_by: null })
       .eq("created_by", userId);
     await supabaseAdmin
-      .from("preparation_materials")
+      .from("persiapan_diniyah")
       .update({ created_by: null })
       .eq("created_by", userId);
 

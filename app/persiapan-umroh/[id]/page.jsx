@@ -67,9 +67,9 @@ export default function DetailMateriPage() {
           }
         }
 
-        // 2. Ambil Data Detail Materi dari Supabase (Langsung 4 Kolom)
+        // 2. Ambil Data Detail Materi dari Supabase (persiapan_teknis)
         const { data: dataMateri, error } = await supabase
-          .from("preparation_assignments")
+          .from("persiapan_teknis")
           .select("id, title, sub_title, description, content")
           .eq("id", id)
           .single();
@@ -113,7 +113,7 @@ export default function DetailMateriPage() {
       };
 
       const { data, error } = await supabase
-        .from("preparation_assignments")
+        .from("persiapan_teknis")
         .update(payload)
         .eq("id", id)
         .select();
@@ -159,11 +159,11 @@ export default function DetailMateriPage() {
   return (
     <div className="w-full bg-[#f8fafc] min-h-screen overflow-x-hidden flex flex-col">
       <Topbar
-        title="Persiapan Umroh"
+        title="Persiapan Teknis"
         breadcrumbs={[
           "Dashboard",
           "Persiapan",
-          "Persiapan Umroh",
+          "Persiapan Teknis",
           materi.title || `BAB ${id}`,
         ]}
       />

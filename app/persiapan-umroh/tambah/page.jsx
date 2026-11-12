@@ -3,16 +3,11 @@ import React, { useState } from "react";
 import Topbar from "@/app/components/Topbar";
 import { FaArrowLeft, FaCheck } from "react-icons/fa6";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-);
 
 export default function TambahMateriPage() {
   const router = useRouter();
@@ -54,13 +49,13 @@ export default function TambahMateriPage() {
 
       // SIMPAN MASING-MASING KE KOLOM SUPABASE YANG SESUAI:
       // title, sub_title, description, content
-      const { error } = await supabase.from("preparation_assignments").insert([
+      const { error } = await supabase.from("persiapan_teknis").insert([
         {
           title: form.bab,
           sub_title: form.subjudul || null,
           description: form.anakSubjudul || null,
           content: form.deskripsi,
-          category: "umroh",
+          category: "teknis",
           visibility: "public",
           is_published: true,
           created_by: user ? user.id : null,
@@ -82,11 +77,11 @@ export default function TambahMateriPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
-        title="Persiapan Umroh"
+        title="Persiapan Teknis"
         breadcrumbs={[
           "Dashboard",
           "Persiapan",
-          "Persiapan Umroh",
+          "Persiapan Teknis",
           "Tambah Materi",
         ]}
       />

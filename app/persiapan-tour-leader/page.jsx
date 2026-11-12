@@ -66,7 +66,7 @@ export default function PersiapanTourLeaderPage() {
     if (!dataToExport.content && dataToExport.id) {
       try {
         const { data } = await supabase
-          .from("preparation_materials")
+          .from("persiapan_diniyah")
           .select("id, title, sub_title, description, content")
           .eq("id", dataToExport.id)
           .single();
@@ -125,7 +125,7 @@ export default function PersiapanTourLeaderPage() {
                 Belum ada materi
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Belum ada materi persiapan tour leader yang tersedia saat ini.
+                Belum ada materi persiapan diniyah yang tersedia saat ini.
               </p>
             </div>
           ) : (

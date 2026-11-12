@@ -66,7 +66,7 @@ export default function PersiapanUmrohPage() {
     if (!dataToExport.content && dataToExport.id) {
       try {
         const { data } = await supabase
-          .from("persiapan_diniyah")
+          .from("persiapan_teknis")
           .select("id, title, sub_title, description, content")
           .eq("id", dataToExport.id)
           .single();
@@ -123,7 +123,7 @@ export default function PersiapanUmrohPage() {
                 Belum ada materi
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Belum ada materi persiapan umroh yang tersedia saat ini.
+                Belum ada materi persiapan teknis yang tersedia saat ini.
               </p>
             </div>
           ) : (
