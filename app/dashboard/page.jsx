@@ -276,7 +276,7 @@ export default function DashboardPage() {
             </Link>
 
             <Link
-              href="/riwayat-absensi"
+              href="/riwayat-absensi/jamaah"
               className="animate-fade-in-up bg-white rounded-2xl p-4 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col justify-between h-28 cursor-pointer"
             >
               <div className="flex justify-between items-start">

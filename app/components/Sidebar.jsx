@@ -17,6 +17,7 @@ export default function Sidebar() {
 
   const [isPenggunaOpen, setIsPenggunaOpen] = useState(true);
   const [isPersiapanOpen, setIsPersiapanOpen] = useState(true);
+  const [isAbsensiOpen, setIsAbsensiOpen] = useState(true);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -329,18 +330,52 @@ export default function Sidebar() {
               Itinerary
             </Link>
 
-            <Link
-              href="/riwayat-absensi"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${isActive("/riwayat-absensi") ? "bg-[#1e2b43] text-white relative overflow-hidden" : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"}`}
-            >
-              {isActive("/riwayat-absensi") && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500 rounded-r-md"></div>
-              )}
-              <LiaUserClockSolid
-                className={`w-5 h-5 ${isActive("/riwayat-absensi") ? "text-yellow-500" : "text-gray-400"}`}
-              />
-              Riwayat Absensi
-            </Link>
+            <div>
+              <button
+                onClick={() => setIsAbsensiOpen(!isAbsensiOpen)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm transition-all duration-200 ${isParentActive(["/riwayat-absensi"]) ? "text-white font-medium" : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"}`}
+              >
+                <div className="flex items-center gap-3">
+                  <LiaUserClockSolid
+                    className={`w-5 h-5 ${isParentActive(["/riwayat-absensi"]) ? "text-yellow-500" : "text-gray-400"}`}
+                  />
+                  <span>Riwayat Absensi</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-300 ${isAbsensiOpen ? "rotate-180" : "rotate-0"} ${isParentActive(["/riwayat-absensi"]) ? "text-yellow-500" : "text-gray-400"}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              <div
+                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${isAbsensiOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+              >
+                <div className="overflow-hidden">
+                  <div className="ml-6 mt-1 flex flex-col gap-1 border-l border-[#1e2b43] pl-3 py-1">
+                    <Link
+                      href="/riwayat-absensi/jamaah"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isActive("/riwayat-absensi/jamaah") ? "text-white font-medium bg-[#1e2b43]/50" : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"}`}
+                    >
+                      Absensi Jamaah
+                    </Link>
+                    <Link
+                      href="/riwayat-absensi/petugas"
+                      className={`block px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isActive("/riwayat-absensi/petugas") ? "text-white font-medium bg-[#1e2b43]/50" : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/30"}`}
+                    >
+                      Absensi Petugas
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <Link
               href="/riwayat-scan"
