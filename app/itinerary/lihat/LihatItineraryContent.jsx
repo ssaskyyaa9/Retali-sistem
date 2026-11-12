@@ -25,7 +25,9 @@ export default function LihatItineraryContent({ id }) {
   const [dayActivities, setDayActivities] = useState([]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchDetailData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchDetailData = async () => {

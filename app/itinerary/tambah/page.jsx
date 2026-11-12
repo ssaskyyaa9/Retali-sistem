@@ -1,131 +1,160 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
   FiMapPin, 
   FiPackage, 
   FiArrowLeft,
   FiSave,
-  FiSend
+  FiSend,
+  FiCalendar,
+  FiUsers,
+  FiPlus,
+  FiTrash2,
+  FiClock
 } from "react-icons/fi";
 import Topbar from "@/app/components/Topbar";
 import { createClient } from "@/lib/supabase";
+import { createItineraryPackageAction } from "@/app/actions/itinerary";
 
 export default function TambahItineraryPage() {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
 
-  const [formData, setFormData] = useState({
-    package_name: "Umrah Super Cermat",
-    city: "Makkah",
-    day_number: 1,
-    activity_time: "08:00",
-    duration: 1,
-    activity_date: "",
-    location: "",
-    description: "",
-  });
+  // Penerima list dari profiles
+  const [tourleaders, setTourleaders] = useState([]);
+  const [muthawifs, setMuthawifs] = useState([]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "day_number") {
-      const dayNum = Math.max(1, parseInt(value, 10) || 1);
-      setFormData((prev) => ({ ...prev, day_number: dayNum }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+  // Form Paket
+  const [packageName, setPackageName] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [recipientType, setRecipientType] = useState("all"); // 'all', 'tour_leader_only', 'selected'
+  const [selectedTLs, setSelectedTLs] = useState([]);
+  const [selectedMuthawifs, setSelectedMuthawifs] = useState([]);
+
+  // Days & Activities
+  const [days, setDays] = useState([
+    {
+      day_number: 1,
+      title: "Makkah",
+      date: "",
+      activities: [
+        { time: "08:00", title: "Keberangkatan / Tiba", location: "Bandara / Hotel", description: "" }
+      ]
     }
+  ]);
+
+  const fetchPetugas = useCallback(async () => {
+    try {
+      const { data: tls } = await supabase
+        .from("profiles")
+        .select("id, username, role")
+        .eq("role", "tour_leader");
+
+      if (tls) setTourleaders(tls);
+
+      const { data: muths } = await supabase
+        .from("profiles")
+        .select("id, username, role")
+        .eq("role", "muthawif");
+
+      if (muths) setMuthawifs(muths);
+    } catch (e) {
+      console.warn("Gagal fetch petugas:", e.message);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPetugas();
+  }, [fetchPetugas]);
+
+  const handleAddDay = () => {
+    const nextNum = days.length + 1;
+    setDays(prev => [
+      ...prev,
+      {
+        day_number: nextNum,
+        title: "Makkah",
+        date: "",
+        activities: []
+      }
+    ]);
+  };
+
+  const handleRemoveDay = (dayIndex) => {
+    if (days.length <= 1) return;
+    setDays(prev => prev.filter((_, idx) => idx !== dayIndex).map((d, i) => ({ ...d, day_number: i + 1 })));
+  };
+
+  const handleAddActivity = (dayIndex) => {
+    setDays(prev => prev.map((d, idx) => {
+      if (idx === dayIndex) {
+        return {
+          ...d,
+          activities: [
+            ...d.activities,
+            { time: "10:00", title: "", location: d.title, description: "" }
+          ]
+        };
+      }
+      return d;
+    }));
+  };
+
+  const handleRemoveActivity = (dayIndex, actIndex) => {
+    setDays(prev => prev.map((d, idx) => {
+      if (idx === dayIndex) {
+        return {
+          ...d,
+          activities: d.activities.filter((_, aIdx) => aIdx !== actIndex)
+        };
+      }
+      return d;
+    }));
   };
 
   const handleSave = async (isPublished = false) => {
-    if (!formData.location.trim()) {
-      alert("Lokasi / judul kegiatan wajib diisi!");
+    if (!packageName.trim()) {
+      alert("Nama paket itinerary wajib diisi!");
+      return;
+    }
+    if (!startDate || !endDate) {
+      alert("Periode tanggal mulai dan selesai wajib diisi!");
       return;
     }
 
     try {
       setLoading(true);
 
-      // Cari atau buat itinerary day yang sesuai
-      const { data: dayData, error: dayErr } = await supabase
-        .from("itinerary_days")
-        .select("id")
-        .eq("day_number", formData.day_number)
-        .limit(1);
+      const payload = {
+        title: packageName,
+        start_date: startDate,
+        end_date: endDate,
+        status: isPublished ? "published" : "draft",
+        recipient_type: recipientType,
+        selected_tl_ids: selectedTLs,
+        selected_muthawif_ids: selectedMuthawifs,
+        days: days.map(d => ({
+          day_number: d.day_number,
+          title: d.title,
+          date: d.date || startDate,
+          activities: d.activities.filter(a => a.title.trim().length > 0)
+        }))
+      };
 
-      let dayIdToUse = "";
-
-      if (dayErr || !dayData || dayData.length === 0) {
-        // Coba cari itinerary yang sudah ada atau buat baru
-        const { data: existingItin } = await supabase
-          .from("itineraries")
-          .select("id")
-          .limit(1);
-
-        let itineraryId = existingItin?.[0]?.id;
-
-        if (!itineraryId) {
-          const { data: newItin, error: itinErr } = await supabase
-            .from("itineraries")
-            .insert([{ 
-              title: formData.package_name, 
-              status: isPublished ? "Terkirim" : "Draft" 
-            }])
-            .select()
-            .single();
-
-          if (itinErr) console.warn("Notice itineraries insert:", itinErr.message);
-          itineraryId = newItin?.id;
-        }
-
-        const { data: newDay, error: insertDayErr } = await supabase
-          .from("itinerary_days")
-          .insert([{ 
-            itinerary_id: itineraryId || null, 
-            day_number: formData.day_number, 
-            activity_date: formData.activity_date || null,
-            title: `Hari ${formData.day_number}`
-          }])
-          .select()
-          .single();
-
-        if (insertDayErr) {
-          // Jika insert gagal, coba ambil day pertama yang tersedia
-          const { data: fallbackDay } = await supabase
-            .from("itinerary_days")
-            .select("id")
-            .limit(1);
-          dayIdToUse = fallbackDay?.[0]?.id;
-        } else {
-          dayIdToUse = newDay?.id;
-        }
-      } else {
-        dayIdToUse = dayData[0].id;
+      const res = await createItineraryPackageAction(payload);
+      if (!res.success) {
+        throw new Error(res.error);
       }
 
-      // Hitung order aktivitas
-      const { count } = await supabase
-        .from("itinerary_activities")
-        .select("*", { count: "exact", head: true });
-
-      const { error: actError } = await supabase.from("itinerary_activities").insert([
-        {
-          itinerary_day_id: dayIdToUse,
-          activity_time: formData.activity_time,
-          title: formData.location,
-          description: formData.description,
-          location: formData.location,
-          sort_order: (count || 0) + 1,
-        },
-      ]);
-
-      if (actError) throw actError;
-
-      alert(isPublished ? "Itinerary berhasil dipublikasikan!" : "Itinerary berhasil disimpan sebagai draft!");
+      alert(isPublished ? "Paket itinerary berhasil dipublikasikan!" : "Paket itinerary berhasil disimpan sebagai draft!");
       router.push("/itinerary");
     } catch (error) {
-      console.error("Gagal menyimpan aktivitas:", error.message);
+      console.error("Gagal menyimpan itinerary:", error.message);
       alert("Terjadi kesalahan saat menyimpan data: " + error.message);
     } finally {
       setLoading(false);
@@ -135,20 +164,20 @@ export default function TambahItineraryPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans">
       <Topbar 
-        title="Tambah Itinerary" 
-        breadcrumbs={["Dashboard", "Itinerary", "Tambah Itinerary"]} 
+        title="Buat Itinerary" 
+        breadcrumbs={["Dashboard", "Itinerary", "Buat Itinerary"]} 
       />
       
-      <div className="flex-1 overflow-y-auto p-6 md:p-10 w-full max-w-7xl mx-auto space-y-6">
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-8 md:p-10 max-w-4xl mx-auto transition-all">
+      <div className="flex-1 overflow-y-auto p-6 md:p-10 w-full max-w-5xl mx-auto space-y-6">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 md:p-10 transition-all space-y-8">
           {/* Header Card */}
-          <div className="flex items-center justify-between pb-6 mb-8 border-b border-slate-100">
-            <div className="space-y-1">
+          <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+            <div>
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                Tambah Aktivitas Itinerary
+                Buat Paket Itinerary Baru
               </h2>
-              <p className="text-xs text-slate-400">
-                Lengkapi informasi mendetail mengenai agenda perjalanan dan aktivitas jamaah.
+              <p className="text-xs text-slate-400 mt-1">
+                Atur judul paket, periode tanggal, penerima tugas, dan jadwal kegiatan harian.
               </p>
             </div>
             <button
@@ -160,11 +189,11 @@ export default function TambahItineraryPage() {
             </button>
           </div>
 
-          {/* Form Fields */}
+          {/* Form Fields Utama */}
           <div className="space-y-6">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Nama Paket Umrah <span className="text-rose-500">*</span>
+                Nama Paket Itinerary <span className="text-rose-500">*</span>
               </label>
               <div className="relative rounded-2xl shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -172,136 +201,268 @@ export default function TambahItineraryPage() {
                 </div>
                 <input
                   type="text"
-                  name="package_name"
-                  value={formData.package_name}
-                  onChange={handleInputChange}
-                  placeholder="Masukkan nama paket umrah..."
-                  className="w-full pl-11 pr-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                  value={packageName}
+                  onChange={(e) => setPackageName(e.target.value)}
+                  placeholder="Contoh: Umrah Plus Eropa / Umrah Ultimo Minimalis"
+                  className="w-full pl-11 pr-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1b3167]/20 focus:border-[#1b3167] transition-all"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Periode Tanggal */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Kota <span className="text-rose-500">*</span>
+                  Tanggal Mulai <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all cursor-pointer"
-                >
-                  <option value="Makkah">Makkah</option>
-                  <option value="Madinah">Madinah</option>
-                  <option value="Jeddah">Jeddah</option>
-                  <option value="Transit">Transit</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Hari Ke <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="day_number"
-                  min="1"
-                  value={formData.day_number}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Waktu <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="time"
-                  name="activity_time"
-                  value={formData.activity_time}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Durasi <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative flex items-center">
+                <div className="relative rounded-2xl shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                    <FiCalendar className="w-4 h-4" />
+                  </div>
                   <input
-                    type="number"
-                    name="duration"
-                    min="1"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                    className="w-full pr-14 pl-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1b3167]/20 focus:border-[#1b3167] transition-all"
                   />
-                  <span className="absolute right-4 text-xs font-bold text-slate-400 pointer-events-none">
-                    jam
-                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Tanggal Selesai <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative rounded-2xl shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                    <FiCalendar className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1b3167]/20 focus:border-[#1b3167] transition-all"
+                  />
                 </div>
               </div>
             </div>
 
+            {/* Penerima Tugas */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Tanggal Kegiatan <span className="text-rose-500">*</span>
+                Penerima Itinerary <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="date"
-                name="activity_date"
-                value={formData.activity_date}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setRecipientType("all")}
+                  className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                    recipientType === "all"
+                      ? "border-[#1b3167] bg-[#1b3167]/10 text-[#1b3167] ring-2 ring-[#1b3167]/10"
+                      : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="font-extrabold text-sm mb-0.5">Semua Petugas</div>
+                  <div className="font-normal text-[11px] opacity-80">Semua Tour Leader & Muthawif</div>
+                </button>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Lokasi / Judul Kegiatan <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative rounded-2xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <FiMapPin className="w-4 h-4" />
-                </div>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="Contoh: Ziarah Raudhah / Tawaf Wada / Keberangkatan Bandara"
-                  className="w-full pl-11 pr-4 py-3 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                />
+                <button
+                  type="button"
+                  onClick={() => setRecipientType("tour_leader_only")}
+                  className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                    recipientType === "tour_leader_only"
+                      ? "border-[#1b3167] bg-[#1b3167]/10 text-[#1b3167] ring-2 ring-[#1b3167]/10"
+                      : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="font-extrabold text-sm mb-0.5">Semua Tourleader</div>
+                  <div className="font-normal text-[11px] opacity-80">Hanya seluruh Tour Leader</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRecipientType("selected")}
+                  className={`p-3.5 rounded-2xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                    recipientType === "selected"
+                      ? "border-[#1b3167] bg-[#1b3167]/10 text-[#1b3167] ring-2 ring-[#1b3167]/10"
+                      : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="font-extrabold text-sm mb-0.5">Pengguna Tertentu</div>
+                  <div className="font-normal text-[11px] opacity-80">Pilih spesifik TL & Muthawif</div>
+                </button>
               </div>
+
+              {/* Pemilihan Spesifik jika 'selected' */}
+              {recipientType === "selected" && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 block mb-2">Pilih Tour Leader:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {tourleaders.map(tl => {
+                        const isChecked = selectedTLs.includes(tl.id);
+                        return (
+                          <button
+                            key={tl.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTLs(prev => isChecked ? prev.filter(x => x !== tl.id) : [...prev, tl.id]);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                              isChecked ? "bg-[#1b3167] text-white border-[#1b3167]" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                            }`}
+                          >
+                            {tl.username || "TL"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 block mb-2">Pilih Muthawif:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {muthawifs.map(muth => {
+                        const isChecked = selectedMuthawifs.includes(muth.id);
+                        return (
+                          <button
+                            key={muth.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedMuthawifs(prev => isChecked ? prev.filter(x => x !== muth.id) : [...prev, muth.id]);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                              isChecked ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+                            }`}
+                          >
+                            {muth.username || "Muthawif"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Catatan / Deskripsi Aktivitas
-              </label>
-              <textarea
-                rows={4}
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Tuliskan petunjuk teknis atau detail aktivitas untuk jamaah..."
-                maxLength={500}
-                className="w-full p-4 text-sm bg-slate-50/50 border border-slate-200 rounded-2xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all placeholder:text-slate-400"
-              ></textarea>
-              <div className="flex justify-between items-center mt-2 px-1">
-                <span className="text-[11px] text-slate-400 font-medium">Opsional untuk petunjuk rincian jamaah.</span>
-                <span className="text-[11px] font-bold text-slate-400">
-                  {formData.description.length}/500 karakter
-                </span>
+            {/* Rincian Hari & Kegiatan */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">Rundown & Jadwal Harian</h3>
+                  <p className="text-xs text-slate-400">Susun agenda perjalanan untuk setiap hari</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddDay}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1b3167]/10 hover:bg-[#1b3167]/20 text-[#1b3167] text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  <FiPlus className="w-3.5 h-3.5" /> Tambah Hari
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {days.map((day, dIdx) => (
+                  <div key={dIdx} className="p-5 rounded-2xl border border-slate-200/90 bg-white space-y-4 shadow-2xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#1b3167] text-white text-xs font-bold flex items-center justify-center">
+                          {day.day_number}
+                        </span>
+                        <span className="font-extrabold text-slate-900 text-sm">Hari ke-{day.day_number}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={day.title}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDays(prev => prev.map((d, i) => i === dIdx ? { ...d, title: val } : d));
+                          }}
+                          placeholder="Kota / Wilayah (e.g. Makkah)"
+                          className="px-3 py-1 text-xs border border-slate-200 rounded-lg text-slate-800 font-semibold w-40"
+                        />
+                        {days.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDay(dIdx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                            title="Hapus Hari"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Kegiatan List */}
+                    <div className="space-y-2.5">
+                      {day.activities.map((act, aIdx) => (
+                        <div key={aIdx} className="flex flex-col sm:flex-row items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                          <input
+                            type="time"
+                            value={act.time}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDays(prev => prev.map((d, i) => i === dIdx ? {
+                                ...d,
+                                activities: d.activities.map((a, j) => j === aIdx ? { ...a, time: val } : a)
+                              } : d));
+                            }}
+                            className="px-2.5 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-slate-700 w-full sm:w-28"
+                          />
+                          <input
+                            type="text"
+                            value={act.title}
+                            placeholder="Judul agenda (e.g. Tawaf Wada)"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDays(prev => prev.map((d, i) => i === dIdx ? {
+                                ...d,
+                                activities: d.activities.map((a, j) => j === aIdx ? { ...a, title: val } : a)
+                              } : d));
+                            }}
+                            className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-lg font-medium text-slate-800 flex-1 w-full"
+                          />
+                          <input
+                            type="text"
+                            value={act.location}
+                            placeholder="Lokasi"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDays(prev => prev.map((d, i) => i === dIdx ? {
+                                ...d,
+                                activities: d.activities.map((a, j) => j === aIdx ? { ...a, location: val } : a)
+                              } : d));
+                            }}
+                            className="px-3 py-1 text-xs bg-white border border-slate-200 rounded-lg font-medium text-slate-600 w-full sm:w-44"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveActivity(dIdx, aIdx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg cursor-pointer"
+                          >
+                            <FiTrash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => handleAddActivity(dIdx)}
+                        className="inline-flex items-center gap-1.5 text-xs text-[#1b3167] hover:text-[#1a2538] font-bold py-1 px-2 rounded-lg hover:bg-[#1b3167]/10 transition-colors cursor-pointer"
+                      >
+                        <FiPlus className="w-3.5 h-3.5" /> Tambah Kegiatan di Hari {day.day_number}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-10 pt-6 border-t border-slate-100 flex items-center justify-between">
+          <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
             <button
               type="button"
               onClick={() => router.push("/itinerary")}
@@ -324,7 +485,7 @@ export default function TambahItineraryPage() {
                 type="button"
                 onClick={() => handleSave(true)}
                 disabled={loading}
-                className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl font-bold text-xs text-white bg-[#1e1b4b] hover:bg-[#2e2a72] active:scale-[0.98] disabled:opacity-50 transition-all shadow-lg shadow-indigo-950/25 cursor-pointer"
+                className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl font-bold text-xs text-white bg-[#1b3167] hover:bg-[#1a2538] active:scale-[0.98] disabled:opacity-50 transition-all shadow-md shadow-[#1b3167]/20 cursor-pointer"
               >
                 <FiSend className="w-4 h-4" />
                 {loading ? "Memproses..." : "Publikasikan"}

@@ -89,10 +89,13 @@ export default function EditItineraryContent({ id }) {
 
   // Fetch recipients dan data itinerary jika ada ID
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchRecipientsData();
     if (id) {
+      // eslint-disable-next-line react-hooks/immutability
       fetchExistingActivity(id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchRecipientsData = async () => {
