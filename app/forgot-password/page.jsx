@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import AuthLayout from "@/app/components/AuthLayout";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "https://be-projectretalitwo.vercel.app"
@@ -157,23 +159,43 @@ export default function ForgotPasswordPage() {
     "w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md space-y-6 rounded-2xl border border-slate-100 bg-white p-8 shadow-xl">
+    <AuthLayout>
+      <div className="w-full bg-white rounded-3xl shadow-2xl shadow-black/40 border border-slate-100 p-8 sm:p-9 space-y-6">
+        {/* Retali Logo & Branding Header */}
+        <div className="flex flex-col items-center text-center pb-5 border-b border-slate-100">
+          <div className="w-14 h-14 rounded-2xl bg-[#0d1523] border border-[#1e2b43] p-2 flex items-center justify-center shadow-md mb-3 transition-transform hover:scale-105 duration-200">
+            <Image
+              src="/logoretali-kuning.png"
+              alt="Retali Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+              priority
+            />
+          </div>
+          <h2 className="font-extrabold text-lg tracking-tight text-slate-900 uppercase">
+            RETALI <span className="text-yellow-500">SISTEM</span>
+          </h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Sistem Manajemen Umrah & Tour Leader
+          </p>
+        </div>
+
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            {step === 1 && "Forgot Password"}
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            {step === 1 && "Lupa Password"}
             {step === 2 && "Verifikasi OTP"}
             {step === 3 && "Password Baru"}
             {step === 4 && "Reset Berhasil"}
           </h1>
 
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 leading-relaxed">
             {step === 1 &&
-              "Masukkan email akun untuk menerima kode pemulihan."}
-            {step === 2 && "Masukkan kode yang dikirim ke email lu."}
-            {step === 3 && "Buat password baru untuk akun lu."}
+              "Masukkan email akun Anda untuk menerima kode pemulihan password."}
+            {step === 2 && "Masukkan kode OTP yang dikirim ke email Anda."}
+            {step === 3 && "Buat password baru yang aman untuk akun Anda."}
             {step === 4 &&
-              "Password akun lu sudah berhasil diperbarui."}
+              "Password akun Anda telah berhasil diperbarui."}
           </p>
         </div>
 
@@ -312,12 +334,12 @@ export default function ForgotPasswordPage() {
         {step !== 4 && (
           <Link
             href="/login"
-            className="block text-center text-sm font-medium text-slate-600 hover:text-slate-900"
+            className="block text-center text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
           >
             Kembali ke Login
           </Link>
         )}
       </div>
-    </div>
+    </AuthLayout>
   );
 }

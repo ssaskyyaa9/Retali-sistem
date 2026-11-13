@@ -1,8 +1,10 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchPetugasReadNotifications } from "@/lib/notifications";
+import { useSidebar } from "@/app/context/SidebarContext";
 
 const VIEWED_STORAGE_KEY = "retali_viewed_notif_ids";
 
@@ -11,6 +13,7 @@ export default function Topbar({
   breadcrumbs = ["Dashboard", "Pengguna", "Muthawif"],
 }) {
   const router = useRouter();
+  const { isCollapsed, toggleSidebar } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -285,20 +288,18 @@ export default function Topbar({
     <>
       <header className="w-full bg-white border-b border-gray-100 px-6 py-5 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-4">
-          <button className="text-gray-500 hover:text-gray-800 focus:outline-none">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 6h16M4 12h16M4 18h7"
-              />
-            </svg>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            title={isCollapsed ? "Buka Sidebar" : "Ciutkan Sidebar"}
+            aria-label={isCollapsed ? "Buka Sidebar" : "Ciutkan Sidebar"}
+            className="p-2 -ml-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors focus:outline-none cursor-pointer flex items-center justify-center group"
+          >
+            {isCollapsed ? (
+              <PanelLeftOpen className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" />
+            )}
           </button>
           <div>
             <h1

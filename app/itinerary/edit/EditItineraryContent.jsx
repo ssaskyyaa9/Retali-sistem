@@ -132,9 +132,77 @@ export default function EditItineraryContent({ id }) {
     }
   };
 
-  const fetchExistingActivity = async (activityId) => {
+  const fetchExistingActivity = async (targetId) => {
     try {
       setLoading(true);
+
+      // 1. Coba ambil dari tabel itineraries (karena routing mengoper itineraries.id)
+      const { data: itinData } = await supabase
+        .from("itineraries")
+        .select(`
+          *,
+          itinerary_days (
+            id,
+            day_number,
+            activity_date,
+            title,
+            itinerary_activities (
+              id,
+              activity_time,
+              title,
+              description,
+              location,
+              sort_order
+            )
+          ),
+          itinerary_recipient_rules (
+            id,
+            recipient_role,
+            recipient_mode,
+            itinerary_recipient_users (
+              profile_id
+            )
+          )
+        `)
+        .eq("id", targetId)
+        .maybeSingle();
+
+      if (itinData) {
+        setDataLoaded(true);
+        const selectedUserIds = [];
+        (itinData.itinerary_recipient_rules || []).forEach(r => {
+          (r.itinerary_recipient_users || []).forEach(u => {
+            if (u.profile_id) selectedUserIds.push(u.profile_id);
+          });
+        });
+
+        setEditData({
+          title: itinData.title || "",
+          start_date: itinData.start_date || "",
+          end_date: itinData.end_date || "",
+          recipient_type: selectedUserIds.length > 0 ? "Pengguna Tertentu" : "Semua Petugas",
+          selected_users: selectedUserIds,
+        });
+
+        if (itinData.itinerary_days && itinData.itinerary_days.length > 0) {
+          const sorted = itinData.itinerary_days.sort((a, b) => (a.day_number || 0) - (b.day_number || 0));
+          setDaysData(sorted.map(d => ({
+            day_number: d.day_number,
+            city: d.title || "",
+            date: d.activity_date || "",
+            activities: (d.itinerary_activities || []).map(a => ({
+              id: a.id,
+              time: a.activity_time || "08:00",
+              title: a.title || "",
+              location: a.location || "",
+              description: a.description || ""
+            }))
+          })));
+        }
+        return;
+      }
+
+      // 2. Fallback jika targetId adalah id dari itinerary_activities
       const { data, error } = await supabase
         .from("itinerary_activities")
         .select(`
@@ -150,7 +218,7 @@ export default function EditItineraryContent({ id }) {
             )
           )
         `)
-        .eq("id", activityId)
+        .eq("id", targetId)
         .single();
 
       if (error) {
@@ -275,8 +343,18 @@ export default function EditItineraryContent({ id }) {
     try {
       setLoading(true);
 
-      // Jika sedang mengedit aktivitas spesifik dari database
+      // Update data paket itinerary jika id adalah itinerary_id
       if (id) {
+        await supabase
+          .from("itineraries")
+          .update({
+            title: editData.title,
+            start_date: editData.start_date,
+            end_date: editData.end_date,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", id);
+
         const { error: actError } = await supabase
           .from("itinerary_activities")
           .update({

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
-import { FaBook, FaRegFilePdf } from "react-icons/fa6";
+import { FaBook, FaRegFilePdf, FaPenToSquare, FaTrashCan } from "react-icons/fa6";
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { HiDocumentText } from "react-icons/hi2";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,41 @@ export default function CurriculumTourLeaderPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [materiList, setMateriList] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = (item) => {
+    setItemToDelete(item);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("curriculum_tour_leader")
+        .delete()
+        .eq("id", itemToDelete.id);
+
+      if (error) {
+        console.error("Gagal menghapus materi kurikulum:", error.message);
+        alert(`Gagal menghapus materi kurikulum: ${error.message}`);
+        return;
+      }
+
+      setMateriList((prev) => prev.filter((m) => m.id !== itemToDelete.id));
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (err) {
+      console.error("Error deleting:", err);
+      alert("Terjadi kesalahan saat menghapus materi kurikulum.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Cek role user Supabase & ambil data daftar materi kurikulum
   useEffect(() => {
@@ -150,20 +185,107 @@ export default function CurriculumTourLeaderPage() {
                     </p>
                   </div>
 
-                  {/* Bagian Kanan: Tombol Export */}
-                  <div className="shrink-0 self-end md:self-center pt-2 md:pt-0">
+                  {/* Bagian Kanan: Tombol Aksi */}
+                  <div className="shrink-0 self-end md:self-center pt-2 md:pt-0 flex items-center gap-2">
                     <button
                       onClick={(e) => handleExportPDF(item, e)}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-4 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2"
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3.5 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2 shadow-xs"
+                      title="Export to PDF"
                     >
                       <FaRegFilePdf className="w-3.5 h-3.5 text-red-500" />
                       Export to pdf
                     </button>
+
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/curriculum-tour-leader/${item.id}?edit=true`);
+                        }}
+                        className="bg-[#263754] hover:bg-[#1e293b] text-white text-xs px-3.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                        title="Edit Materi"
+                      >
+                        <FaPenToSquare className="w-3.5 h-3.5" />
+                        Edit
+                      </button>
+                    )}
+
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          confirmDelete(item);
+                        }}
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs px-3.5 py-2.5 rounded-lg font-semibold transition-all cursor-pointer border border-rose-200/80 flex items-center gap-1.5 shadow-xs"
+                        title="Hapus Materi"
+                      >
+                        <FaTrashCan className="w-3.5 h-3.5 text-rose-600" />
+                        Hapus
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             ))
           )}
+        </div>
+      </div>
+
+      {/* Modal Konfirmasi Hapus */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 transition-all duration-300 ease-in-out ${
+          deleteModalOpen
+            ? "opacity-100 visible pointer-events-auto"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      >
+        <div
+          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
+            deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+          }`}
+        >
+          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 shrink-0">
+                <FaTrashCan className="w-4 h-4 text-rose-400" />
+              </div>
+              <h2 className="text-sm font-bold">Hapus Materi Kurikulum</h2>
+            </div>
+            <button
+              onClick={() => setDeleteModalOpen(false)}
+              className="text-gray-300 hover:text-white transition-colors p-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-6 text-center">
+            <p className="text-sm text-gray-600 font-medium leading-relaxed">
+              Apakah Anda yakin ingin menghapus materi kurikulum ini? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <p className="text-base font-bold text-gray-900 mt-2 line-clamp-2">
+              "{itemToDelete?.title || itemToDelete?.bab}"
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setDeleteModalOpen(false)}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-bold text-white shadow-md transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import Image from "next/image";
+import AuthLayout from "@/app/components/AuthLayout";
 
 // 1. Pisahkan logika form ke dalam komponen tersendiri
 function LoginForm() {
@@ -84,13 +86,33 @@ function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8 space-y-6">
+    <div className="w-full bg-white rounded-3xl shadow-2xl shadow-black/40 border border-slate-100 p-8 sm:p-9 space-y-6">
+      {/* Retali Logo & Branding Header */}
+      <div className="flex flex-col items-center text-center pb-5 border-b border-slate-100">
+        <div className="w-14 h-14 rounded-2xl bg-[#0d1523] border border-[#1e2b43] p-2 flex items-center justify-center shadow-md mb-3 transition-transform hover:scale-105 duration-200">
+          <Image
+            src="/logoretali-kuning.png"
+            alt="Retali Logo"
+            width={40}
+            height={40}
+            className="object-contain"
+            priority
+          />
+        </div>
+        <h2 className="font-extrabold text-lg tracking-tight text-slate-900 uppercase">
+          RETALI <span className="text-yellow-500">SISTEM</span>
+        </h2>
+        <p className="text-xs text-slate-500 font-medium mt-0.5">
+          Sistem Manajemen Umrah & Tour Leader
+        </p>
+      </div>
+
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
           Login Admin
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Masuk ke dashboard Retali Sistem.
+        <p className="text-xs text-slate-500 mt-1">
+          Masuk ke dashboard untuk mengelola sistem.
         </p>
       </div>
 
@@ -201,14 +223,16 @@ function LoginForm() {
 // 3. Komponen utama yang diekspor, dibungkus dengan Suspense
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+    <AuthLayout>
       <Suspense
         fallback={
-          <div className="text-slate-500 font-medium">Memuat form...</div>
+          <div className="w-full bg-white rounded-3xl shadow-2xl p-8 text-center text-slate-500 font-medium">
+            Memuat form...
+          </div>
         }
       >
         <LoginForm />
       </Suspense>
-    </div>
+    </AuthLayout>
   );
 }
