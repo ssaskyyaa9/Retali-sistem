@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2 } from "react-icons/tb";
+import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2, TbEye } from "react-icons/tb";
 import Topbar from "@/app/components/Topbar";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
@@ -20,6 +20,12 @@ export default function RiwayatScanPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // State untuk Detail Modal
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [tourLeaderInfo, setTourLeaderInfo] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const handleTabChange = (tab) => {
     if (tab === activeTab) return;
@@ -176,6 +182,39 @@ export default function RiwayatScanPage() {
     setShowDeleteModal(true);
   };
 
+  // Fungsi untuk membuka Modal Detail & Mencari Tour Leader yang melakukan scan/absen
+  const openDetailModal = async (item) => {
+    setSelectedDetailItem(item);
+    setShowDetailModal(true);
+    setTourLeaderInfo(null);
+    setLoadingDetail(true);
+
+    try {
+      const userId = item.user_id || item.scanned_by || item.created_by;
+      
+      if (userId) {
+        const { data: profileData, error } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", userId)
+          .single();
+
+        if (!error && profileData) {
+          setTourLeaderInfo(profileData);
+        } else {
+          setTourLeaderInfo({ username: "Tidak ditemukan / Sistem Otomatis" });
+        }
+      } else {
+        setTourLeaderInfo({ username: "Data Tour Leader tidak terikat langsung" });
+      }
+    } catch (err) {
+      console.error("Error fetching tour leader detail:", err);
+      setTourLeaderInfo({ username: "Gagal memuat data Tour Leader" });
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!selectedIdToDelete) return;
     setIsDeleting(true);
@@ -189,7 +228,7 @@ export default function RiwayatScanPage() {
       setShowDeleteModal(false);
       setSelectedIdToDelete(null);
       fetchData();
-      fetchAllKloterList(); // Refresh list kloter jika data terhapus
+      fetchAllKloterList();
     } catch (err) {
       alert("Gagal menghapus data: " + err.message);
     } finally {
@@ -304,7 +343,7 @@ export default function RiwayatScanPage() {
                   <th className="px-5 py-4">No Telepon</th>
                   <th className="px-5 py-4">Kloter</th>
                   <th className="px-5 py-4 text-center">Waktu Scan</th>
-                  <th className="px-5 py-4 text-center w-20">Aksi</th>
+                  <th className="px-5 py-4 text-center w-28">Aksi</th>
                 </tr>
               ) : (
                 <tr>
@@ -314,7 +353,7 @@ export default function RiwayatScanPage() {
                   <th className="px-5 py-4">Telepon</th>
                   <th className="px-5 py-4">Kloter</th>
                   <th className="px-5 py-4 text-center">Waktu Scan</th>
-                  <th className="px-5 py-4 text-center w-20">Aksi</th>
+                  <th className="px-5 py-4 text-center w-28">Aksi</th>
                 </tr>
               )}
             </thead>
@@ -374,13 +413,22 @@ export default function RiwayatScanPage() {
                     )}
 
                     <td className="px-5 py-4 text-center whitespace-nowrap">
-                      <button 
-                        onClick={() => openDeleteModal(item.id)}
-                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors inline-flex items-center justify-center"
-                        title="Hapus Data"
-                      >
-                        <TbTrash className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button 
+                          onClick={() => openDetailModal(item)}
+                          className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center justify-center"
+                          title="Lihat Detail & Petugas"
+                        >
+                          <TbEye className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => openDeleteModal(item.id)}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors inline-flex items-center justify-center"
+                          title="Hapus Data"
+                        >
+                          <TbTrash className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -425,6 +473,124 @@ export default function RiwayatScanPage() {
           )}
         </div>
       </div>
+
+      {/* Modal Detail Informasi & Tour Leader */}
+      {showDetailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs transition-all p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all animate-in fade-in zoom-in-95 border border-gray-100">
+            {/* Header Modal */}
+            <div className="bg-gradient-to-r from-[#1e293b] to-[#263754] px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-blue-400">
+                  <TbEye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Detail Informasi & Petugas Scan</h3>
+                  <p className="text-[11px] text-slate-300">Rangkuman lengkap data pemindaian dan Tour Leader</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDetailModal(false)} 
+                className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <TbX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body Modal */}
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto no-scrollbar">
+              {/* Informasi Utama Data Scan */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Informasi Data {activeTab === "koper" ? "Koper" : "Paspor"}</h4>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 grid grid-cols-2 gap-3 text-xs">
+                  {activeTab === "koper" ? (
+                    <>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Kode Koper</span>
+                        <span className="font-semibold text-gray-900">{selectedDetailItem?.kode_koper || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Nama Pemilik</span>
+                        <span className="font-semibold text-gray-900">{selectedDetailItem?.nama_pemilik || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Nomor Telepon</span>
+                        <span className="font-semibold text-gray-800">{selectedDetailItem?.nomor_telepon || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Kloter</span>
+                        <span className="font-semibold text-[#263754]">{selectedDetailItem?.kloter || "-"}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-400 block mb-0.5">Waktu Scan (Created At)</span>
+                        <span className="font-semibold text-emerald-600">
+                          {selectedDetailItem?.created_at ? new Date(selectedDetailItem.created_at).toLocaleString("id-ID") : "-"}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Nomor Paspor</span>
+                        <span className="font-semibold text-gray-900">{selectedDetailItem?.passport_number || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Nama Pemilik</span>
+                        <span className="font-semibold text-gray-900">{selectedDetailItem?.owner_name || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Nomor Telepon</span>
+                        <span className="font-semibold text-gray-800">{selectedDetailItem?.phone || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block mb-0.5">Kloter</span>
+                        <span className="font-semibold text-[#263754]">{selectedDetailItem?.kloter || "-"}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-400 block mb-0.5">Waktu Scan (Scanned At)</span>
+                        <span className="font-semibold text-emerald-600">
+                          {selectedDetailItem?.scanned_at ? new Date(selectedDetailItem.scanned_at).toLocaleString("id-ID") : "-"}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Informasi Tour Leader yang Melakukan Absen/Scan (Hanya Nama) */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Tour Leader / Petugas Bertugas</h4>
+                {loadingDetail ? (
+                  <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 flex items-center justify-center gap-2 text-gray-500 text-xs">
+                    <TbLoader2 className="w-5 h-5 animate-spin text-[#263754]" />
+                    <span>Mencari data petugas...</span>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100/60 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
+                      {tourLeaderInfo?.username ? tourLeaderInfo.username.charAt(0).toUpperCase() : "TL"}
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-[10px] uppercase">Nama Petugas / Tour Leader</span>
+                      <span className="font-bold text-gray-900 text-sm">{tourLeaderInfo?.username || "Tidak Diketahui"}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="bg-gray-50 px-6 py-3.5 border-t border-gray-100 flex items-center justify-end">
+              <button 
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 rounded-xl bg-[#263754] text-white text-xs font-semibold hover:bg-[#1e293b] transition-colors shadow-xs"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs transition-all">
