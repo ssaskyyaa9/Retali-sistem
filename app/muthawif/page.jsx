@@ -282,11 +282,11 @@ export default function MuthawifPage() {
                 <table className="w-full text-left text-sm">
                   <thead className="text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-white border-b border-gray-100">
                     <tr>
-                      <th className="px-6 py-4">PENGGUNA</th>
-                      <th className="px-6 py-4">KONTAK</th>
-                      <th className="px-6 py-4">KLOTER</th>
-                      <th className="px-6 py-4">BERGABUNG</th>
-                      <th className="px-6 py-4 text-right">AKSI</th>
+                      <th className="px-6 py-4 text-center">PENGGUNA</th>
+                      <th className="px-6 py-4 text-center">KONTAK</th>
+                      <th className="px-6 py-4 text-center">KLOTER</th>
+                      <th className="px-6 py-4 text-center">BERGABUNG</th>
+                      <th className="px-6 py-4 text-center">AKSI</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
@@ -316,12 +316,12 @@ export default function MuthawifPage() {
                           key={idx}
                           className="hover:bg-gray-50/50 transition-colors"
                         >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-[#eef2f6] text-[#6b7280] font-bold flex items-center justify-center text-xs">
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-[#eef2f6] text-[#6b7280] font-bold flex items-center justify-center text-xs shrink-0">
                                 {mt.initial}
                               </div>
-                              <div>
+                              <div className="text-left">
                                 <p className="font-bold text-[#1a2538]">
                                   {mt.name}
                                 </p>
@@ -329,13 +329,13 @@ export default function MuthawifPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 text-center">
                             <p className="font-semibold text-gray-700">
                               {mt.phone}
                             </p>
                             <p className="text-xs text-gray-400">{mt.email}</p>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 text-center">
                             <p className="font-semibold text-gray-700">
                               {mt.kloter}
                             </p>
@@ -345,11 +345,11 @@ export default function MuthawifPage() {
                               </p>
                             )}
                           </td>
-                          <td className="px-6 py-4 text-gray-500">
+                          <td className="px-6 py-4 text-center text-gray-500">
                             {mt.joinDate}
                           </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
                               {/* EDIT BUTTON */}
                               <button
                                 onClick={() => {

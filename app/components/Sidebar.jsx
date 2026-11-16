@@ -17,9 +17,9 @@ export default function Sidebar() {
   const router = useRouter();
   const { isCollapsed } = useSidebar();
 
-  const [isPenggunaOpen, setIsPenggunaOpen] = useState(true);
-  const [isPersiapanOpen, setIsPersiapanOpen] = useState(true);
-  const [isAbsensiOpen, setIsAbsensiOpen] = useState(true);
+  const [isPenggunaOpen, setIsPenggunaOpen] = useState(false);
+  const [isPersiapanOpen, setIsPersiapanOpen] = useState(false);
+  const [isAbsensiOpen, setIsAbsensiOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -38,6 +38,13 @@ export default function Sidebar() {
 
   const isActive = (path) => pathname === path || pathname.startsWith(path + "/");
   const isParentActive = (paths) => paths.some((p) => pathname.startsWith(p));
+
+  // Submenu tertutup secara default, hanya terbuka otomatis jika halaman aktif saat ini berada di dalam submenu tersebut
+  useEffect(() => {
+    setIsPenggunaOpen(isParentActive(["/tour-leader", "/muthawif"]));
+    setIsPersiapanOpen(isParentActive(["/persiapan-tour-leader", "/persiapan-umroh"]));
+    setIsAbsensiOpen(isParentActive(["/riwayat-absensi"]));
+  }, [pathname]);
 
   // Reset flyout saat collapsed state berubah atau rute berpindah
   useEffect(() => {
@@ -1000,6 +1007,59 @@ export default function Sidebar() {
               </svg>
               {!isCollapsed && (
                 <span className="truncate whitespace-nowrap">Notifikasi</span>
+              )}
+            </Link>
+
+            {/* FAQ */}
+            <Link
+              href="/faq"
+              onMouseEnter={(e) =>
+                handleItemMouseEnter(e, {
+                  id: "faq",
+                  type: "tooltip",
+                  title: "FAQ",
+                  isActive: isActive("/faq"),
+                })
+              }
+              onMouseLeave={handleItemMouseLeave}
+              className={`flex items-center rounded-lg font-medium text-sm transition-all duration-200 relative group ${
+                isCollapsed
+                  ? "justify-center w-11 h-11 mx-auto"
+                  : "gap-3 px-4 py-3"
+              } ${
+                isActive("/faq")
+                  ? "bg-[#1e2b43] text-white"
+                  : "text-gray-400 hover:text-white hover:bg-[#1e2b43]/50"
+              }`}
+            >
+              {isActive("/faq") && (
+                <div
+                  className={`absolute left-0 bg-yellow-500 rounded-r-md ${
+                    isCollapsed
+                      ? "top-1/2 -translate-y-1/2 h-6 w-1"
+                      : "top-0 bottom-0 w-1"
+                  }`}
+                ></div>
+              )}
+              <svg
+                className={`w-5 h-5 shrink-0 ${
+                  isActive("/faq")
+                    ? "text-yellow-500"
+                    : "text-gray-400 group-hover:text-white"
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {!isCollapsed && (
+                <span className="truncate whitespace-nowrap">FAQ</span>
               )}
             </Link>
           </nav>
