@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dummy QR Scanner Retali - Koper & Paspor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; min-height: 100vh; padding: 32px 16px; display: flex; flex-direction: column; align-items: center; }
+    .header { text-align: center; max-width: 650px; margin-bottom: 32px; }
+    .badge { display: inline-block; padding: 4px 12px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-size: 26px; font-weight: 800; color: #ffffff; margin-bottom: 8px; }
+    p.desc { font-size: 14px; color: #94a3b8; line-height: 1.5; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; max-width: 900px; width: 100%; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); transition: transform 0.2s, border-color 0.2s; }
+    .card:hover { transform: translateY(-3px); border-color: #64748b; }
+    
+    .tag { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; margin-bottom: 16px; }
+    .tag-koper { background: #842D62; color: #ffffff; }
+    .tag-paspor { background: #2563eb; color: #ffffff; }
+    
+    .qr-frame { background: #ffffff; padding: 14px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px; }
+    .qr-frame img { width: 220px; height: 220px; display: block; border-radius: 8px; }
+    
+    .details { width: 100%; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+    .row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+    .row:last-child { margin-bottom: 0; }
+    .label { color: #64748b; font-weight: 600; }
+    .val { color: #e2e8f0; font-weight: 700; text-align: right; }
+    
+    .raw-box { width: 100%; background: #090d16; border: 1px dashed #334155; border-radius: 10px; padding: 10px 12px; }
+    .raw-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .raw-str { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; color: #38bdf8; word-break: break-all; }
+    
+    .footer-instruction { max-width: 900px; width: 100%; margin-top: 32px; background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 14px; padding: 18px 24px; font-size: 13px; color: #cbd5e1; }
+    .footer-instruction ol { margin-left: 20px; margin-top: 8px; line-height: 1.6; }
+    .copy-btn { background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 10px; font-weight: bold; }
+    .copy-btn:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">Scanner Testing Utility</div>
+    <h1>Dummy QR Code (Koper & Paspor)</h1>
+    <p class="desc">Arahkan kamera aplikasi mobile langsung ke kode QR di bawah. Hasil scan otomatis disimpan ke Supabase dan tampil secara live di tabel Web Riwayat Scan.</p>
+  </div>
+
+  <div class="grid">
+    <!-- QR KOPER -->
+    <div class="card">
+      <div class="tag tag-koper">📦 Mode: Scan Koper</div>
+      <div class="qr-frame">
+        <img src="/qr/qr_koper_dummy.png" alt="QR Code Dummy Koper">
+      </div>
+      <div class="details">
+        <div class="row"><span class="label">Tabel Web:</span><span class="val">koper</span></div>
+        <div class="row"><span class="label">Kode Koper:</span><span class="val">KPR-126-001</span></div>
+        <div class="row"><span class="label">Nama Pemilik:</span><span class="val">Ahmad Dahlan</span></div>
+        <div class="row"><span class="label">No. Telepon:</span><span class="val">081234567801</span></div>
+        <div class="row"><span class="label">Kloter:</span><span class="val">Kloter 126</span></div>
+      </div>
+      <div class="raw-box">
+        <div class="raw-label">
+          <span>Isi QR (Raw String):</span>
+          <button class="copy-btn" onclick="copyText('KPR-126-001 | Ahmad Dahlan | 081234567801 | Kloter 126', this)">Salin</button>
+        </div>
+        <div class="raw-str">KPR-126-001 | Ahmad Dahlan | 081234567801 | Kloter 126</div>
+      </div>
+    </div>
+
+    <!-- QR PASPOR -->
+    <div class="card">
+      <div class="tag tag-paspor">📘 Mode: Scan Paspor</div>
+      <div class="qr-frame">
+        <img src="/qr/qr_passport_dummy.png" alt="QR Code Dummy Paspor">
+      </div>
+      <div class="details">
+        <div class="row"><span class="label">Tabel Web:</span><span class="val">passport_scans</span></div>
+        <div class="row"><span class="label">No. Paspor:</span><span class="val">B1234567</span></div>
+        <div class="row"><span class="label">Nama Pemilik:</span><span class="val">Siti Aminah</span></div>
+        <div class="row"><span class="label">No. Telepon:</span><span class="val">081234567802</span></div>
+        <div class="row"><span class="label">Kloter:</span><span class="val">Kloter 126</span></div>
+      </div>
+      <div class="raw-box">
+        <div class="raw-label">
+          <span>Isi QR (Raw String):</span>
+          <button class="copy-btn" onclick="copyText('B1234567 | Siti Aminah | 081234567802 | Kloter 126', this)">Salin</button>
+        </div>
+        <div class="raw-str">B1234567 | Siti Aminah | 081234567802 | Kloter 126</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-instruction">
+    <strong>Petunjuk Pengujian Scanner Mobile:</strong>
+    <ol>
+      <li>Buka aplikasi <strong>Retali Mobile</strong> lalu tekan tombol <strong>Scan (FAB tengah)</strong>.</li>
+      <li>Untuk scan koper, pastikan mode berada pada <strong>"📦 SCAN KOPER"</strong>, lalu arahkan kamera ke QR Koper.</li>
+      <li>Untuk scan paspor, tekan tombol <strong>"Ke Scan Paspor"</strong> di bawah layar, lalu arahkan kamera ke QR Paspor.</li>
+      <li>Kamera akan mendeteksi QR secara otomatis, berbunyi beep sukses, dan data langsung tersimpan ke Supabase.</li>
+      <li>Buka halaman <strong>Riwayat Scan</strong> di Web Dashboard untuk memverifikasi data yang baru saja masuk.</li>
+    </ol>
+  </div>
+
+  <script>
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = "Tersalin!";
+        setTimeout(() => btn.innerText = orig, 1500);
+      });
+    }
+  </script>
+</body>
+</html>
