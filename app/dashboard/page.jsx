@@ -89,7 +89,7 @@ export default function DashboardPage() {
       const { count: attendanceDone } = await supabase
         .from("attendance_user")
         .select("*", { count: "exact", head: true })
-        .eq("status", "hadir");
+        .eq("attendance_status", "hadir");
 
       setOperational({
         taskDone: taskDone || 0,

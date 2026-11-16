@@ -382,14 +382,14 @@ function normalizeGender(val) {
 }
 
 function normalizeStatus(val) {
-  if (!val) return "hadir";
+  if (!val) return "belum_hadir";
   const s = String(val).trim().toLowerCase();
   if (["hadir", "h", "present", "ya", "1", "true"].includes(s)) return "hadir";
   if (["izin", "i", "permisi"].includes(s)) return "izin";
   if (["sakit", "s", "sick"].includes(s)) return "sakit";
   if (["alpa", "a", "tidak hadir", "tidak_hadir", "absen", "tidak", "0", "false"].includes(s)) return "alpa";
-  if (["belum", "belum hadir", "belum_hadir", "pending"].includes(s)) return "belum_hadir";
-  return "hadir";
+  if (["belum", "belum hadir", "belum_hadir", "pending", "belum absen", "belum_absen"].includes(s)) return "belum_hadir";
+  return "belum_hadir";
 }
 
 function normalizeDate(val) {
@@ -862,6 +862,39 @@ export default function RiwayatAbsensiContent({ type }) {
       setLoadingDetail(false);
     }
   }, []);
+
+  // ── Update status kehadiran jamaah (langsung dari app) ─────────────────────
+  const handleUpdateJamaahStatus = useCallback(async (jamaahId, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from("attendance_user")
+        .update({ attendance_status: newStatus })
+        .eq("id", jamaahId);
+      if (error) throw error;
+      setJamaahDetailList((prev) =>
+        prev.map((item) => (item.id === jamaahId ? { ...item, attendance_status: newStatus } : item))
+      );
+    } catch (err) {
+      alert("Gagal mengubah status: " + err.message);
+    }
+  }, []);
+
+  const handleBatchUpdateJamaahStatus = useCallback(async (newStatus) => {
+    if (!jamaahDetailList || jamaahDetailList.length === 0) return;
+    const ids = jamaahDetailList.map((j) => j.id);
+    try {
+      const { error } = await supabase
+        .from("attendance_user")
+        .update({ attendance_status: newStatus })
+        .in("id", ids);
+      if (error) throw error;
+      setJamaahDetailList((prev) =>
+        prev.map((item) => ({ ...item, attendance_status: newStatus }))
+      );
+    } catch (err) {
+      alert("Gagal update massal: " + err.message);
+    }
+  }, [jamaahDetailList]);
 
   // ── Delete guide ──────────────────────────────────────────────────────────
   const handleDeleteGuide = useCallback(
@@ -1745,7 +1778,7 @@ export default function RiwayatAbsensiContent({ type }) {
         kloter: cleanString(row.kloter) || selectedKloter,
         bus: cleanString(row.bus),
         description: cleanString(row.description),
-        attendance_status: normalizeStatus(row.attendance_status),
+        attendance_status: "belum_hadir",
         note: cleanString(row.note),
         grup_id: grupId,
       }));
@@ -3002,25 +3035,38 @@ export default function RiwayatAbsensiContent({ type }) {
                     <div className="p-6">
                       <div className="border border-blue-500 rounded-2xl p-5 bg-white space-y-4 shadow-2xs">
                         <div>
-                          <h5 className="text-sm font-bold text-gray-900">
-                            Tour Leader:{" "}
-                            <span
-                              className={
-                                assignedTourLeaderName
-                                  ? "text-[#121c2d] font-bold"
-                                  : "text-gray-400 font-normal italic"
-                              }
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                              <h5 className="text-sm font-bold text-gray-900">
+                                Tour Leader:{" "}
+                                <span
+                                  className={
+                                    assignedTourLeaderName
+                                      ? "text-[#121c2d] font-bold"
+                                      : "text-gray-400 font-normal italic"
+                                  }
+                                >
+                                  {assignedTourLeaderName ||
+                                    (selectedKloter
+                                      ? "Tidak ada Tour Leader yang ditugaskan pada kloter ini"
+                                      : "- (Pilih kloter terlebih dahulu)")}
+                                </span>
+                              </h5>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Format Excel: nama_jamaah, no_paspor, no_hp, jenis_kelamin, tanggal_lahir,
+                                kode_kloter, nomor_bus, keterangan, status, catatan
+                              </p>
+                            </div>
+                            <a
+                              href="/dummy_absen_jamaah.xlsx"
+                              download="dummy_absen_jamaah.xlsx"
+                              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#121c2d] bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-lg transition-all shrink-0 shadow-2xs cursor-pointer"
+                              title="Download template file excel dummy untuk tambah absen"
                             >
-                              {assignedTourLeaderName ||
-                                (selectedKloter
-                                  ? "Tidak ada Tour Leader yang ditugaskan pada kloter ini"
-                                  : "- (Pilih kloter terlebih dahulu)")}
-                            </span>
-                          </h5>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Format Excel: nama_jamaah, no_paspor, no_hp, jenis_kelamin, tanggal_lahir,
-                            kode_kloter, nomor_bus, keterangan, status
-                          </p>
+                              <FiFile className="w-4 h-4 text-emerald-600" />
+                              Download Template Dummy Excel
+                            </a>
+                          </div>
                         </div>
 
                         {/* File Input */}
@@ -3106,14 +3152,8 @@ export default function RiwayatAbsensiContent({ type }) {
                                         {cleanString(row.bus) || "-"}
                                       </td>
                                       <td className="px-3 py-2 whitespace-nowrap">
-                                        <span
-                                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                                            normalizeStatus(row.attendance_status) === "hadir"
-                                              ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
-                                              : "bg-rose-50 text-rose-700 border border-rose-300"
-                                          }`}
-                                        >
-                                          {normalizeStatus(row.attendance_status)}
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-slate-100 text-slate-700 border border-slate-300">
+                                          belum_hadir
                                         </span>
                                       </td>
                                     </tr>
@@ -3277,7 +3317,7 @@ export default function RiwayatAbsensiContent({ type }) {
               {/* VIEW 4: DETAIL JAMAAH */}
               {jamaahView === "detail_jamaah" && (
                 <div className="space-y-6">
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex justify-between items-center">
+                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">
                         Detail Absen Jamaah: {selectedJamaah?.kloter}
@@ -3290,12 +3330,30 @@ export default function RiwayatAbsensiContent({ type }) {
                         </span>
                       </p>
                     </div>
-                    <button
-                      onClick={() => setJamaahView("list")}
-                      className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                    >
-                      <FiArrowLeft className="w-3.5 h-3.5" /> Kembali
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleBatchUpdateJamaahStatus("hadir")}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                        title="Tandai seluruh jamaah pada sesi ini sebagai Hadir"
+                      >
+                        <FiCheckCircle className="w-3.5 h-3.5" /> Tandai Semua Hadir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBatchUpdateJamaahStatus("belum_hadir")}
+                        className="bg-slate-700 hover:bg-slate-800 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                        title="Reset seluruh status jamaah menjadi Belum Hadir"
+                      >
+                        <FiClock className="w-3.5 h-3.5" /> Reset Belum Hadir
+                      </button>
+                      <button
+                        onClick={() => setJamaahView("list")}
+                        className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <FiArrowLeft className="w-3.5 h-3.5" /> Kembali
+                      </button>
+                    </div>
                   </div>
 
                   <div className="bg-white rounded-xl shadow-xs border border-gray-100 overflow-hidden">
@@ -3361,24 +3419,28 @@ export default function RiwayatAbsensiContent({ type }) {
                                     <td className="py-5 px-4 text-sm text-gray-700 font-semibold leading-snug">
                                       {item.description || "-"}
                                     </td>
-                                    <td className="py-5 px-4 text-center whitespace-nowrap">
-                                      {st === "hadir" ? (
-                                        <span className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs uppercase">
-                                          Hadir
-                                        </span>
-                                      ) : st === "izin" ? (
-                                        <span className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-amber-50 text-amber-700 border border-amber-300 shadow-2xs uppercase">
-                                          Izin
-                                        </span>
-                                      ) : st === "sakit" ? (
-                                        <span className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-300 shadow-2xs uppercase">
-                                          Sakit
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex flex-col items-center justify-center px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs leading-tight uppercase">
-                                          <span>{st === "alpa" ? "Alpa" : "Tidak Hadir"}</span>
-                                        </span>
-                                      )}
+                                    <td className="py-4 px-4 text-center whitespace-nowrap">
+                                      <select
+                                        value={st || "belum_hadir"}
+                                        onChange={(e) => handleUpdateJamaahStatus(item.id, e.target.value)}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase border cursor-pointer transition-all outline-none shadow-2xs ${
+                                          st === "hadir"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                            : st === "izin"
+                                            ? "bg-amber-50 text-amber-700 border-amber-300"
+                                            : st === "sakit"
+                                            ? "bg-blue-50 text-blue-700 border-blue-300"
+                                            : st === "alpa"
+                                            ? "bg-rose-50 text-rose-700 border-rose-300"
+                                            : "bg-slate-100 text-slate-700 border-slate-300"
+                                        }`}
+                                      >
+                                        <option value="belum_hadir">Belum Hadir</option>
+                                        <option value="hadir">Hadir</option>
+                                        <option value="izin">Izin</option>
+                                        <option value="sakit">Sakit</option>
+                                        <option value="alpa">Alpa</option>
+                                      </select>
                                     </td>
                                     <td className="py-5 px-4 text-center text-sm text-gray-500 font-medium">
                                       {item.note || "-"}
