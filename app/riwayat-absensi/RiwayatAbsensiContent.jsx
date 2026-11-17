@@ -394,7 +394,7 @@ function normalizeStatus(val) {
   if (["hadir", "h", "present", "ya", "1", "true"].includes(s)) return "hadir";
   if (["izin", "i", "permisi"].includes(s)) return "izin";
   if (["sakit", "s", "sick"].includes(s)) return "sakit";
-  if (["alpa", "a", "tidak hadir", "tidak_hadir", "absen", "tidak", "0", "false"].includes(s)) return "alpa";
+  if (["alpa", "a", "tidak hadir", "tidak_hadir", "absen", "tidak", "0", "false"].includes(s)) return "tidak_hadir";
   if (["belum", "belum hadir", "belum_hadir", "pending", "belum absen", "belum_absen"].includes(s)) return "belum_hadir";
   return "belum_hadir";
 }
@@ -568,7 +568,7 @@ export default function RiwayatAbsensiContent({ type }) {
     const note = (item.note || "").toLowerCase();
     if (note.includes("[status: izin]") || note.includes("[izin]") || type === "izin") return "izin";
     if (note.includes("[status: sakit]") || note.includes("[sakit]") || type === "sakit") return "sakit";
-    if (note.includes("[status: alpa]") || note.includes("[alpa]") || type === "alpa") return "alpa";
+    if (note.includes("[status: tidak_hadir]") || note.includes("[tidak_hadir]") || type === "tidak_hadir") return "tidak_hadir";
     if (
       note.includes("[status: hadir]") ||
       item.photo_url ||
@@ -592,7 +592,7 @@ export default function RiwayatAbsensiContent({ type }) {
     if (s === "hadir") return { label: "Hadir", color: "bg-emerald-50 text-emerald-700 border-emerald-300" };
     if (s === "izin") return { label: "Izin", color: "bg-amber-50 text-amber-700 border-amber-300" };
     if (s === "sakit") return { label: "Sakit", color: "bg-blue-50 text-blue-700 border-blue-300" };
-    if (s === "alpa") return { label: "Alpa", color: "bg-rose-50 text-rose-700 border-rose-300" };
+    if (s === "tidak_hadir") return { label: "Tidak Hadir", color: "bg-rose-50 text-rose-700 border-rose-300" };
     return { label: "Belum Absen", color: "bg-slate-100 text-slate-700 border-slate-300" };
   }, [getMemberAttendanceStatus]);
 
@@ -3518,20 +3518,14 @@ export default function RiwayatAbsensiContent({ type }) {
                                         className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase border cursor-pointer transition-all outline-none shadow-2xs ${
                                           st === "hadir"
                                             ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                                            : st === "izin"
-                                            ? "bg-amber-50 text-amber-700 border-amber-300"
-                                            : st === "sakit"
-                                            ? "bg-blue-50 text-blue-700 border-blue-300"
-                                            : st === "alpa"
+                                            : st === "tidak_hadir"
                                             ? "bg-rose-50 text-rose-700 border-rose-300"
                                             : "bg-slate-100 text-slate-700 border-slate-300"
                                         }`}
                                       >
                                         <option value="belum_hadir">Belum Hadir</option>
                                         <option value="hadir">Hadir</option>
-                                        <option value="izin">Izin</option>
-                                        <option value="sakit">Sakit</option>
-                                        <option value="alpa">Alpa</option>
+                                        <option value="tidak_hadir">Tidak Hadir</option>
                                       </select>
                                     </td>
                                     <td className="py-5 px-4 text-center text-sm text-gray-500 font-medium">
@@ -3795,7 +3789,7 @@ export default function RiwayatAbsensiContent({ type }) {
                     { id: "belum_absen", label: "Belum Absen", active: "bg-slate-800 text-white border-slate-800" },
                     { id: "izin", label: "Izin", active: "bg-amber-500 text-white border-amber-500" },
                     { id: "sakit", label: "Sakit", active: "bg-blue-600 text-white border-blue-600" },
-                    { id: "alpa", label: "Alpa", active: "bg-rose-600 text-white border-rose-600" },
+                    { id: "tidak_hadir", label: "Tidak Hadir", active: "bg-rose-600 text-white border-rose-600" },
                   ].map((st) => (
                     <button
                       key={st.id}
