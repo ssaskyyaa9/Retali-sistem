@@ -1,0 +1,11 @@
+no_urutan,nama_jamaah,no_paspor,no_hp,jenis_kelamin,tanggal_lahir,kode_kloter,nomor_bus,keterangan,status,catatan
+1,Ahmad Dahlan,B1234567,081234567801,Laki-laki,1975-04-12,Kloter 126,Bus 1,Reguler,belum_hadir,Ketua Rombongan Bus 1
+2,Siti Aminah,B2345678,081234567802,Perempuan,1978-08-25,Kloter 126,Bus 1,Reguler,belum_hadir,
+3,Budi Santoso,B3456789,081234567803,Laki-laki,1965-11-03,Kloter 126,Bus 1,Lansia,belum_hadir,Perlu kursi roda
+4,Nurul Hidayati,B4567890,081234567804,Perempuan,1982-02-17,Kloter 126,Bus 1,Reguler,belum_hadir,
+5,Muhammad Rizky,B5678901,081234567805,Laki-laki,1990-06-30,Kloter 126,Bus 2,Reguler,belum_hadir,
+6,Dewi Sartika,B6789012,081234567806,Perempuan,1985-09-14,Kloter 126,Bus 2,Reguler,belum_hadir,
+7,Hendra Wijaya,B7890123,081234567807,Laki-laki,1970-12-05,Kloter 126,Bus 2,Reguler,belum_hadir,
+8,Fatimah Azzahra,B8901234,081234567808,Perempuan,1995-03-21,Kloter 126,Bus 2,Reguler,belum_hadir,
+9,Agus Pratama,B9012345,081234567809,Laki-laki,1988-07-09,Kloter 126,Bus 3,Reguler,belum_hadir,
+10,Sri Wahyuni,B0123456,081234567810,Perempuan,1960-01-15,Kloter 126,Bus 3,Lansia,belum_hadir,Perlu pendampingan khusus

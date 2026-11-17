@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2, TbEye } from "react-icons/tb";
+import Link from "next/link";
+import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2, TbEye, TbQrcode } from "react-icons/tb";
 import Topbar from "@/app/components/Topbar";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
@@ -69,7 +70,19 @@ export default function RiwayatScanPage() {
         if (filterKloter) {
           queryKoper = queryKoper.eq("kloter", filterKloter);
         }
-        const { data: resKoper } = await queryKoper.order("created_at", { ascending: false });
+        let { data: resKoper, error: errKoper } = await queryKoper.order("no_urutan", { ascending: true, nullsFirst: false });
+        if (errKoper) {
+          // Fallback order by created_at jika kolom no_urutan belum dibuat di Supabase
+          const resFallback = await queryKoper.order("created_at", { ascending: false });
+          resKoper = resFallback.data;
+        } else if (resKoper) {
+          resKoper.sort((a, b) => {
+            if (a.no_urutan != null && b.no_urutan != null) return a.no_urutan - b.no_urutan;
+            if (a.no_urutan != null) return -1;
+            if (b.no_urutan != null) return 1;
+            return 0;
+          });
+        }
         setDataKoper(resKoper || []);
       } else {
         let queryPaspor = supabase.from("passport_scans").select("*");
@@ -83,7 +96,19 @@ export default function RiwayatScanPage() {
         if (filterKloter) {
           queryPaspor = queryPaspor.eq("kloter", filterKloter);
         }
-        const { data: resPaspor } = await queryPaspor.order("scanned_at", { ascending: false });
+        let { data: resPaspor, error: errPaspor } = await queryPaspor.order("no_urutan", { ascending: true, nullsFirst: false });
+        if (errPaspor) {
+          // Fallback order by scanned_at jika kolom no_urutan belum dibuat di Supabase
+          const resFallback = await queryPaspor.order("scanned_at", { ascending: false });
+          resPaspor = resFallback.data;
+        } else if (resPaspor) {
+          resPaspor.sort((a, b) => {
+            if (a.no_urutan != null && b.no_urutan != null) return a.no_urutan - b.no_urutan;
+            if (a.no_urutan != null) return -1;
+            if (b.no_urutan != null) return 1;
+            return 0;
+          });
+        }
         setDataPaspor(resPaspor || []);
       }
     } catch (err) {
@@ -125,7 +150,7 @@ export default function RiwayatScanPage() {
       rows.push(["No", "Kode Koper", "Nama Pemilik", "No Telepon", "Kloter", "Waktu Scan"]);
       activeData.forEach((item, index) => {
         rows.push([
-          index + 1,
+          item.no_urutan != null ? item.no_urutan : index + 1,
           item.kode_koper || "-",
           item.nama_pemilik || "-",
           item.nomor_telepon || "-",
@@ -137,7 +162,7 @@ export default function RiwayatScanPage() {
       rows.push(["No", "No Paspor", "Nama Pemilik", "Telepon", "Kloter", "Waktu Scan"]);
       activeData.forEach((item, index) => {
         rows.push([
-          index + 1,
+          item.no_urutan != null ? item.no_urutan : index + 1,
           item.passport_number || "-",
           item.owner_name || "-",
           item.phone || "-",
@@ -325,9 +350,24 @@ export default function RiwayatScanPage() {
               </div>
             </div>
 
-            {/* Export Excel */}
-            <div>
-              <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap" >
+            {/* Dummy QR, Template Dummy & Export Excel */}
+            <div className="flex items-center gap-2">
+              <Link
+                href="/dummy-qr"
+                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shadow-2xs"
+                title="Buka QR code dummy untuk testing scan di HP"
+              >
+                <TbQrcode className="w-4 h-4 text-indigo-600" /> Dummy QR (Test HP)
+              </Link>
+              <a
+                href={activeTab === "koper" ? "/dummy_scan_koper.xlsx" : "/dummy_scan_paspor.xlsx"}
+                download={activeTab === "koper" ? "dummy_scan_koper.xlsx" : "dummy_scan_paspor.xlsx"}
+                className="bg-gray-50 hover:bg-gray-100 text-[#121c2d] border border-gray-200 px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shadow-2xs"
+                title={`Download template data dummy scan ${activeTab === "koper" ? "koper" : "paspor"}`}
+              >
+                <TbDownload className="w-4 h-4 text-gray-500" /> Template {activeTab === "koper" ? "Koper" : "Paspor"}
+              </a>
+              <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap cursor-pointer" >
                 <TbDownload className="w-4 h-4" /> Export Excel
               </button>
             </div>
@@ -376,8 +416,8 @@ export default function RiwayatScanPage() {
               ) : (
                 currentData.map((item, index) => (
                   <tr key={item.id || index} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-5 py-4 text-center text-gray-500 text-sm whitespace-nowrap">
-                      {indexOfFirstItem + index + 1}
+                    <td className="px-5 py-4 text-center text-gray-500 text-sm whitespace-nowrap font-medium">
+                      {item.no_urutan != null ? item.no_urutan : indexOfFirstItem + index + 1}
                     </td>
                     
                     {activeTab === "koper" ? (

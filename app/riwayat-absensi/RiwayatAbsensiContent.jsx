@@ -325,6 +325,13 @@ function normalizeKey(k) {
 }
 
 const COLUMN_MAP = {
+  nourutan: "no_urutan",
+  nomorurutan: "no_urutan",
+  urutan: "no_urutan",
+  nourut: "no_urutan",
+  no: "no_urutan",
+  nomor: "no_urutan",
+  number: "no_urutan",
   namajama: "jamaah_name",
   namajamaah: "jamaah_name",
   namalengkap: "jamaah_name",
@@ -832,11 +839,20 @@ export default function RiwayatAbsensiContent({ type }) {
 
       let data = [];
       if (grup.id) {
-        const resGrup = await supabase
+        let resGrup = await supabase
           .from("attendance_user")
           .select("*")
           .eq("grup_id", grup.id)
-          .order("id", { ascending: true });
+          .order("no_urutan", { ascending: true, nullsFirst: false });
+
+        if (resGrup.error) {
+          // Fallback order by id jika kolom no_urutan belum dibuat di Supabase
+          resGrup = await supabase
+            .from("attendance_user")
+            .select("*")
+            .eq("grup_id", grup.id)
+            .order("id", { ascending: true });
+        }
 
         if (!resGrup.error && resGrup.data && resGrup.data.length > 0) {
           data = resGrup.data;
@@ -844,16 +860,32 @@ export default function RiwayatAbsensiContent({ type }) {
       }
 
       if (data.length === 0 && grup.kloter) {
-        const resKloter = await supabase
+        let resKloter = await supabase
           .from("attendance_user")
           .select("*")
           .eq("kloter", grup.kloter)
-          .order("id", { ascending: true });
+          .order("no_urutan", { ascending: true, nullsFirst: false });
+
+        if (resKloter.error) {
+          resKloter = await supabase
+            .from("attendance_user")
+            .select("*")
+            .eq("kloter", grup.kloter)
+            .order("id", { ascending: true });
+        }
 
         if (!resKloter.error && resKloter.data) {
           data = resKloter.data;
         }
       }
+
+      // Pastikan urut rapi berdasarkan no_urutan
+      data.sort((a, b) => {
+        if (a.no_urutan != null && b.no_urutan != null) return a.no_urutan - b.no_urutan;
+        if (a.no_urutan != null) return -1;
+        if (b.no_urutan != null) return 1;
+        return 0;
+      });
 
       setJamaahDetailList(data);
     } catch (err) {
@@ -1769,7 +1801,8 @@ export default function RiwayatAbsensiContent({ type }) {
       }
 
       // 2. Normalisasi & sanitasi baris untuk attendance_user
-      const rowsToInsert = excelRows.map((row) => ({
+      const rowsToInsert = excelRows.map((row, idx) => ({
+        no_urutan: row.no_urutan ? parseInt(row.no_urutan, 10) : idx + 1,
         jamaah_name: cleanString(row.jamaah_name) || "Jamaah",
         passport_number: cleanString(row.passport_number),
         phone_number: cleanString(row.phone_number),
@@ -1783,12 +1816,21 @@ export default function RiwayatAbsensiContent({ type }) {
         grup_id: grupId,
       }));
 
-      // 3. Insert ke attendance_user (batch 50)
+      // 3. Insert ke attendance_user (batch 50) dengan fallback jika no_urutan belum ada di Supabase
       const BATCH = 50;
       for (let i = 0; i < rowsToInsert.length; i += BATCH) {
         const batch = rowsToInsert.slice(i, i + BATCH);
         const { error: insertErr } = await supabase.from("attendance_user").insert(batch);
-        if (insertErr) throw insertErr;
+        if (insertErr) {
+          if (insertErr.message && insertErr.message.includes("no_urutan")) {
+            // Kolom no_urutan belum dibuat di Supabase, fallback insert tanpa no_urutan
+            const fallbackBatch = batch.map(({ no_urutan, ...rest }) => rest);
+            const { error: fallbackErr } = await supabase.from("attendance_user").insert(fallbackBatch);
+            if (fallbackErr) throw fallbackErr;
+          } else {
+            throw insertErr;
+          }
+        }
       }
 
       // 4. Update total_jamaah di attendance_grup
@@ -1922,10 +1964,9 @@ export default function RiwayatAbsensiContent({ type }) {
               {petugasView === "list" && (
                 <div className="space-y-6">
                   {/* Header Banner - Gaya Card Jamaah */}
-                  <div className="bg-[#121c2d] text-white p-6 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+                  <div className="bg-[#121c2d] text-white p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                       
                         <h3 className="text-lg font-bold">
                           {activeTab === "tour_leader" ? "Data Absen Tour Leader" : "Data Absen Muthawif"}
                         </h3>
@@ -1936,16 +1977,16 @@ export default function RiwayatAbsensiContent({ type }) {
                           : "Kelola sesi absen dan pantau daftar absensi kegiatan yang wajib dipenuhi Muthawif."}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 self-stretch md:self-auto flex-wrap">
+                    <div className="flex items-center gap-2.5 self-stretch md:self-auto flex-wrap">
                       <button
                         onClick={() => setPetugasView("sesi_absen")}
-                        className="bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition-all border border-white/20 flex items-center gap-2 shadow-xs cursor-pointer"
+                        className="bg-white/10 hover:bg-white/20 active:scale-[0.98] text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-all border border-white/20 flex items-center gap-2 shadow-xs cursor-pointer"
                       >
                         <FiList className="w-4 h-4" /> Kelola Sesi
                       </button>
                       <button
                         onClick={handleOpenCatatAbsenPetugas}
-                        className="bg-white text-[#121c2d] hover:bg-gray-100 px-4 py-2.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                        className="bg-white hover:bg-gray-100 active:scale-[0.98] text-[#121c2d] px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                       >
                         <FiPlus className="w-4 h-4" /> Catat Absen{" "}
                         {activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"}
@@ -1956,18 +1997,18 @@ export default function RiwayatAbsensiContent({ type }) {
                   {/* Filter Petugas */}
                   <form
                     onSubmit={handleFilter}
-                    className="flex flex-wrap gap-4 items-end bg-white p-5 rounded-xl border border-gray-100 shadow-2xs"
+                    className="flex flex-wrap gap-4 items-end bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs"
                   >
                     {/* Sesi Filter Khusus Petugas */}
                     <div className="w-72">
-                      <label className="block text-[13px] font-bold text-gray-800 mb-1.5">
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
                         Filter Sesi Absen
                       </label>
                       <div className="relative">
                         <select
                           value={filterSesi}
                           onChange={(e) => setFilterSesi(e.target.value)}
-                          className="w-full appearance-none border border-gray-300 rounded-lg pl-3.5 pr-8 py-2.5 text-[13px] text-gray-900 bg-white focus:border-gray-500 focus:outline-none transition-all cursor-pointer font-medium"
+                          className="w-full appearance-none border border-gray-200 rounded-xl pl-3.5 pr-9 py-2.5 text-xs text-gray-900 bg-gray-50/50 hover:bg-white focus:bg-white focus:border-[#1b3167] focus:ring-2 focus:ring-[#1b3167]/10 focus:outline-none transition-all cursor-pointer font-medium"
                         >
                           <option value="">Semua Sesi</option>
                           {(activeTab === "tour_leader" ? tourLeaderSesiList : muthawifSesiList).map(
@@ -1981,28 +2022,28 @@ export default function RiwayatAbsensiContent({ type }) {
                             )
                           )}
                         </select>
-                        <FiChevronDown className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <FiChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
                     </div>
 
                     <div className="w-48">
-                      <label className="block text-[13px] font-bold text-gray-800 mb-1.5">
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
                         Tanggal Absen
                       </label>
                       <input
                         type="date"
                         value={searchDate}
                         onChange={(e) => setSearchDate(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-[13px] text-gray-900 bg-white focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all font-medium"
+                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 bg-gray-50/50 hover:bg-white focus:bg-white focus:border-[#1b3167] focus:ring-2 focus:ring-[#1b3167]/10 focus:outline-none transition-all font-medium"
                       />
                     </div>
 
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg text-[13px] font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
                     >
-                      <FiRefreshCw className="w-3.5 h-3.5" /> Reset
+                      <FiRefreshCw className="w-3.5 h-3.5 text-gray-500" /> Reset
                     </button>
                   </form>
 
@@ -2029,75 +2070,111 @@ export default function RiwayatAbsensiContent({ type }) {
                             return (
                               <div
                                 key={item.key}
-                                className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-sm transition-all"
+                                className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-100/90 shadow-xs hover:shadow-md hover:border-gray-200/80 transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
                               >
-                                <div className="space-y-2">
+                                {/* Sisi Kiri: Informasi Sesi & Metadata */}
+                                <div className="space-y-3 flex-1 min-w-0">
+                                  {/* Baris Judul & Badge Bagian */}
                                   <div className="flex items-center gap-2.5 flex-wrap">
-                                    <h4 className="font-bold text-gray-900 text-lg">
-                                      {index + 1}. {item.sesi || "–"}
+                                    <span className="w-7 h-7 rounded-lg bg-[#1b3167]/10 text-[#1b3167] font-bold text-xs flex items-center justify-center shrink-0">
+                                      {index + 1}
+                                    </span>
+                                    <h4 className="font-bold text-gray-900 text-base sm:text-lg group-hover:text-[#1b3167] transition-colors break-words">
+                                      {item.sesi || "–"}
                                     </h4>
                                     {item.bagian_sesi && (
-                                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                      <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/70 inline-flex items-center gap-1.5 shrink-0">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                         Bagian: {item.bagian_sesi}
                                       </span>
                                     )}
+                                  </div>
+
+                                  {/* Baris Metadata: Tanggal, Target Waktu, Kloter */}
+                                  <div className="flex items-center gap-2 flex-wrap text-xs">
                                     {item.tanggal && (
-                                      <span className="text-sm text-gray-500 font-semibold">
-                                        ({formatTanggal(item.tanggal)})
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 text-gray-600 border border-gray-200/80 font-medium">
+                                        <FiCalendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                        {formatTanggal(item.tanggal)}
                                       </span>
                                     )}
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-wrap">
                                     {item.target_jam_mulai && item.target_jam_selesai && (
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                        <FiClock className="w-3 h-3 text-amber-600" />
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50/70 text-amber-800 border border-amber-200/70 font-medium">
+                                        <FiClock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                         Target: {item.target_jam_mulai.slice(0, 5)} -{" "}
                                         {item.target_jam_selesai.slice(0, 5)}
                                       </span>
                                     )}
                                     {item.kloters && item.kloters.length > 0 && (
-                                      <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 border border-slate-200/80 font-medium">
+                                        <FiUsers className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                                         Kloter: {item.kloters.join(", ")}
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-[13px] text-gray-400 font-medium pt-0.5">
+
+                                  {/* Baris Timestamp Dibuat */}
+                                  <p className="text-[12px] text-gray-400 font-medium">
                                     Dibuat: {formatTanggalPanjang(item.created_at || item.tanggal)}
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-3 self-end md:self-center flex-wrap">
-                                  <span className="inline-flex items-center justify-center min-w-[110px] h-10 px-4 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/80 text-xs font-bold shadow-2xs">
-                                    {item.members.length}{" "}
-                                    {activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"}
-                                  </span>
-                                  <span
-                                    className={`inline-flex items-center justify-center h-10 px-3.5 rounded-lg text-xs font-bold border shadow-2xs ${
-                                      isAllHadir
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                                        : "bg-amber-50 text-amber-700 border-amber-300"
-                                    }`}
-                                  >
-                                    {hadirCount}/{item.members.length} Hadir
-                                  </span>
-                                  <button
-                                    onClick={() => handleOpenPetugasDetail(item)}
-                                    className="inline-flex items-center justify-center min-w-[90px] h-10 px-4 bg-[#121c2d] hover:bg-[#1f2d47] text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
-                                  >
-                                    Detail
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      openDeleteConfirmation(
-                                        item.key,
-                                        "petugas_grup",
-                                        `${item.sesi}${item.bagian_sesi ? ` (${item.bagian_sesi})` : ""}`,
-                                        item
-                                      )
-                                    }
-                                    className="inline-flex items-center justify-center min-w-[80px] h-10 px-4 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/80 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
-                                  >
-                                    Hapus
-                                  </button>
+
+                                {/* Sisi Kanan: Status Badges & Action Buttons */}
+                                <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-gray-100 flex-wrap sm:flex-nowrap">
+                                  {/* Info Badges */}
+                                  <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50/80 text-blue-700 border border-blue-200/70 text-xs font-semibold shadow-2xs">
+                                      <FiUsers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                      {item.members.length}{" "}
+                                      <span className="hidden sm:inline">
+                                        {activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"}
+                                      </span>
+                                    </span>
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shadow-2xs ${
+                                        isAllHadir
+                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                          : "bg-amber-50 text-amber-700 border-amber-200"
+                                      }`}
+                                    >
+                                      {isAllHadir ? (
+                                        <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                      ) : (
+                                        <FiAlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                      )}
+                                      {hadirCount}/{item.members.length} Hadir
+                                    </span>
+                                  </div>
+
+                                  {/* Divider vertikal pemisah badge dan tombol */}
+                                  <div className="h-7 w-px bg-gray-200 hidden sm:block" />
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                      onClick={() => handleOpenPetugasDetail(item)}
+                                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#1b3167] hover:bg-[#121c2d] active:scale-[0.98] text-white rounded-xl text-xs font-semibold transition-all shadow-xs hover:shadow-sm cursor-pointer"
+                                      title="Lihat Detail Absensi"
+                                    >
+                                      <FiEye className="w-3.5 h-3.5" />
+                                      Detail
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        openDeleteConfirmation(
+                                          item.key,
+                                          "petugas_grup",
+                                          `${item.sesi}${item.bagian_sesi ? ` (${item.bagian_sesi})` : ""}`,
+                                          item
+                                        )
+                                      }
+                                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-xl text-xs font-semibold transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer"
+                                      title="Hapus sesi ini"
+                                    >
+                                      <FiTrash2 className="w-3.5 h-3.5 text-rose-500" />
+                                      <span className="hidden sm:inline">Hapus</span>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -2824,59 +2901,74 @@ export default function RiwayatAbsensiContent({ type }) {
                         jamaahGrupList.map((item, index) => (
                           <div
                             key={item.id}
-                            className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-sm transition-all"
+                            className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-100/90 shadow-xs hover:shadow-md hover:border-gray-200/80 transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
                           >
-                            <div className="space-y-2">
+                            <div className="space-y-3 flex-1 min-w-0">
                               <div className="flex items-center gap-2.5 flex-wrap">
-                                <h4 className="font-bold text-gray-900 text-lg">
-                                  {index + 1}. {item.kloter || "–"}
+                                <span className="w-7 h-7 rounded-lg bg-[#1b3167]/10 text-[#1b3167] font-bold text-xs flex items-center justify-center shrink-0">
+                                  {index + 1}
+                                </span>
+                                <h4 className="font-bold text-gray-900 text-base sm:text-lg group-hover:text-[#1b3167] transition-colors break-words">
+                                  {item.kloter || "–"}
                                 </h4>
                                 {item.kloter_date && (
-                                  <span className="text-sm text-gray-500 font-semibold">
-                                    ({item.kloter_date})
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 text-gray-600 border border-gray-200/80 text-xs font-medium shrink-0">
+                                    <FiCalendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                    {item.kloter_date}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[14px] text-gray-700 font-medium">
-                                Sesi: <span className="font-bold text-gray-900">{item.sesi || "–"}</span>
-                              </p>
-                              <p className="text-[14px] text-gray-700 font-medium">
-                                Tour Leader:{" "}
-                                <span className="font-bold text-gray-900">
-                                  {item.tour_leader || "–"}
+                              <div className="flex items-center gap-2 flex-wrap text-xs">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50/70 text-blue-800 border border-blue-200/70 font-medium">
+                                  <FiList className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                  Sesi: {item.sesi || "–"}
                                 </span>
-                              </p>
-                              <p className="text-[14px] text-gray-400 font-medium pt-0.5">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 border border-slate-200/80 font-medium">
+                                  <FiUsers className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                  Tour Leader: {item.tour_leader || "–"}
+                                </span>
+                              </div>
+                              <p className="text-[12px] text-gray-400 font-medium">
                                 Dibuat: {formatTanggalPanjang(item.created_at)}
                               </p>
                             </div>
-                            <div className="flex items-center gap-3 self-end md:self-center">
-                              <span className="inline-flex items-center justify-center min-w-[100px] h-10 px-4 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/80 text-xs font-bold shadow-2xs">
+                            <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-gray-100 flex-wrap sm:flex-nowrap">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50/80 text-blue-700 border border-blue-200/70 text-xs font-semibold shadow-2xs">
+                                <FiUsers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                 {item.total_jamaah ?? "–"} Jamaah
                               </span>
-                              <button
-                                onClick={() => {
-                                  setSelectedJamaah(item);
-                                  fetchJamaahDetail(item);
-                                  setJamaahView("detail_jamaah");
-                                }}
-                                className="inline-flex items-center justify-center min-w-[100px] h-10 px-4 bg-[#121c2d] hover:bg-[#1f2d47] text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
-                              >
-                                Detail
-                              </button>
-                              <button
-                                onClick={() =>
-                                  openDeleteConfirmation(
-                                    item.id,
-                                    "jamaah",
-                                    item.kloter || String(item.id),
-                                    item
-                                  )
-                                }
-                                className="inline-flex items-center justify-center min-w-[100px] h-10 px-4 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/80 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
-                              >
-                                Hapus
-                              </button>
+
+                              <div className="h-7 w-px bg-gray-200 hidden sm:block" />
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={() => {
+                                    setSelectedJamaah(item);
+                                    fetchJamaahDetail(item);
+                                    setJamaahView("detail_jamaah");
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#1b3167] hover:bg-[#121c2d] active:scale-[0.98] text-white rounded-xl text-xs font-semibold transition-all shadow-xs hover:shadow-sm cursor-pointer"
+                                  title="Lihat Detail Jamaah"
+                                >
+                                  <FiEye className="w-3.5 h-3.5" />
+                                  Detail
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    openDeleteConfirmation(
+                                      item.id,
+                                      "jamaah",
+                                      item.kloter || String(item.id),
+                                      item
+                                    )
+                                  }
+                                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-xl text-xs font-semibold transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer"
+                                  title="Hapus sesi jamaah ini"
+                                >
+                                  <FiTrash2 className="w-3.5 h-3.5 text-rose-500" />
+                                  <span className="hidden sm:inline">Hapus</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))
@@ -3119,7 +3211,7 @@ export default function RiwayatAbsensiContent({ type }) {
                               <table className="w-full text-xs text-left border-collapse">
                                 <thead className="bg-gray-100 text-gray-700 font-bold sticky top-0">
                                   <tr>
-                                    <th className="px-3 py-2 whitespace-nowrap">#</th>
+                                    <th className="px-3 py-2 whitespace-nowrap text-center">No. Urut</th>
                                     <th className="px-3 py-2 whitespace-nowrap">Nama Jamaah</th>
                                     <th className="px-3 py-2 whitespace-nowrap">No. Paspor</th>
                                     <th className="px-3 py-2 whitespace-nowrap">No. HP</th>
@@ -3132,7 +3224,7 @@ export default function RiwayatAbsensiContent({ type }) {
                                 <tbody className="divide-y divide-gray-100 bg-white">
                                   {excelRows.slice(0, 5).map((row, i) => (
                                     <tr key={i} className="hover:bg-gray-50">
-                                      <td className="px-3 py-2 text-gray-500 font-bold">{i + 1}</td>
+                                      <td className="px-3 py-2 text-center text-gray-500 font-bold">{row.no_urutan ?? (i + 1)}</td>
                                       <td className="px-3 py-2 font-semibold text-gray-800 whitespace-nowrap">
                                         {cleanString(row.jamaah_name) || "-"}
                                       </td>
@@ -3393,7 +3485,7 @@ export default function RiwayatAbsensiContent({ type }) {
                                 return (
                                   <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
                                     <td className="py-5 px-3 text-center font-bold text-gray-500 text-sm">
-                                      {idx + 1}
+                                      {item.no_urutan != null ? item.no_urutan : idx + 1}
                                     </td>
                                     <td className="py-5 px-4 font-bold text-gray-900 text-sm leading-snug">
                                       {item.jamaah_name || "-"}

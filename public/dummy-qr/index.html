@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dummy QR Scanner Testing - Retali Sistem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    body {
+      background-color: #f8fafc;
+      color: #1e293b;
+      padding: 24px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e293b, #263754);
+      color: white;
+      padding: 28px 32px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .header p {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-size: 14px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: -2px;
+    }
+    .tab-btn.active {
+      color: #263754;
+      border-bottom-color: #263754;
+      background-color: #f1f5f9;
+      border-radius: 8px 8px 0 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      transition: all 0.2s ease;
+      display: flex;
+      flex-col;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 20px -8px rgba(0,0,0,0.08);
+      border-color: #cbd5e1;
+    }
+    .badge-no {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .badge-type {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .qr-wrapper {
+      margin-top: 24px;
+      margin-bottom: 14px;
+      background: white;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #f1f5f9;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      cursor: pointer;
+    }
+    .qr-img {
+      width: 170px;
+      height: 170px;
+      display: block;
+      image-rendering: pixelated;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .card-code {
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2563eb;
+      background: #eff6ff;
+      padding: 2px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .card-meta {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .btn-zoom {
+      margin-top: 12px;
+      width: 100%;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-zoom:hover {
+      background: #263754;
+      color: white;
+      border-color: #263754;
+    }
+    /* Modal Zoom */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-box {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: #f1f5f9;
+      border: none;
+      font-size: 18px;
+      font-weight: bold;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      color: #64748b;
+    }
+    .modal-qr {
+      width: 250px;
+      height: 250px;
+      margin: 20px auto;
+      display: block;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 8px;
+    }
+    .payload-pre {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: left;
+      font-size: 11px;
+      color: #334155;
+      margin-top: 14px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .print-btn {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .print-btn:hover {
+      background: #059669;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .header, .tabs, .btn-zoom, .print-btn { display: none !important; }
+      .grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .card { page-break-inside: avoid; border: 1px dashed #cbd5e1; box-shadow: none; }
+      .qr-img { width: 140px; height: 140px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Dummy QR Testing Scanner (No. Urut 1 - 10)</h1>
+        <p>Arahkan kamera aplikasi mobile Retali ke QR Code di layar ini untuk uji coba pemindaian.</p>
+      </div>
+      <div>
+        <button class="print-btn" onclick="window.print()">🖨️ Cetak Kartu QR (Print)</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-koper" onclick="switchTab('koper')">🧳 Scan Koper (1 - 10)</button>
+      <button class="tab-btn" id="tab-paspor" onclick="switchTab('paspor')">🛂 Scan Paspor (1 - 10)</button>
+    </div>
+
+    <!-- Section Koper -->
+    <div id="section-koper" class="grid"></div>
+
+    <!-- Section Paspor -->
+    <div id="section-paspor" class="grid" style="display: none;"></div>
+  </div>
+
+  <!-- Modal Zoom -->
+  <div class="modal" id="modalZoom" onclick="closeModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <span id="modalBadge" style="background:#eff6ff; color:#1d4ed8; padding:3px 12px; border-radius:999px; font-size:12px; font-weight:800;">No. Urut: 1</span>
+      <h2 id="modalTitle" style="font-size:18px; margin-top:8px; font-weight:800;">Ahmad Dahlan</h2>
+      <p id="modalSub" style="font-size:13px; color:#64748b; font-family:monospace; margin-top:2px;">KPR-126-001</p>
+      <img id="modalImg" class="modal-qr" src="" alt="QR Zoom">
+      <p style="font-size:12px; color:#10b981; font-weight:700;">✓ Siap discan dengan kamera ponsel</p>
+      <pre class="payload-pre" id="modalPayload"></pre>
+    </div>
+  </div>
+
+  <script>
+    const koperData = [
+      { no_urutan: 1, kode_koper: "KPR-126-001", nama_pemilik: "Ahmad Dahlan", nomor_telepon: "081234567801", kloter: "Kloter 126" },
+      { no_urutan: 2, kode_koper: "KPR-126-002", nama_pemilik: "Siti Aminah", nomor_telepon: "081234567802", kloter: "Kloter 126" },
+      { no_urutan: 3, kode_koper: "KPR-126-003", nama_pemilik: "Budi Santoso", nomor_telepon: "081234567803", kloter: "Kloter 126" },
+      { no_urutan: 4, kode_koper: "KPR-126-004", nama_pemilik: "Nurul Hidayati", nomor_telepon: "081234567804", kloter: "Kloter 126" },
+      { no_urutan: 5, kode_koper: "KPR-126-005", nama_pemilik: "Muhammad Rizky", nomor_telepon: "081234567805", kloter: "Kloter 126" },
+      { no_urutan: 6, kode_koper: "KPR-126-006", nama_pemilik: "Dewi Sartika", nomor_telepon: "081234567806", kloter: "Kloter 126" },
+      { no_urutan: 7, kode_koper: "KPR-126-007", nama_pemilik: "Hendra Wijaya", nomor_telepon: "081234567807", kloter: "Kloter 126" },
+      { no_urutan: 8, kode_koper: "KPR-126-008", nama_pemilik: "Fatimah Azzahra", nomor_telepon: "081234567808", kloter: "Kloter 126" },
+      { no_urutan: 9, kode_koper: "KPR-126-009", nama_pemilik: "Agus Pratama", nomor_telepon: "081234567809", kloter: "Kloter 126" },
+      { no_urutan: 10, kode_koper: "KPR-126-010", nama_pemilik: "Sri Wahyuni", nomor_telepon: "081234567810", kloter: "Kloter 126" }
+    ];
+
+    const pasporData = [
+      { no_urutan: 1, passport_number: "B1234567", owner_name: "Ahmad Dahlan", phone: "081234567801", kloter: "Kloter 126" },
+      { no_urutan: 2, passport_number: "B2345678", owner_name: "Siti Aminah", phone: "081234567802", kloter: "Kloter 126" },
+      { no_urutan: 3, passport_number: "B3456789", owner_name: "Budi Santoso", phone: "081234567803", kloter: "Kloter 126" },
+      { no_urutan: 4, passport_number: "B4567890", owner_name: "Nurul Hidayati", phone: "081234567804", kloter: "Kloter 126" },
+      { no_urutan: 5, passport_number: "B5678901", owner_name: "Muhammad Rizky", phone: "081234567805", kloter: "Kloter 126" },
+      { no_urutan: 6, passport_number: "B6789012", owner_name: "Dewi Sartika", phone: "081234567806", kloter: "Kloter 126" },
+      { no_urutan: 7, passport_number: "B7890123", owner_name: "Hendra Wijaya", phone: "081234567807", kloter: "Kloter 126" },
+      { no_urutan: 8, passport_number: "B8901234", owner_name: "Fatimah Azzahra", phone: "081234567808", kloter: "Kloter 126" },
+      { no_urutan: 9, passport_number: "B9012345", owner_name: "Agus Pratama", phone: "081234567809", kloter: "Kloter 126" },
+      { no_urutan: 10, passport_number: "B0123456", owner_name: "Sri Wahyuni", phone: "081234567810", kloter: "Kloter 126" }
+    ];
+
+    function renderKoper() {
+      const el = document.getElementById("section-koper");
+      el.innerHTML = koperData.map(item => {
+        const imgSrc = `/dummy-qr/koper/koper_no_${item.no_urutan}.png`;
+        const payloadStr = JSON.stringify(item);
+        return `
+          <div class="card">
+            <span class="badge-no">No. Urut: ${item.no_urutan}</span>
+            <span class="badge-type">Koper</span>
+            <div class="qr-wrapper" onclick='openModal(${JSON.stringify(item)}, "${imgSrc}", "koper")'>
+              <img class="qr-img" src="${imgSrc}" alt="QR Koper ${item.no_urutan}">
+            </div>
+            <div class="card-title">${item.nama_pemilik}</div>
+            <div class="card-code">${item.kode_koper}</div>
+            <div class="card-meta">📞 ${item.nomor_telepon}</div>
+            <div class="card-meta">📍 ${item.kloter}</div>
+            <button class="btn-zoom" onclick='openModal(${JSON.stringify(item)}, "${imgSrc}", "koper")'>🔍 Perbesar Layar</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderPaspor() {
+      const el = document.getElementById("section-paspor");
+      el.innerHTML = pasporData.map(item => {
+        const imgSrc = `/dummy-qr/paspor/paspor_no_${item.no_urutan}.png`;
+        return `
+          <div class="card">
+            <span class="badge-no">No. Urut: ${item.no_urutan}</span>
+            <span class="badge-type">Paspor</span>
+            <div class="qr-wrapper" onclick='openModal(${JSON.stringify(item)}, "${imgSrc}", "paspor")'>
+              <img class="qr-img" src="${imgSrc}" alt="QR Paspor ${item.no_urutan}">
+            </div>
+            <div class="card-title">${item.owner_name}</div>
+            <div class="card-code">${item.passport_number}</div>
+            <div class="card-meta">📞 ${item.phone}</div>
+            <div class="card-meta">📍 ${item.kloter}</div>
+            <button class="btn-zoom" onclick='openModal(${JSON.stringify(item)}, "${imgSrc}", "paspor")'>🔍 Perbesar Layar</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function switchTab(type) {
+      const tabKoper = document.getElementById("tab-koper");
+      const tabPaspor = document.getElementById("tab-paspor");
+      const secKoper = document.getElementById("section-koper");
+      const secPaspor = document.getElementById("section-paspor");
+
+      if (type === "koper") {
+        tabKoper.classList.add("active");
+        tabPaspor.classList.remove("active");
+        secKoper.style.display = "grid";
+        secPaspor.style.display = "none";
+      } else {
+        tabPaspor.classList.add("active");
+        tabKoper.classList.remove("active");
+        secPaspor.style.display = "grid";
+        secKoper.style.display = "none";
+      }
+    }
+
+    function openModal(item, imgSrc, type) {
+      document.getElementById("modalBadge").innerText = `No. Urut: ${item.no_urutan}`;
+      document.getElementById("modalTitle").innerText = type === "koper" ? item.nama_pemilik : item.owner_name;
+      document.getElementById("modalSub").innerText = (type === "koper" ? item.kode_koper : item.passport_number) + ` • ${item.kloter}`;
+      document.getElementById("modalImg").src = imgSrc;
+      document.getElementById("modalPayload").innerText = JSON.stringify(item, null, 2);
+      document.getElementById("modalZoom").classList.add("active");
+    }
+
+    function closeModal() {
+      document.getElementById("modalZoom").classList.remove("active");
+    }
+
+    renderKoper();
+    renderPaspor();
+  </script>
+</body>
+</html>

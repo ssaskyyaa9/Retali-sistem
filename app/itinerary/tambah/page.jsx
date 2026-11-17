@@ -12,11 +12,19 @@ import {
   FiUsers,
   FiPlus,
   FiTrash2,
-  FiClock
+  FiClock,
+  FiUpload,
+  FiDownload,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiFileText,
+  FiDatabase,
+  FiX
 } from "react-icons/fi";
 import Topbar from "@/app/components/Topbar";
 import { createClient } from "@/lib/supabase";
 import { createItineraryPackageAction } from "@/app/actions/itinerary";
+import * as XLSX from "xlsx";
 
 export default function TambahItineraryPage() {
   const router = useRouter();
@@ -46,6 +54,224 @@ export default function TambahItineraryPage() {
       ]
     }
   ]);
+
+  // Toast Notifikasi
+  const [toastMessage, setToastMessage] = useState("");
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 4500);
+  };
+
+  // State Modal Preview Import CSV
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importPreviewData, setImportPreviewData] = useState(null);
+  const [directSaving, setDirectSaving] = useState(false);
+
+  // Helper normalisasi tanggal CSV ke format YYYY-MM-DD
+  const normalizeDate = (val) => {
+    if (!val) return "";
+    const str = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+      const parts = str.split("/");
+      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
+      const parts = str.split("-");
+      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    return str;
+  };
+
+  // Helper normalisasi waktu CSV ke format HH:MM
+  const normalizeTime = (val) => {
+    if (!val) return "08:00";
+    const str = String(val).trim();
+    if (/^\d:\d{2}$/.test(str)) return `0${str}`;
+    if (/^\d{1,2}\.\d{2}$/.test(str)) {
+      const parts = str.split(".");
+      return `${parts[0].padStart(2, "0")}:${parts[1]}`;
+    }
+    if (/^\d{2}:\d{2}$/.test(str)) return str;
+    return "08:00";
+  };
+
+  // Handle Import CSV / XLSX
+  const handleImportCSV = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = evt.target.result;
+        const workbook = XLSX.read(data, { type: "binary", cellDates: true });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        if (!rawJson || rawJson.length === 0) {
+          alert("File CSV/Excel kosong atau tidak memiliki data.");
+          return;
+        }
+
+        let detectedPackageName = "";
+        let detectedStartDate = "";
+        let detectedEndDate = "";
+        const daysMap = new Map();
+
+        rawJson.forEach((row) => {
+          const norm = {};
+          Object.keys(row).forEach((k) => {
+            const cleanKey = k.trim().toLowerCase().replace(/[\s_-]+/g, "_");
+            norm[cleanKey] = String(row[k] ?? "").trim();
+          });
+
+          // Metadata paket jika ada
+          const pkgName = norm.nama_paket || norm.package_name || norm.paket || norm.judul_paket;
+          if (pkgName && !detectedPackageName) detectedPackageName = pkgName;
+
+          const sDate = normalizeDate(norm.tanggal_mulai || norm.start_date);
+          if (sDate && !detectedStartDate) detectedStartDate = sDate;
+
+          const eDate = normalizeDate(norm.tanggal_selesai || norm.end_date);
+          if (eDate && !detectedEndDate) detectedEndDate = eDate;
+
+          // Hari
+          const rawDay = norm.hari || norm.day || norm.day_number || norm.hari_ke || norm.hari_ke_;
+          const dayNum = parseInt(rawDay, 10) || 1;
+
+          // Kota / Judul Hari
+          const dayTitle = norm.kota || norm.city || norm.judul_hari || norm.day_title || norm.title || `Hari ${dayNum}`;
+
+          // Tanggal Hari
+          const dayDate = normalizeDate(norm.tanggal || norm.date || norm.activity_date);
+
+          // Aktivitas
+          const time = normalizeTime(norm.jam || norm.waktu || norm.time || norm.activity_time || norm.pukul);
+          const title = norm.judul_kegiatan || norm.kegiatan || norm.activity_title || norm.agenda || norm.aktivitas || norm.judul;
+          const location = norm.lokasi || norm.location || norm.tempat || dayTitle;
+          const description = norm.keterangan || norm.deskripsi || norm.description || norm.catatan || norm.notes;
+
+          if (!daysMap.has(dayNum)) {
+            daysMap.set(dayNum, {
+              day_number: dayNum,
+              title: dayTitle,
+              date: dayDate,
+              activities: [],
+            });
+          }
+
+          const dayObj = daysMap.get(dayNum);
+          if (!dayObj.title && dayTitle) dayObj.title = dayTitle;
+          if (!dayObj.date && dayDate) dayObj.date = dayDate;
+
+          if (title) {
+            dayObj.activities.push({
+              time: time || "08:00",
+              title,
+              location: location || "",
+              description: description || "",
+            });
+          }
+        });
+
+        const sortedDays = Array.from(daysMap.values())
+          .sort((a, b) => a.day_number - b.day_number)
+          .map((d, i) => ({
+            ...d,
+            day_number: i + 1,
+            activities:
+              d.activities.length > 0
+                ? d.activities
+                : [{ time: "08:00", title: "Kegiatan Hari Ini", location: d.title, description: "" }],
+          }));
+
+        if (sortedDays.length === 0) {
+          alert("Tidak ditemukan data hari atau jadwal kegiatan yang valid dalam file.");
+          return;
+        }
+
+        // Tentukan nama paket dari file jika belum diisi
+        const cleanFileName = file.name.replace(/\.[^/.]+$/, "").replace(/[\s_-]+/g, " ");
+        const finalPackageName = detectedPackageName || packageName || cleanFileName || "Paket Itinerary Umrah";
+
+        // Tentukan tanggal mulai dan selesai dari data
+        const allDates = sortedDays.map((d) => d.date).filter(Boolean).sort();
+        const finalStartDate = detectedStartDate || (allDates.length > 0 ? allDates[0] : startDate) || new Date().toISOString().split("T")[0];
+        const finalEndDate = detectedEndDate || (allDates.length > 0 ? allDates[allDates.length - 1] : endDate) || finalStartDate;
+
+        const totalActivities = sortedDays.reduce((acc, curr) => acc + curr.activities.length, 0);
+
+        // Buka modal pratinjau agar user bisa memilih cara penyimpanan
+        setImportPreviewData({
+          packageName: finalPackageName,
+          startDate: finalStartDate,
+          endDate: finalEndDate,
+          days: sortedDays,
+          totalActivities,
+        });
+        setImportModalOpen(true);
+      } catch (err) {
+        console.error("Gagal membaca file CSV:", err);
+        alert("Gagal membaca file CSV: " + err.message);
+      } finally {
+        e.target.value = "";
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  // Opsi 1: Tinjau di Formulir (masukkan data ke form tanpa langsung simpan)
+  const handleApplyToForm = () => {
+    if (!importPreviewData) return;
+    setPackageName(importPreviewData.packageName);
+    setStartDate(importPreviewData.startDate);
+    setEndDate(importPreviewData.endDate);
+    setDays(importPreviewData.days);
+    setImportModalOpen(false);
+    showToast(
+      `Data CSV dimasukkan ke formulir (${importPreviewData.days.length} hari & ${importPreviewData.totalActivities} kegiatan). Data belum disimpan ke Supabase — silakan periksa dan klik tombol Simpan jika sudah sesuai.`
+    );
+  };
+
+  // Opsi 2: Langsung Simpan ke Supabase
+  const handleSaveDirectToSupabase = async (isPublished = true) => {
+    if (!importPreviewData) return;
+    try {
+      setDirectSaving(true);
+      const payload = {
+        title: importPreviewData.packageName,
+        start_date: importPreviewData.startDate,
+        end_date: importPreviewData.endDate,
+        status: isPublished ? "published" : "draft",
+        recipient_type: recipientType,
+        selected_tl_ids: selectedTLs,
+        selected_muthawif_ids: selectedMuthawifs,
+        days: importPreviewData.days.map((d) => ({
+          day_number: d.day_number,
+          title: d.title,
+          date: d.date || importPreviewData.startDate,
+          activities: d.activities.filter((a) => a.title.trim().length > 0),
+        })),
+      };
+
+      const res = await createItineraryPackageAction(payload);
+      if (!res.success) {
+        throw new Error(res.error);
+      }
+
+      setImportModalOpen(false);
+      alert("Paket itinerary dari file CSV berhasil disimpan langsung ke database Supabase!");
+      router.push("/itinerary");
+    } catch (err) {
+      console.error("Gagal simpan langsung ke Supabase:", err);
+      alert("Gagal menyimpan ke Supabase: " + err.message);
+    } finally {
+      setDirectSaving(false);
+    }
+  };
 
   const fetchPetugas = useCallback(async () => {
     try {
@@ -169,9 +395,17 @@ export default function TambahItineraryPage() {
       />
       
       <div className="flex-1 overflow-y-auto p-6 md:p-10 w-full max-w-5xl mx-auto space-y-6">
+        {/* Toast Notifikasi Import */}
+        {toastMessage && (
+          <div className="fixed top-20 right-6 z-50 bg-[#121c2d] text-white text-sm px-4 py-3 rounded-xl shadow-xl border border-emerald-500/30 flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
+            <FiCheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-6 md:p-10 transition-all space-y-8">
           {/* Header Card */}
-          <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 gap-4">
             <div>
               <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
                 Buat Paket Itinerary Baru
@@ -180,13 +414,47 @@ export default function TambahItineraryPage() {
                 Atur judul paket, periode tanggal, penerima tugas, dan jadwal kegiatan harian.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => router.push("/itinerary")}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-4 py-2.5 rounded-xl border border-slate-200/80 transition-all shadow-sm cursor-pointer"
-            >
-              <FiArrowLeft className="w-4 h-4" /> Kembali
-            </button>
+            
+            <div className="flex items-center gap-2 flex-wrap">
+              <a
+                href="/dummy_itinerary_template.xlsx"
+                download="dummy_itinerary_template.xlsx"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2.5 rounded-xl border border-emerald-200/80 transition-all shadow-xs cursor-pointer"
+                title="Download contoh template format Excel (.xlsx)"
+              >
+                <FiDownload className="w-4 h-4 text-emerald-600" />
+                <span className="hidden sm:inline">Format Excel</span>
+              </a>
+
+              {/* <a
+                href="/dummy_itinerary_template.csv"
+                download="dummy_itinerary_template.csv"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-3.5 py-2.5 rounded-xl border border-slate-200/80 transition-all shadow-xs cursor-pointer"
+                title="Download contoh template format CSV"
+              >
+                <FiDownload className="w-4 h-4 text-slate-500" />
+                <span className="hidden sm:inline">Format CSV</span>
+              </a> */}
+
+              <label className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#1b3167] hover:bg-[#121c2d] active:scale-[0.98] px-4 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer">
+                <FiUpload className="w-4 h-4" />
+                <span>Import File</span>
+                <input
+                  type="file"
+                  accept=".csv, .txt, .xlsx, .xls"
+                  onChange={handleImportCSV}
+                  className="hidden"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={() => router.push("/itinerary")}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-3.5 py-2.5 rounded-xl border border-slate-200/80 transition-all shadow-xs cursor-pointer"
+              >
+                <FiArrowLeft className="w-4 h-4" /> Kembali
+              </button>
+            </div>
           </div>
 
           {/* Form Fields Utama */}
@@ -347,18 +615,30 @@ export default function TambahItineraryPage() {
 
             {/* Rincian Hari & Kegiatan */}
             <div className="space-y-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <h3 className="font-bold text-slate-800 text-base">Rundown & Jadwal Harian</h3>
-                  <p className="text-xs text-slate-400">Susun agenda perjalanan untuk setiap hari</p>
+                  <p className="text-xs text-slate-400">Susun agenda perjalanan untuk setiap hari atau impor langsung dari file CSV</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddDay}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1b3167]/10 hover:bg-[#1b3167]/20 text-[#1b3167] text-xs font-bold rounded-xl transition-all cursor-pointer"
-                >
-                  <FiPlus className="w-3.5 h-3.5" /> Tambah Hari
-                </button>
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl transition-all cursor-pointer">
+                    <FiUpload className="w-3.5 h-3.5" />
+                    <span>Import CSV</span>
+                    <input
+                      type="file"
+                      accept=".csv, .txt, .xlsx, .xls"
+                      onChange={handleImportCSV}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddDay}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1b3167]/10 hover:bg-[#1b3167]/20 text-[#1b3167] text-xs font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    <FiPlus className="w-3.5 h-3.5" /> Tambah Hari
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -494,6 +774,157 @@ export default function TambahItineraryPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Preview & Konfirmasi Import CSV */}
+      {importModalOpen && importPreviewData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 border border-slate-100 animate-in zoom-in-95 duration-150 space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#1b3167]/10 text-[#1b3167] flex items-center justify-center font-bold">
+                  <FiFileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                    Pratinjau Hasil Impor CSV
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    File CSV berhasil dibaca. Tinjau ringkasan dan tentukan cara penyimpanan.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(false)}
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Ringkasan Metadata */}
+            <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Nama Paket Itinerary
+                </label>
+                <input
+                  type="text"
+                  value={importPreviewData.packageName}
+                  onChange={(e) =>
+                    setImportPreviewData((prev) => ({ ...prev, packageName: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#1b3167]/20 focus:border-[#1b3167]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Tanggal Mulai
+                  </label>
+                  <input
+                    type="date"
+                    value={importPreviewData.startDate}
+                    onChange={(e) =>
+                      setImportPreviewData((prev) => ({ ...prev, startDate: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Tanggal Selesai
+                  </label>
+                  <input
+                    type="date"
+                    value={importPreviewData.endDate}
+                    onChange={(e) =>
+                      setImportPreviewData((prev) => ({ ...prev, endDate: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 text-slate-600 font-semibold">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold">
+                  {importPreviewData.days.length} Hari Perjalanan
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 font-bold">
+                  {importPreviewData.totalActivities} Agenda Kegiatan
+                </span>
+              </div>
+            </div>
+
+            {/* List Pratinjau Jadwal Harian */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-slate-700 block">
+                Daftar Hari & Contoh Kegiatan:
+              </span>
+              <div className="max-h-48 overflow-y-auto no-scrollbar space-y-2 border border-slate-200/80 rounded-2xl p-3 bg-slate-50/40">
+                {importPreviewData.days.map((d, i) => (
+                  <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 text-xs shadow-2xs">
+                    <div className="flex items-center justify-between font-bold text-slate-800 mb-1">
+                      <span className="text-[#1b3167]">Hari {d.day_number} — {d.title}</span>
+                      <span className="text-slate-400 font-medium">{d.date || "-"}</span>
+                    </div>
+                    <p className="text-slate-500 text-[11px]">
+                      {d.activities.length} Kegiatan:{" "}
+                      <span className="text-slate-700 font-medium">
+                        {d.activities.slice(0, 2).map((a) => a.title).join(", ")}
+                        {d.activities.length > 2 && "..."}
+                      </span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Kotak Info Status Penyimpanan */}
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
+              <FiAlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>Data saat ini baru dibaca dari file CSV dan belum masuk ke Supabase.</strong> Silakan pilih apakah Anda ingin meninjau/mengedit di formulir terlebih dahulu, atau langsung menyimpannya ke database Supabase saat ini juga.
+              </div>
+            </div>
+
+            {/* Tombol Opsi Penyimpanan */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleApplyToForm}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer"
+                  title="Masukkan data ke formulir untuk dicek & diedit manual"
+                >
+                  <FiEdit3 className="w-4 h-4 text-slate-600" />
+                  <span>Tinjau di Formulir</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={directSaving}
+                  onClick={() => handleSaveDirectToSupabase(true)}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1b3167] hover:bg-[#121c2d] active:scale-[0.98] text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  title="Langsung simpan & terbitkan ke Supabase"
+                >
+                  <FiDatabase className="w-4 h-4" />
+                  <span>{directSaving ? "Menyimpan..." : "Langsung Simpan ke Supabase"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

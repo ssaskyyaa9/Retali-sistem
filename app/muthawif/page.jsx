@@ -282,9 +282,9 @@ export default function MuthawifPage() {
                 <table className="w-full text-left text-sm">
                   <thead className="text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-white border-b border-gray-100">
                     <tr>
-                      <th className="px-6 py-4 text-center">PENGGUNA</th>
-                      <th className="px-6 py-4 text-center">KONTAK</th>
-                      <th className="px-6 py-4 text-center">KLOTER</th>
+                      <th className="px-6 py-4 text-left">PENGGUNA</th>
+                      <th className="px-6 py-4 text-left">KONTAK</th>
+                      <th className="px-6 py-4 text-left">KLOTER</th>
                       <th className="px-6 py-4 text-center">BERGABUNG</th>
                       <th className="px-6 py-4 text-center">AKSI</th>
                     </tr>
@@ -316,26 +316,26 @@ export default function MuthawifPage() {
                           key={idx}
                           className="hover:bg-gray-50/50 transition-colors"
                         >
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-3">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-full bg-[#eef2f6] text-[#6b7280] font-bold flex items-center justify-center text-xs shrink-0">
                                 {mt.initial}
                               </div>
                               <div className="text-left">
-                                <p className="font-bold text-[#1a2538]">
+                                <p className="font-bold text-[#1a2538] capitalize">
                                   {mt.name}
                                 </p>
                                 <p className="text-xs text-gray-400">{mt.id}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-6 py-4 text-left">
                             <p className="font-semibold text-gray-700">
                               {mt.phone}
                             </p>
                             <p className="text-xs text-gray-400">{mt.email}</p>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-6 py-4 text-left">
                             <p className="font-semibold text-gray-700">
                               {mt.kloter}
                             </p>
@@ -418,7 +418,7 @@ export default function MuthawifPage() {
               <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                 <span className="text-xs text-gray-500 font-medium">
                   Menampilkan halaman <strong>{currentPage}</strong> dari{" "}
-                  <strong>{totalPages || 1}</strong>
+                  <strong>{totalPages || 1}</strong> - {totalItems} pengguna
                 </span>
                 <div className="flex items-center gap-1">
                   <button
