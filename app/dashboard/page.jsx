@@ -100,10 +100,10 @@ export default function DashboardPage() {
         attendanceTotal: attendanceTotal || 0,
       });
 
-      // Mengambil aktivitas koper dengan relasi ke profiles (mengambil kolom username)
+      // Mengambil aktivitas koper dengan relasi ke profiles (mengambil kolom username via scanned_by)
       const { data: activitiesData } = await supabase
         .from("koper")
-        .select("id, created_at, koper_id, profiles(username)")
+        .select("id, created_at, kode_koper, profiles:scanned_by(username, role)")
         .order("created_at", { ascending: false })
         .limit(5);
 
@@ -114,7 +114,7 @@ export default function DashboardPage() {
           const name = item.profiles?.username || "Petugas";
           return {
             title: name,
-            desc: item.koper_id ? `Scan koper ${item.koper_id}` : "Aktivitas scan koper",
+            desc: item.kode_koper ? `Scan koper ${item.kode_koper}` : "Aktivitas scan koper",
             time: `${timeString} WIB`,
           };
         });

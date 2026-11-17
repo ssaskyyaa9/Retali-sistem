@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2, TbEye, TbQrcode } from "react-icons/tb";
+import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2, TbQrcode, TbCopy, TbCheck, TbEye } from "react-icons/tb";
 import Topbar from "@/app/components/Topbar";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
@@ -21,6 +20,8 @@ export default function RiwayatScanPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [copiedField, setCopiedField] = useState("");
 
   // State untuk Detail Modal
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -59,7 +60,7 @@ export default function RiwayatScanPage() {
     setLoading(true);
     try {
       if (activeTab === "koper") {
-        let queryKoper = supabase.from("koper").select("*");
+        let queryKoper = supabase.from("koper").select("*, profiles:scanned_by(id, username, role, email)");
         if (searchQuery.trim() !== "") {
           queryKoper = queryKoper.ilike("nama_pemilik", `%${searchQuery}%`);
         }
@@ -85,7 +86,7 @@ export default function RiwayatScanPage() {
         }
         setDataKoper(resKoper || []);
       } else {
-        let queryPaspor = supabase.from("passport_scans").select("*");
+        let queryPaspor = supabase.from("passport_scans").select("*, profiles:scanned_by(id, username, role, email)");
         if (searchQuery.trim() !== "") {
           queryPaspor = queryPaspor.ilike("owner_name", `%${searchQuery}%`);
         }
@@ -130,6 +131,25 @@ export default function RiwayatScanPage() {
     return () => clearTimeout(delayDebounce);
   }, [activeTab, searchQuery, filterTanggal, filterKloter]);
 
+  // Realtime subscription agar saat di-scan di mobile, tabel langsung terupdate
+  useEffect(() => {
+    const channel = supabase
+      .channel("realtime-scan-updates")
+      .on("postgres_changes", { event: "*", schema: "public", table: "koper" }, () => {
+        fetchData();
+        fetchAllKloterList();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "passport_scans" }, () => {
+        fetchData();
+        fetchAllKloterList();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeTab]);
+
   const handleReset = () => {
     setSearchQuery("");
     setFilterTanggal("");
@@ -149,6 +169,9 @@ export default function RiwayatScanPage() {
     if (activeTab === "koper") {
       rows.push(["No", "Kode Koper", "Nama Pemilik", "No Telepon", "Kloter", "Waktu Scan"]);
       activeData.forEach((item, index) => {
+        const petugas = item.profiles?.username
+          ? `${item.profiles.username} (${item.profiles.role === "muthawif" ? "Muthawif" : "Tour Leader"})`
+          : "-";
         rows.push([
           item.no_urutan != null ? item.no_urutan : index + 1,
           item.kode_koper || "-",
@@ -159,8 +182,11 @@ export default function RiwayatScanPage() {
         ]);
       });
     } else {
-      rows.push(["No", "No Paspor", "Nama Pemilik", "Telepon", "Kloter", "Waktu Scan"]);
+      rows.push(["No", "No Paspor", "Nama Pemilik", "Telepon", "Kloter", "Petugas Scan", "Waktu Scan"]);
       activeData.forEach((item, index) => {
+        const petugas = item.profiles?.username
+          ? `${item.profiles.username} (${item.profiles.role === "muthawif" ? "Muthawif" : "Tour Leader"})`
+          : "-";
         rows.push([
           item.no_urutan != null ? item.no_urutan : index + 1,
           item.passport_number || "-",
@@ -207,7 +233,7 @@ export default function RiwayatScanPage() {
     setShowDeleteModal(true);
   };
 
-  // Fungsi untuk membuka Modal Detail & Mencari Tour Leader yang melakukan scan/absen
+  // Fungsi untuk membuka Modal Detail & Mencari Tour Leader / Muthawif yang melakukan scan
   const openDetailModal = async (item) => {
     setSelectedDetailItem(item);
     setShowDetailModal(true);
@@ -215,26 +241,64 @@ export default function RiwayatScanPage() {
     setLoadingDetail(true);
 
     try {
-      const userId = item.user_id || item.scanned_by || item.created_by;
+      // 1. Cek apakah relasi profiles sudah ada dari query awal
+      if (item.profiles && item.profiles.username) {
+        setTourLeaderInfo(item.profiles);
+        setLoadingDetail(false);
+        return;
+      }
+
+      // 2. Cek id petugas dari scanned_by atau user_id
+      const userId = item.scanned_by || item.user_id || item.created_by;
       
       if (userId) {
         const { data: profileData, error } = await supabase
           .from("profiles")
-          .select("username")
+          .select("id, username, role, email")
           .eq("id", userId)
-          .single();
+          .maybeSingle();
 
-        if (!error && profileData) {
+        if (!error && profileData && profileData.username) {
           setTourLeaderInfo(profileData);
-        } else {
-          setTourLeaderInfo({ username: "Tidak ditemukan / Sistem Otomatis" });
+          setLoadingDetail(false);
+          return;
         }
-      } else {
-        setTourLeaderInfo({ username: "Data Tour Leader tidak terikat langsung" });
       }
+
+      // 3. Fallback cerdas: cari Tour Leader / Muthawif dari kloter terkait jika belum terhubung
+      if (item.kloter) {
+        const { data: kloterData } = await supabase
+          .from("kloter")
+          .select("id, name")
+          .ilike("name", item.kloter.trim())
+          .maybeSingle();
+
+        if (kloterData?.id) {
+          const { data: tlProfile } = await supabase
+            .from("profiles")
+            .select("id, username, role, email")
+            .eq("kloter_id", kloterData.id)
+            .in("role", ["tour_leader", "muthawif"])
+            .limit(1)
+            .maybeSingle();
+
+          if (tlProfile && tlProfile.username) {
+            setTourLeaderInfo(tlProfile);
+
+            // Perbarui scanned_by di Supabase agar permanen
+            const tableName = activeTab === "koper" ? "koper" : "passport_scans";
+            await supabase.from(tableName).update({ scanned_by: tlProfile.id }).eq("id", item.id);
+
+            setLoadingDetail(false);
+            return;
+          }
+        }
+      }
+
+      setTourLeaderInfo({ username: "Data Tour Leader tidak terikat langsung", role: "-" });
     } catch (err) {
       console.error("Error fetching tour leader detail:", err);
-      setTourLeaderInfo({ username: "Gagal memuat data Tour Leader" });
+      setTourLeaderInfo({ username: "Gagal memuat data Tour Leader", role: "-" });
     } finally {
       setLoadingDetail(false);
     }
@@ -350,23 +414,8 @@ export default function RiwayatScanPage() {
               </div>
             </div>
 
-            {/* Dummy QR, Template Dummy & Export Excel */}
-            <div className="flex items-center gap-2">
-              <Link
-                href="/dummy-qr"
-                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shadow-2xs"
-                title="Buka QR code dummy untuk testing scan di HP"
-              >
-                <TbQrcode className="w-4 h-4 text-indigo-600" /> Dummy QR (Test HP)
-              </Link>
-              <a
-                href={activeTab === "koper" ? "/dummy_scan_koper.xlsx" : "/dummy_scan_paspor.xlsx"}
-                download={activeTab === "koper" ? "dummy_scan_koper.xlsx" : "dummy_scan_paspor.xlsx"}
-                className="bg-gray-50 hover:bg-gray-100 text-[#121c2d] border border-gray-200 px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shadow-2xs"
-                title={`Download template data dummy scan ${activeTab === "koper" ? "koper" : "paspor"}`}
-              >
-                <TbDownload className="w-4 h-4 text-gray-500" /> Template {activeTab === "koper" ? "Koper" : "Paspor"}
-              </a>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2.5">
               <button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap cursor-pointer" >
                 <TbDownload className="w-4 h-4" /> Export Excel
               </button>
@@ -400,7 +449,7 @@ export default function RiwayatScanPage() {
             <tbody className="divide-y divide-gray-100 text-sm text-gray-700 font-normal transition-opacity duration-150">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
+                  <td colSpan={8} className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-gray-500">
                       <TbLoader2 className="w-7 h-7 animate-spin text-[#263754]" />
                       <span className="text-xs font-medium">Memuat data...</span>
@@ -409,7 +458,7 @@ export default function RiwayatScanPage() {
                 </tr>
               ) : currentData.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={8} className="px-5 py-12 text-center text-gray-400 text-sm">
                     {filterKloter ? `Belum ada data pada ${filterKloter}` : (activeTab === "koper" ? "Belum ada data scan koper" : "Data kosong")}
                   </td>
                 </tr>
@@ -597,9 +646,11 @@ export default function RiwayatScanPage() {
                 </div>
               </div>
 
-              {/* Informasi Tour Leader yang Melakukan Absen/Scan (Hanya Nama) */}
+              {/* Informasi Tour Leader / Muthawif yang Melakukan Scan */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Tour Leader / Petugas Bertugas</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                  Petugas Scan (Tour Leader / Muthawif)
+                </h4>
                 {loadingDetail ? (
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-100 flex items-center justify-center gap-2 text-gray-500 text-xs">
                     <TbLoader2 className="w-5 h-5 animate-spin text-[#263754]" />
@@ -607,12 +658,33 @@ export default function RiwayatScanPage() {
                   </div>
                 ) : (
                   <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100/60 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
-                      {tourLeaderInfo?.username ? tourLeaderInfo.username.charAt(0).toUpperCase() : "TL"}
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-[#263754] flex items-center justify-center font-bold text-sm shrink-0 border border-blue-200 uppercase">
+                      {tourLeaderInfo?.username &&
+                      tourLeaderInfo.username !== "Data Tour Leader tidak terikat langsung" &&
+                      tourLeaderInfo.username !== "Tidak ditemukan / Sistem Otomatis" &&
+                      tourLeaderInfo.username !== "Gagal memuat data Tour Leader"
+                        ? tourLeaderInfo.username.charAt(0).toUpperCase()
+                        : "TL"}
                     </div>
-                    <div>
-                      <span className="text-gray-400 block text-[10px] uppercase">Nama Petugas / Tour Leader</span>
-                      <span className="font-bold text-gray-900 text-sm">{tourLeaderInfo?.username || "Tidak Diketahui"}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                          Nama Petugas
+                        </span>
+                        {tourLeaderInfo?.role && tourLeaderInfo.role !== "-" && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold uppercase">
+                            {tourLeaderInfo.role === "muthawif" ? "Muthawif" : "Tour Leader"}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-bold text-gray-900 text-sm block truncate">
+                        {tourLeaderInfo?.username || "Tidak Diketahui"}
+                      </span>
+                      {tourLeaderInfo?.email && (
+                        <span className="text-[11px] text-gray-500 block truncate">
+                          {tourLeaderInfo.email}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
