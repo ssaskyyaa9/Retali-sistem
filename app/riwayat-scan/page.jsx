@@ -426,7 +426,7 @@ export default function RiwayatScanPage() {
             <thead className="bg-gray-50/50 border-b border-gray-100 text-gray-400 text-[11px] uppercase tracking-wider font-semibold">
               {activeTab === "koper" ? (
                 <tr>
-                  <th className="px-5 py-4 text-center w-16">No</th>
+                  <th className="px-5 py-4 text-center w-16">Urutan</th>
                   <th className="px-5 py-4">Kode Koper</th>
                   <th className="px-5 py-4">Nama Pemilik</th>
                   <th className="px-5 py-4">No Telepon</th>
@@ -436,7 +436,7 @@ export default function RiwayatScanPage() {
                 </tr>
               ) : (
                 <tr>
-                  <th className="px-5 py-4 text-center w-16">No</th>
+                  <th className="px-5 py-4 text-center w-16">Urutan</th>
                   <th className="px-5 py-4">No Paspor</th>
                   <th className="px-5 py-4">Nama Pemilik</th>
                   <th className="px-5 py-4">Telepon</th>
