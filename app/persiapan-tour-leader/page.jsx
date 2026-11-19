@@ -88,7 +88,7 @@ export default function PersiapanTourLeaderPage() {
         const { data, error } = await supabase
           .from("persiapan_diniyah")
           .select("id, title, sub_title, description, content")
-          .order("created_at", { ascending: true });
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
 

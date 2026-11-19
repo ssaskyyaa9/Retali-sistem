@@ -13,7 +13,6 @@ import {
   HelpCircle,
   Tag,
   AlertCircle,
-  RotateCcw,
   CheckCircle2,
   X,
 } from "lucide-react";
@@ -347,13 +346,6 @@ export default function FAQPage() {
     }
   };
 
-  // Reset ke FAQ Default jika dibutuhkan
-  const handleResetDefault = () => {
-    saveFaqsToStorage(DEFAULT_FAQS);
-    setExpandedIds(new Set(["faq-1"]));
-    showToast("FAQ dikembalikan ke data default.", "success");
-  };
-
   // Filter FAQ berdasarkan Pencarian dan Kategori
   const filteredFaqs = useMemo(() => {
     return faqs.filter((item) => {
@@ -487,7 +479,7 @@ export default function FAQPage() {
           </div>
         </div>
 
-        {/* Counter Info & Reset Default Action */}
+        {/* Counter Info */}
         <div className="flex items-center justify-between mb-4 px-1 flex-wrap gap-2">
           <p className="text-xs font-semibold text-gray-500">
             Menampilkan{" "}
@@ -502,34 +494,6 @@ export default function FAQPage() {
               <span className="text-gray-400 font-normal"> (hasil pencarian &quot;{searchQuery}&quot;)</span>
             )}
           </p>
-          <div className="flex items-center gap-3">
-            {filteredFaqs.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (expandedIds.size === filteredFaqs.length) {
-                    setExpandedIds(new Set());
-                  } else {
-                    setExpandedIds(new Set(filteredFaqs.map((f) => f.id)));
-                  }
-                }}
-                className="text-xs text-gray-500 hover:text-[#1b3167] font-semibold transition-colors cursor-pointer"
-              >
-                {expandedIds.size === filteredFaqs.length ? "Tutup Semua" : "Buka Semua"}
-              </button>
-            )}
-            {faqs.length > 0 && (
-              <button
-                type="button"
-                onClick={handleResetDefault}
-                className="text-xs text-gray-400 hover:text-[#1b3167] flex items-center gap-1 cursor-pointer transition-colors"
-                title="Reset ke pertanyaan default"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset Default</span>
-              </button>
-            )}
-          </div>
         </div>
 
         {/* FAQ Accordion List */}

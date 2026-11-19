@@ -89,7 +89,7 @@ export default function PersiapanUmrohPage() {
         const { data, error } = await supabase
           .from("persiapan_teknis")
           .select("id, title, sub_title, description, content")
-          .order("created_at", { ascending: true });
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
 
