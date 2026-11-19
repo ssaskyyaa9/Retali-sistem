@@ -403,9 +403,9 @@ export default function FAQPage() {
       <main className="flex-1 px-4 sm:px-6 md:px-10 py-6 md:py-8 w-full max-w-5xl mx-auto no-scrollbar overflow-y-auto">
         {/* Toast Notifikasi */}
         {toast.show && (
-          <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div className="fixed top-6 right-6 z-50 animate-bounce">
             <div
-              className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+              className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
                 toast.type === "error"
                   ? "bg-rose-50 border-rose-200 text-rose-800"
                   : "bg-emerald-50 border-emerald-200 text-emerald-800"
@@ -785,22 +785,18 @@ export default function FAQPage() {
 
       {/* Modal Konfirmasi Hapus FAQ */}
       {deleteModalOpen && faqToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-gray-100 animate-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-500 mx-auto flex items-center justify-center mb-4">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center animate-scale-up">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-gray-900 mb-1">
-              Hapus Pertanyaan FAQ?
-            </h3>
-            <p className="text-xs text-gray-500 mb-4 px-2 line-clamp-2">
-              "{faqToDelete.question}"
-            </p>
-            <p className="text-xs text-rose-600 mb-6 bg-rose-50 py-2 px-3 rounded-lg">
-              Tindakan ini tidak dapat dibatalkan. Pertanyaan ini akan dihapus dari daftar FAQ.
-            </p>
-
-            <div className="flex gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Hapus FAQ</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Apakah Anda yakin ingin menghapus pertanyaan FAQ <span className="font-bold text-gray-800">"{faqToDelete.question}"</span> secara permanen?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -808,7 +804,7 @@ export default function FAQPage() {
                   setFaqToDelete(null);
                 }}
                 disabled={isDeleting}
-                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
               >
                 Batal
               </button>
@@ -816,16 +812,9 @@ export default function FAQPage() {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors cursor-pointer disabled:opacity-50"
               >
-                {isDeleting ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    <span>Menghapus...</span>
-                  </>
-                ) : (
-                  <span>Ya, Hapus</span>
-                )}
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
               </button>
             </div>
           </div>

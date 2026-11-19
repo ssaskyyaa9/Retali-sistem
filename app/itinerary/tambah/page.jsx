@@ -310,9 +310,9 @@ export default function TambahItineraryPage() {
       <div className="flex-1 overflow-y-auto p-6 md:p-10 w-full max-w-5xl mx-auto space-y-6">
         {/* Toast Notification */}
         {toast.show && (
-          <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div className="fixed top-6 right-6 z-50 animate-bounce">
             <div
-              className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+              className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
                 toast.type === "error"
                   ? "bg-rose-50 border-rose-200 text-rose-800"
                   : "bg-emerald-50 border-emerald-200 text-emerald-800"

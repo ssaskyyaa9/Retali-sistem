@@ -713,72 +713,45 @@ export default function ItineraryPage() {
       )}
 
       {/* Modal Konfirmasi Hapus Itinerary */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
-          deleteModalOpen
-            ? "opacity-100 visible pointer-events-auto"
-            : "opacity-0 invisible pointer-events-none"
-        }`}
-      >
-        <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-          onClick={() => setDeleteModalOpen(false)}
-        />
-        <div
-          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out relative z-10 ${
-            deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
-          }`}
-        >
-          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 shrink-0">
-                <FiTrash2 className="w-4 h-4 text-rose-400" />
-              </div>
-              <h2 className="text-sm font-bold">Hapus Paket Itinerary</h2>
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <FiTrash2 className="w-6 h-6" />
             </div>
-            <button
-              onClick={() => setDeleteModalOpen(false)}
-              className="text-gray-300 hover:text-white transition-colors p-1 cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="p-6 text-center">
-            <p className="text-sm text-gray-600 font-medium leading-relaxed">
-              Apakah Anda yakin ingin menghapus paket itinerary ini? Tindakan ini tidak dapat dibatalkan.
-            </p>
-            <p className="text-base font-bold text-gray-900 mt-2 line-clamp-2">
-              "{itemToDelete?.title || "Paket Itinerary"}"
-            </p>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 bg-gray-50 px-6 py-4 border-t border-gray-100">
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={() => setDeleteModalOpen(false)}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              Batal
-            </button>
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={executeDeleteItem}
-              className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-bold text-white shadow-md transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
-            </button>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Hapus Paket Itinerary</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Apakah Anda yakin ingin menghapus <span className="font-bold text-gray-800">"{itemToDelete?.title || "Paket Itinerary"}"</span> secara permanen?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteModalOpen(false)}
+                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeDeleteItem}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Toast Notification */}
       {toast.show && (
-        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
           <div
-            className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
               toast.type === "error"
                 ? "bg-rose-50 border-rose-200 text-rose-800"
                 : "bg-emerald-50 border-emerald-200 text-emerald-800"

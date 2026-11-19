@@ -657,7 +657,7 @@ export default function Sidebar() {
                 handleItemMouseEnter(e, {
                   id: "curriculum",
                   type: "tooltip",
-                  title: "Kurikulum",
+                  title: "Kurikulum Tour Leader",
                   isActive: isActive("/curriculum-tour-leader"),
                 })
               }
@@ -690,7 +690,7 @@ export default function Sidebar() {
               />
               {!isCollapsed && (
                 <span className="truncate whitespace-nowrap">
-                  Kurikulum
+                  Kurikulum Tour Leader
                 </span>
               )}
             </Link>

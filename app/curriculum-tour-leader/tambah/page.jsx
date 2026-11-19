@@ -96,10 +96,10 @@ export default function TambahCurriculumTourLeaderPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
-        title="Kurikulum"
+        title="Kurikulum Tour Leader"
         breadcrumbs={[
           "Dashboard",
-          "Kurikulum",
+          "Kurikulum Tour Leader",
           "Tambah Materi",
         ]}
       />
@@ -209,9 +209,9 @@ export default function TambahCurriculumTourLeaderPage() {
 
       {/* Toast Notification */}
       {toast.show && (
-        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
           <div
-            className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
               toast.type === "error"
                 ? "bg-rose-50 border-rose-200 text-rose-800"
                 : "bg-emerald-50 border-emerald-200 text-emerald-800"
