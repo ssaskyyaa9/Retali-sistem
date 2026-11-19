@@ -155,8 +155,8 @@ export default function DashboardPage() {
                 const diffMs = now - activeDate;
                 const diffMinutes = diffMs / (1000 * 60);
 
-                // Jika is_active bernilai true DAN waktu heartbeat <= 3 menit, status Aktif (Hijau)
-                if (p.is_active && diffMinutes <= 3) {
+                // Jika is_active bernilai true DAN waktu heartbeat <= 1 menit, status Aktif (Hijau)
+                if (p.is_active && diffMinutes <= 1) {
                   isActive = true;
                 }
 
