@@ -13,10 +13,19 @@ import {
   FiTrash2, 
   FiSearch, 
   FiX, 
-  FiMapPin 
+  FiMapPin,
+  FiUpload,
+  FiDownload,
+  FiFileText,
+  FiAlertCircle,
+  FiDatabase,
+  FiEdit3,
+  FiCheckCircle
 } from "react-icons/fi";
 import { FaCalendarAlt } from "react-icons/fa";
 import { BsBuildings } from "react-icons/bs";
+import { parseItineraryFile } from "@/lib/itineraryParser";
+import { createItineraryPackageAction } from "@/app/actions/itinerary";
 
 export default function ItineraryPage() {
   const router = useRouter();
@@ -26,6 +35,115 @@ export default function ItineraryPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCityModal, setShowCityModal] = useState(false);
+
+  // State Modal Konfirmasi Hapus & Toast Notifikasi
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
+
+  // State Import File
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importPreviewData, setImportPreviewData] = useState(null);
+  const [directSaving, setDirectSaving] = useState(false);
+  const [importingFile, setImportingFile] = useState(false);
+
+  // Flash Toast dari halaman Tambah / Edit
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const flash = sessionStorage.getItem("flash_toast");
+      if (flash) {
+        try {
+          const parsed = JSON.parse(flash);
+          showToast(parsed.message, parsed.type || "success");
+        } catch {
+          showToast(flash, "success");
+        }
+        sessionStorage.removeItem("flash_toast");
+      }
+    }
+  }, []);
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImportingFile(true);
+      const res = await parseItineraryFile(file);
+      if (!res.success) {
+        showToast(res.error || "Gagal membaca file CSV/Excel.", "error");
+        return;
+      }
+
+      setImportPreviewData({
+        packageName: res.packageName || "Paket Itinerary Umrah",
+        startDate: res.startDate,
+        endDate: res.endDate,
+        days: res.days,
+        totalActivities: res.totalActivities,
+      });
+      setImportModalOpen(true);
+    } catch (err) {
+      console.error("Gagal membaca file itinerary:", err);
+      showToast("Gagal membaca file: " + err.message, "error");
+    } finally {
+      setImportingFile(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleOpenInForm = () => {
+    if (!importPreviewData) return;
+    try {
+      sessionStorage.setItem("imported_itinerary_data", JSON.stringify(importPreviewData));
+      router.push("/itinerary/tambah");
+    } catch (e) {
+      console.error("Gagal simpan ke sessionStorage:", e);
+      router.push("/itinerary/tambah");
+    }
+  };
+
+  const handleDirectSave = async () => {
+    if (!importPreviewData) return;
+    try {
+      setDirectSaving(true);
+      const payload = {
+        title: importPreviewData.packageName,
+        start_date: importPreviewData.startDate,
+        end_date: importPreviewData.endDate,
+        status: "published",
+        recipient_type: "all",
+        days: importPreviewData.days.map((d) => ({
+          day_number: d.day_number,
+          title: d.title,
+          date: d.date || importPreviewData.startDate,
+          activities: d.activities.filter((a) => a.title.trim().length > 0),
+        })),
+      };
+
+      const res = await createItineraryPackageAction(payload);
+      if (!res.success) {
+        throw new Error(res.error);
+      }
+
+      setImportModalOpen(false);
+      showToast("Paket itinerary dari file berhasil disimpan langsung ke database Supabase!", "success");
+      fetchItinerariesData();
+    } catch (err) {
+      console.error("Gagal simpan langsung ke Supabase:", err);
+      showToast("Gagal menyimpan ke Supabase: " + err.message, "error");
+    } finally {
+      setDirectSaving(false);
+    }
+  };
 
   const fetchItinerariesData = useCallback(async (isInitial = false) => {
     if (!isInitial) setLoading(true);
@@ -82,22 +200,31 @@ export default function ItineraryPage() {
     fetchItinerariesData(true);
   }, [fetchItinerariesData]);
 
-  const handleDelete = async (id, title) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus itinerary "${title || "ini"}"?`)) {
-      return;
-    }
+  const confirmDeleteItem = (item) => {
+    setItemToDelete(item);
+    setDeleteModalOpen(true);
+  };
+
+  const executeDeleteItem = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
 
     try {
-      const res = await deleteItineraryAction(id);
+      const res = await deleteItineraryAction(itemToDelete.id);
       if (!res.success) {
         // Fallback client delete
-        const { error } = await supabase.from("itineraries").delete().eq("id", id);
+        const { error } = await supabase.from("itineraries").delete().eq("id", itemToDelete.id);
         if (error) throw error;
       }
-      setItinerariesList((prev) => prev.filter((item) => item.id !== id));
+      setItinerariesList((prev) => prev.filter((item) => item.id !== itemToDelete.id));
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+      showToast("Paket itinerary berhasil dihapus.", "success");
     } catch (error) {
       console.error("Gagal menghapus itinerary:", error.message);
-      alert("Gagal menghapus data: " + error.message);
+      showToast("Gagal menghapus data: " + error.message, "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -218,14 +345,38 @@ export default function ItineraryPage() {
             />
           </div>
 
-          {/* Sisi Kanan: Tombol Daftar List Kota (Menggantikan Dropdown Status) */}
-          <button
-            onClick={() => setShowCityModal(true)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-[#1b3167] border border-gray-200 hover:border-gray-300 px-4 py-2 rounded-lg font-semibold text-sm shadow-xs transition-colors cursor-pointer"
-          >
-            <BsBuildings className="w-4 h-4 text-[#1b3167]" />
-            <span>Daftar List Kota</span>
-          </button>
+          {/* Sisi Kanan: Action Buttons (Template, Import File, Daftar Kota) */}
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            <a
+              href="/dummy_itinerary_template.xlsx"
+              download="dummy_itinerary_template.xlsx"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-lg border border-emerald-200/80 transition-all shadow-2xs cursor-pointer"
+              title="Download contoh template format Excel (.xlsx)"
+            >
+              <FiDownload className="w-4 h-4 text-emerald-600" />
+              <span className="hidden md:inline">Template Excel</span>
+            </a>
+
+            <label className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#1b3167] hover:bg-[#121c2d] active:scale-[0.98] px-3.5 py-2 rounded-lg transition-all shadow-xs cursor-pointer">
+              <FiUpload className="w-4 h-4" />
+              <span>{importingFile ? "Membaca..." : "Import File"}</span>
+              <input
+                type="file"
+                accept=".csv, .txt, .xlsx, .xls"
+                onChange={handleImportFile}
+                className="hidden"
+                disabled={importingFile}
+              />
+            </label>
+
+            <button
+              onClick={() => setShowCityModal(true)}
+              className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-[#1b3167] border border-gray-200 hover:border-gray-300 px-3.5 py-2 rounded-lg font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+            >
+              <BsBuildings className="w-4 h-4 text-[#1b3167]" />
+              <span>Daftar Kota</span>
+            </button>
+          </div>
         </div>
 
         {/* TABEL DATA ITINERARY */}
@@ -343,7 +494,7 @@ export default function ItineraryPage() {
 
                             {/* Tombol Hapus */}
                             <button
-                              onClick={() => handleDelete(item.id, item.title)}
+                              onClick={() => confirmDeleteItem(item)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:border-rose-400 hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-all cursor-pointer shadow-xs"
                               title="Hapus Itinerary"
                             >
@@ -415,6 +566,238 @@ export default function ItineraryPage() {
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL PRATINJAU & KONFIRMASI IMPORT FILE */}
+      {importModalOpen && importPreviewData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 border border-slate-100 animate-in zoom-in-95 duration-150 space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#1b3167]/10 text-[#1b3167] flex items-center justify-center font-bold">
+                  <FiFileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                    Pratinjau Hasil Impor File (Excel / CSV)
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    File berhasil dibaca. Tinjau ringkasan dan tentukan cara penyimpanan.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(false)}
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Ringkasan Metadata */}
+            <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Nama Paket Itinerary
+                </label>
+                <input
+                  type="text"
+                  value={importPreviewData.packageName}
+                  onChange={(e) =>
+                    setImportPreviewData((prev) => ({ ...prev, packageName: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-[#1b3167]/20 focus:border-[#1b3167]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Tanggal Mulai
+                  </label>
+                  <input
+                    type="date"
+                    value={importPreviewData.startDate}
+                    onChange={(e) =>
+                      setImportPreviewData((prev) => ({ ...prev, startDate: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Tanggal Selesai
+                  </label>
+                  <input
+                    type="date"
+                    value={importPreviewData.endDate}
+                    onChange={(e) =>
+                      setImportPreviewData((prev) => ({ ...prev, endDate: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 text-slate-600 font-semibold">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold">
+                  {importPreviewData.days.length} Hari Perjalanan
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 font-bold">
+                  {importPreviewData.totalActivities} Agenda Kegiatan
+                </span>
+              </div>
+            </div>
+
+            {/* List Pratinjau Jadwal Harian */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-slate-700 block">
+                Daftar Hari & Contoh Kegiatan:
+              </span>
+              <div className="max-h-48 overflow-y-auto no-scrollbar space-y-2 border border-slate-200/80 rounded-2xl p-3 bg-slate-50/40">
+                {importPreviewData.days.map((d, i) => (
+                  <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 text-xs shadow-2xs">
+                    <div className="flex items-center justify-between font-bold text-slate-800 mb-1">
+                      <span className="text-[#1b3167]">Hari {d.day_number} — {d.title}</span>
+                      <span className="text-slate-400 font-medium">{d.date || "-"}</span>
+                    </div>
+                    <p className="text-slate-500 text-[11px]">
+                      {d.activities.length} Kegiatan:{" "}
+                      <span className="text-slate-700 font-medium">
+                        {d.activities.slice(0, 2).map((a) => a.title).join(", ")}
+                        {d.activities.length > 2 && "..."}
+                      </span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Kotak Info Status Penyimpanan */}
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
+              <FiAlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>Data baru dibaca dari file dan belum masuk ke database.</strong> Silakan pilih apakah Anda ingin meninjau/mengedit di formulir terlebih dahulu, atau langsung menyimpannya ke database Supabase saat ini juga.
+              </div>
+            </div>
+
+            {/* Tombol Opsi Penyimpanan */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setImportModalOpen(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleOpenInForm}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer"
+                  title="Masukkan data ke formulir untuk dicek & diedit manual"
+                >
+                  <FiEdit3 className="w-4 h-4 text-slate-600" />
+                  <span>Tinjau di Formulir</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={directSaving}
+                  onClick={handleDirectSave}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1b3167] hover:bg-[#121c2d] active:scale-[0.98] text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  title="Langsung simpan & terbitkan ke Supabase"
+                >
+                  <FiDatabase className="w-4 h-4" />
+                  <span>{directSaving ? "Menyimpan..." : "Langsung Simpan ke Supabase"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Itinerary */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
+          deleteModalOpen
+            ? "opacity-100 visible pointer-events-auto"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      >
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+          onClick={() => setDeleteModalOpen(false)}
+        />
+        <div
+          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out relative z-10 ${
+            deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+          }`}
+        >
+          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 shrink-0">
+                <FiTrash2 className="w-4 h-4 text-rose-400" />
+              </div>
+              <h2 className="text-sm font-bold">Hapus Paket Itinerary</h2>
+            </div>
+            <button
+              onClick={() => setDeleteModalOpen(false)}
+              className="text-gray-300 hover:text-white transition-colors p-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-6 text-center">
+            <p className="text-sm text-gray-600 font-medium leading-relaxed">
+              Apakah Anda yakin ingin menghapus paket itinerary ini? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <p className="text-base font-bold text-gray-900 mt-2 line-clamp-2">
+              "{itemToDelete?.title || "Paket Itinerary"}"
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 bg-gray-50 px-6 py-4 border-t border-gray-100">
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setDeleteModalOpen(false)}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={executeDeleteItem}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-bold text-white shadow-md transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
           </div>
         </div>
       )}

@@ -11,7 +11,9 @@ import {
   FiPlus,
   FiClock,
   FiMapPin,
-  FiCheck
+  FiCheck,
+  FiCheckCircle,
+  FiAlertCircle
 } from "react-icons/fi";
 import Topbar from "@/app/components/Topbar";
 import { createClient } from "@/lib/supabase";
@@ -22,6 +24,18 @@ export default function EditItineraryContent({ id }) {
 
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  // State Toast Notifikasi & Modal Konfirmasi Hapus Kegiatan
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [deleteActivityModalOpen, setDeleteActivityModalOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   // Data penerima dari Supabase profiles
   const [tourleaders, setTourleaders] = useState([]);
@@ -300,7 +314,7 @@ export default function EditItineraryContent({ id }) {
 
   const handleAddActivity = (dayNumber) => {
     if (!newActivity.title.trim()) {
-      alert("Judul kegiatan wajib diisi!");
+      showToast("Judul kegiatan wajib diisi!", "error");
       return;
     }
 
@@ -324,22 +338,39 @@ export default function EditItineraryContent({ id }) {
 
     setNewActivity({ time: "08:00 - 10:00", title: "", location: "" });
     setAddingActivityDay(null);
+    showToast("Kegiatan berhasil ditambahkan.", "success");
   };
 
-  const handleDeleteActivity = (dayNumber, activityId) => {
-    if (!confirm("Hapus kegiatan ini dari daftar?")) return;
+  const confirmDeleteActivity = (dayNumber, activity) => {
+    setActivityToDelete({ dayNumber, activity });
+    setDeleteActivityModalOpen(true);
+  };
+
+  const executeDeleteActivity = () => {
+    if (!activityToDelete) return;
+    const { dayNumber, activity } = activityToDelete;
+
     setDaysData(prev => prev.map(day => {
       if (day.day_number === dayNumber) {
         return {
           ...day,
-          activities: day.activities.filter(a => a.id !== activityId)
+          activities: day.activities.filter(a => a.id !== activity.id)
         };
       }
       return day;
     }));
+
+    setDeleteActivityModalOpen(false);
+    setActivityToDelete(null);
+    showToast("Kegiatan berhasil dihapus dari jadwal.", "success");
   };
 
   const handleUpdate = async () => {
+    if (!editData.title.trim()) {
+      showToast("Nama paket itinerary wajib diisi!", "error");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -381,11 +412,17 @@ export default function EditItineraryContent({ id }) {
         }
       }
 
-      alert("Perubahan itinerary berhasil disimpan ke Supabase!");
+      sessionStorage.setItem(
+        "flash_toast",
+        JSON.stringify({
+          message: "Perubahan itinerary berhasil disimpan ke Supabase!",
+          type: "success",
+        })
+      );
       router.push("/itinerary");
     } catch (error) {
       console.error("Gagal memperbarui:", error.message);
-      alert("Terjadi kesalahan saat memperbarui data: " + error.message);
+      showToast("Terjadi kesalahan saat memperbarui data: " + error.message, "error");
     } finally {
       setLoading(false);
     }
@@ -710,7 +747,7 @@ export default function EditItineraryContent({ id }) {
                                 <div className="flex items-center gap-2">
                                   <button 
                                     type="button"
-                                    onClick={() => handleDeleteActivity(day.day_number, act.id)}
+                                    onClick={() => confirmDeleteActivity(day.day_number, act)}
                                     className="p-2 bg-slate-50 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 transition-colors border border-slate-100 cursor-pointer"
                                     title="Hapus Kegiatan"
                                   >
@@ -761,6 +798,91 @@ export default function EditItineraryContent({ id }) {
           </div>
         </div>
       </div>
+
+      {/* Modal Konfirmasi Hapus Kegiatan */}
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
+          deleteActivityModalOpen
+            ? "opacity-100 visible pointer-events-auto"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      >
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+          onClick={() => setDeleteActivityModalOpen(false)}
+        />
+        <div
+          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out relative z-10 ${
+            deleteActivityModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+          }`}
+        >
+          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 shrink-0">
+                <FiTrash2 className="w-4 h-4 text-rose-400" />
+              </div>
+              <h2 className="text-sm font-bold">Hapus Kegiatan</h2>
+            </div>
+            <button
+              onClick={() => setDeleteActivityModalOpen(false)}
+              className="text-gray-300 hover:text-white transition-colors p-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-6 text-center">
+            <p className="text-sm text-gray-600 font-medium leading-relaxed">
+              Apakah Anda yakin ingin menghapus kegiatan ini dari daftar jadwal?
+            </p>
+            <p className="text-base font-bold text-gray-900 mt-2 line-clamp-2">
+              "{activityToDelete?.activity?.title || "Kegiatan"}"
+            </p>
+            {activityToDelete?.activity?.time && (
+              <p className="text-xs text-purple-700 font-semibold mt-1">
+                Waktu: {activityToDelete.activity.time}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 bg-gray-50 px-6 py-4 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setDeleteActivityModalOpen(false)}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={executeDeleteActivity}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-bold text-white shadow-md transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              Ya, Hapus
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   FaCheck,
   FaTrashCan,
 } from "react-icons/fa6";
+import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import dynamic from "next/dynamic";
@@ -27,6 +28,15 @@ export default function DetailMateriTourLeaderPage() {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -47,15 +57,22 @@ export default function DetailMateriTourLeaderPage() {
 
       if (error) {
         console.error("Gagal menghapus materi:", error.message);
-        alert(`Gagal menghapus materi: ${error.message}`);
+        showToast(`Gagal menghapus materi: ${error.message}`, "error");
         return;
       }
 
       setShowDeleteModal(false);
+      sessionStorage.setItem(
+        "flash_toast",
+        JSON.stringify({
+          message: "Materi persiapan diniyah berhasil dihapus.",
+          type: "success",
+        })
+      );
       router.push("/persiapan-tour-leader");
     } catch (err) {
       console.error("Error deleting:", err);
-      alert("Terjadi kesalahan saat menghapus materi.");
+      showToast("Terjadi kesalahan saat menghapus materi.", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -140,10 +157,15 @@ export default function DetailMateriTourLeaderPage() {
   // Fungsi Simpan Perubahan saat Edit ke 4 Kolom Database
   const handleSave = async () => {
     try {
+      if (!materi.title || !materi.title.trim()) {
+        showToast("Judul BAB wajib diisi!", "error");
+        return;
+      }
+
       const payload = {
-        title: materi.title,
-        sub_title: materi.sub_title || null,
-        description: materi.description || null,
+        title: materi.title.trim(),
+        sub_title: materi.sub_title ? materi.sub_title.trim() : null,
+        description: materi.description ? materi.description.trim() : null,
         content: materi.content,
       };
 
@@ -155,32 +177,48 @@ export default function DetailMateriTourLeaderPage() {
 
       if (error) {
         console.error("Supabase Update Error:", error);
-        alert(`Gagal menyimpan: ${error.message}`);
+        showToast(`Gagal menyimpan: ${error.message}`, "error");
         return;
       }
 
       if (!data || data.length === 0) {
-        alert(
+        showToast(
           "Gagal update: Terhalang aturan RLS Supabase (Pastikan Policy UPDATE sudah dibuat).",
+          "error"
         );
         return;
       }
 
       setIsEditing(false);
-      alert("Materi berhasil disimpan!");
+      showToast("Materi persiapan diniyah berhasil disimpan!", "success");
     } catch (err) {
       console.error("System Error:", err);
-      alert("Terjadi kesalahan sistem saat menyimpan.");
+      showToast("Terjadi kesalahan sistem saat menyimpan.", "error");
     }
   };
 
   const handleExportPDF = () => {
-    exportMateriToPDF({
-      title: materi.title || `BAB ${id}`,
-      sub_title: materi.sub_title,
-      description: materi.description,
-      content: materi.content,
-    });
+    try {
+      setIsExporting(true);
+      exportMateriToPDF({
+        title: materi.title || `BAB ${id}`,
+        sub_title: materi.sub_title,
+        description: materi.description,
+        content: materi.content,
+        onAfterPrint: () => {
+          setIsExporting(false);
+          showToast("Materi berhasil diekspor ke PDF!", "success");
+        },
+        onError: (err) => {
+          setIsExporting(false);
+          showToast("Gagal mengekspor PDF: " + err.message, "error");
+        },
+      });
+    } catch (err) {
+      console.error("Export error:", err);
+      setIsExporting(false);
+      showToast("Gagal mengekspor PDF: " + err.message, "error");
+    }
   };
 
   if (loading) {
@@ -237,11 +275,13 @@ export default function DetailMateriTourLeaderPage() {
                     </button>
                   )}
                   <button
+                    type="button"
+                    disabled={isExporting}
                     onClick={handleExportPDF}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold border border-gray-200 cursor-pointer"
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold border border-gray-200 cursor-pointer disabled:opacity-60"
                   >
                     <FaRegFilePdf className="w-3.5 h-3.5 text-red-500" />
-                    Export to PDF
+                    {isExporting ? "Menyiapkan PDF..." : "Export to PDF"}
                   </button>
                   {isAdmin && (
                     <button
@@ -369,9 +409,9 @@ export default function DetailMateriTourLeaderPage() {
                 {/* Garis Pemisah Antara Header dan Konten Materi */}
                 <hr className="border-t border-gray-100 my-4" />
 
-                {/* 4. Menampilkan Content / Materi Penjelasan - Rapi Kebawah & Tidak Miring */}
+                {/* 4. Menampilkan Content / Materi Penjelasan - Rapi Kebawah & Mendukung Format Tebal/Miring */}
                 <div
-                  className="w-full text-sm md:text-base text-gray-800 font-normal !not-italic leading-relaxed break-words whitespace-normal [&_*]:!not-italic [&_p]:mb-4 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_li]:mb-1.5 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:text-[#0f172a] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:text-[#0f172a] [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:text-[#0f172a] [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:my-3 [&_blockquote]:text-gray-600 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-6 [&_.ql-indent-2]:pl-12 [&_.ql-indent-3]:pl-18"
+                  className="w-full text-sm md:text-base text-gray-800 font-normal leading-relaxed break-words whitespace-normal [&_em]:italic [&_i]:italic [&_strong]:font-bold [&_b]:font-bold [&_u]:underline [&_p]:mb-4 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_li]:mb-1.5 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-3 [&_h1]:text-[#0f172a] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:text-[#0f172a] [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:text-[#0f172a] [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:my-3 [&_blockquote]:text-gray-600 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-6 [&_.ql-indent-2]:pl-12 [&_.ql-indent-3]:pl-18"
                   dangerouslySetInnerHTML={{
                     __html: formatContent(materi.content),
                   }}
@@ -381,6 +421,26 @@ export default function DetailMateriTourLeaderPage() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
 
       {/* Modal Konfirmasi Hapus */}
       <div

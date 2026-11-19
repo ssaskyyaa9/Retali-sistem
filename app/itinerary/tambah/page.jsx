@@ -19,12 +19,13 @@ import {
   FiAlertCircle,
   FiFileText,
   FiDatabase,
+  FiEdit3,
   FiX
 } from "react-icons/fi";
 import Topbar from "@/app/components/Topbar";
 import { createClient } from "@/lib/supabase";
 import { createItineraryPackageAction } from "@/app/actions/itinerary";
-import * as XLSX from "xlsx";
+import { parseItineraryFile } from "@/lib/itineraryParser";
 
 export default function TambahItineraryPage() {
   const router = useRouter();
@@ -56,171 +57,68 @@ export default function TambahItineraryPage() {
   ]);
 
   // Toast Notifikasi
-  const [toastMessage, setToastMessage] = useState("");
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 4500);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
   };
 
-  // State Modal Preview Import CSV
+  // State Modal Preview Import CSV / Excel
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importPreviewData, setImportPreviewData] = useState(null);
   const [directSaving, setDirectSaving] = useState(false);
 
-  // Helper normalisasi tanggal CSV ke format YYYY-MM-DD
-  const normalizeDate = (val) => {
-    if (!val) return "";
-    const str = String(val).trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
-      const parts = str.split("/");
-      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+  // Cek apakah ada data itinerary import dari halaman /itinerary via sessionStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem("imported_itinerary_data");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          sessionStorage.removeItem("imported_itinerary_data");
+          if (parsed.packageName) setPackageName(parsed.packageName);
+          if (parsed.startDate) setStartDate(parsed.startDate);
+          if (parsed.endDate) setEndDate(parsed.endDate);
+          if (parsed.days && parsed.days.length > 0) setDays(parsed.days);
+          showToast(
+            `Data itinerary dari file berhasil dimuat (${parsed.days?.length || 0} hari & ${parsed.totalActivities || 0} kegiatan). Silakan periksa formulir dan simpan.`,
+            "success"
+          );
+        } catch (err) {
+          console.error("Gagal membaca imported_itinerary_data:", err);
+        }
+      }
     }
-    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
-      const parts = str.split("-");
-      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
-    }
-    return str;
-  };
+  }, []);
 
-  // Helper normalisasi waktu CSV ke format HH:MM
-  const normalizeTime = (val) => {
-    if (!val) return "08:00";
-    const str = String(val).trim();
-    if (/^\d:\d{2}$/.test(str)) return `0${str}`;
-    if (/^\d{1,2}\.\d{2}$/.test(str)) {
-      const parts = str.split(".");
-      return `${parts[0].padStart(2, "0")}:${parts[1]}`;
-    }
-    if (/^\d{2}:\d{2}$/.test(str)) return str;
-    return "08:00";
-  };
-
-  // Handle Import CSV / XLSX
-  const handleImportCSV = (e) => {
+  // Handle Import CSV / XLSX menggunakan itineraryParser
+  const handleImportCSV = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = evt.target.result;
-        const workbook = XLSX.read(data, { type: "binary", cellDates: true });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-        if (!rawJson || rawJson.length === 0) {
-          alert("File CSV/Excel kosong atau tidak memiliki data.");
-          return;
-        }
-
-        let detectedPackageName = "";
-        let detectedStartDate = "";
-        let detectedEndDate = "";
-        const daysMap = new Map();
-
-        rawJson.forEach((row) => {
-          const norm = {};
-          Object.keys(row).forEach((k) => {
-            const cleanKey = k.trim().toLowerCase().replace(/[\s_-]+/g, "_");
-            norm[cleanKey] = String(row[k] ?? "").trim();
-          });
-
-          // Metadata paket jika ada
-          const pkgName = norm.nama_paket || norm.package_name || norm.paket || norm.judul_paket;
-          if (pkgName && !detectedPackageName) detectedPackageName = pkgName;
-
-          const sDate = normalizeDate(norm.tanggal_mulai || norm.start_date);
-          if (sDate && !detectedStartDate) detectedStartDate = sDate;
-
-          const eDate = normalizeDate(norm.tanggal_selesai || norm.end_date);
-          if (eDate && !detectedEndDate) detectedEndDate = eDate;
-
-          // Hari
-          const rawDay = norm.hari || norm.day || norm.day_number || norm.hari_ke || norm.hari_ke_;
-          const dayNum = parseInt(rawDay, 10) || 1;
-
-          // Kota / Judul Hari
-          const dayTitle = norm.kota || norm.city || norm.judul_hari || norm.day_title || norm.title || `Hari ${dayNum}`;
-
-          // Tanggal Hari
-          const dayDate = normalizeDate(norm.tanggal || norm.date || norm.activity_date);
-
-          // Aktivitas
-          const time = normalizeTime(norm.jam || norm.waktu || norm.time || norm.activity_time || norm.pukul);
-          const title = norm.judul_kegiatan || norm.kegiatan || norm.activity_title || norm.agenda || norm.aktivitas || norm.judul;
-          const location = norm.lokasi || norm.location || norm.tempat || dayTitle;
-          const description = norm.keterangan || norm.deskripsi || norm.description || norm.catatan || norm.notes;
-
-          if (!daysMap.has(dayNum)) {
-            daysMap.set(dayNum, {
-              day_number: dayNum,
-              title: dayTitle,
-              date: dayDate,
-              activities: [],
-            });
-          }
-
-          const dayObj = daysMap.get(dayNum);
-          if (!dayObj.title && dayTitle) dayObj.title = dayTitle;
-          if (!dayObj.date && dayDate) dayObj.date = dayDate;
-
-          if (title) {
-            dayObj.activities.push({
-              time: time || "08:00",
-              title,
-              location: location || "",
-              description: description || "",
-            });
-          }
-        });
-
-        const sortedDays = Array.from(daysMap.values())
-          .sort((a, b) => a.day_number - b.day_number)
-          .map((d, i) => ({
-            ...d,
-            day_number: i + 1,
-            activities:
-              d.activities.length > 0
-                ? d.activities
-                : [{ time: "08:00", title: "Kegiatan Hari Ini", location: d.title, description: "" }],
-          }));
-
-        if (sortedDays.length === 0) {
-          alert("Tidak ditemukan data hari atau jadwal kegiatan yang valid dalam file.");
-          return;
-        }
-
-        // Tentukan nama paket dari file jika belum diisi
-        const cleanFileName = file.name.replace(/\.[^/.]+$/, "").replace(/[\s_-]+/g, " ");
-        const finalPackageName = detectedPackageName || packageName || cleanFileName || "Paket Itinerary Umrah";
-
-        // Tentukan tanggal mulai dan selesai dari data
-        const allDates = sortedDays.map((d) => d.date).filter(Boolean).sort();
-        const finalStartDate = detectedStartDate || (allDates.length > 0 ? allDates[0] : startDate) || new Date().toISOString().split("T")[0];
-        const finalEndDate = detectedEndDate || (allDates.length > 0 ? allDates[allDates.length - 1] : endDate) || finalStartDate;
-
-        const totalActivities = sortedDays.reduce((acc, curr) => acc + curr.activities.length, 0);
-
-        // Buka modal pratinjau agar user bisa memilih cara penyimpanan
-        setImportPreviewData({
-          packageName: finalPackageName,
-          startDate: finalStartDate,
-          endDate: finalEndDate,
-          days: sortedDays,
-          totalActivities,
-        });
-        setImportModalOpen(true);
-      } catch (err) {
-        console.error("Gagal membaca file CSV:", err);
-        alert("Gagal membaca file CSV: " + err.message);
-      } finally {
-        e.target.value = "";
+    try {
+      const res = await parseItineraryFile(file);
+      if (!res.success) {
+        showToast(res.error || "Gagal membaca file CSV/Excel.", "error");
+        return;
       }
-    };
 
-    reader.readAsBinaryString(file);
+      setImportPreviewData({
+        packageName: res.packageName || packageName || "Paket Itinerary Umrah",
+        startDate: res.startDate || startDate,
+        endDate: res.endDate || endDate,
+        days: res.days,
+        totalActivities: res.totalActivities,
+      });
+      setImportModalOpen(true);
+    } catch (err) {
+      console.error("Gagal membaca file CSV/Excel:", err);
+      showToast("Gagal membaca file: " + err.message, "error");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   // Opsi 1: Tinjau di Formulir (masukkan data ke form tanpa langsung simpan)
@@ -232,7 +130,8 @@ export default function TambahItineraryPage() {
     setDays(importPreviewData.days);
     setImportModalOpen(false);
     showToast(
-      `Data CSV dimasukkan ke formulir (${importPreviewData.days.length} hari & ${importPreviewData.totalActivities} kegiatan). Data belum disimpan ke Supabase — silakan periksa dan klik tombol Simpan jika sudah sesuai.`
+      `Data file dimasukkan ke formulir (${importPreviewData.days.length} hari & ${importPreviewData.totalActivities} kegiatan). Data belum disimpan ke Supabase — silakan periksa dan klik tombol Simpan jika sudah sesuai.`,
+      "success"
     );
   };
 
@@ -263,11 +162,17 @@ export default function TambahItineraryPage() {
       }
 
       setImportModalOpen(false);
-      alert("Paket itinerary dari file CSV berhasil disimpan langsung ke database Supabase!");
+      sessionStorage.setItem(
+        "flash_toast",
+        JSON.stringify({
+          message: "Paket itinerary dari file berhasil disimpan langsung ke database Supabase!",
+          type: "success",
+        })
+      );
       router.push("/itinerary");
     } catch (err) {
       console.error("Gagal simpan langsung ke Supabase:", err);
-      alert("Gagal menyimpan ke Supabase: " + err.message);
+      showToast("Gagal menyimpan ke Supabase: " + err.message, "error");
     } finally {
       setDirectSaving(false);
     }
@@ -345,11 +250,11 @@ export default function TambahItineraryPage() {
 
   const handleSave = async (isPublished = false) => {
     if (!packageName.trim()) {
-      alert("Nama paket itinerary wajib diisi!");
+      showToast("Nama paket itinerary wajib diisi!", "error");
       return;
     }
     if (!startDate || !endDate) {
-      alert("Periode tanggal mulai dan selesai wajib diisi!");
+      showToast("Periode tanggal mulai dan selesai wajib diisi!", "error");
       return;
     }
 
@@ -377,11 +282,19 @@ export default function TambahItineraryPage() {
         throw new Error(res.error);
       }
 
-      alert(isPublished ? "Paket itinerary berhasil dipublikasikan!" : "Paket itinerary berhasil disimpan sebagai draft!");
+      sessionStorage.setItem(
+        "flash_toast",
+        JSON.stringify({
+          message: isPublished
+            ? "Paket itinerary berhasil dipublikasikan!"
+            : "Paket itinerary berhasil disimpan sebagai draft!",
+          type: "success",
+        })
+      );
       router.push("/itinerary");
     } catch (error) {
       console.error("Gagal menyimpan itinerary:", error.message);
-      alert("Terjadi kesalahan saat menyimpan data: " + error.message);
+      showToast("Terjadi kesalahan saat menyimpan data: " + error.message, "error");
     } finally {
       setLoading(false);
     }
@@ -395,11 +308,23 @@ export default function TambahItineraryPage() {
       />
       
       <div className="flex-1 overflow-y-auto p-6 md:p-10 w-full max-w-5xl mx-auto space-y-6">
-        {/* Toast Notifikasi Import */}
-        {toastMessage && (
-          <div className="fixed top-20 right-6 z-50 bg-[#121c2d] text-white text-sm px-4 py-3 rounded-xl shadow-xl border border-emerald-500/30 flex items-center gap-2 animate-in fade-in slide-in-from-top-3 duration-200">
-            <FiCheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{toastMessage}</span>
+        {/* Toast Notification */}
+        {toast.show && (
+          <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+            <div
+              className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+                toast.type === "error"
+                  ? "bg-rose-50 border-rose-200 text-rose-800"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-800"
+              }`}
+            >
+              {toast.type === "error" ? (
+                <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              ) : (
+                <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              )}
+              <span>{toast.message}</span>
+            </div>
           </div>
         )}
 
@@ -786,10 +711,10 @@ export default function TambahItineraryPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                    Pratinjau Hasil Impor CSV
+                    Pratinjau Hasil Impor File (Excel / CSV)
                   </h3>
                   <p className="text-xs text-slate-400">
-                    File CSV berhasil dibaca. Tinjau ringkasan dan tentukan cara penyimpanan.
+                    File berhasil dibaca. Tinjau ringkasan dan tentukan cara penyimpanan.
                   </p>
                 </div>
               </div>
@@ -885,7 +810,7 @@ export default function TambahItineraryPage() {
             <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
               <FiAlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div className="leading-relaxed">
-                <strong>Data saat ini baru dibaca dari file CSV dan belum masuk ke Supabase.</strong> Silakan pilih apakah Anda ingin meninjau/mengedit di formulir terlebih dahulu, atau langsung menyimpannya ke database Supabase saat ini juga.
+                <strong>Data saat ini baru dibaca dari file dan belum masuk ke Supabase.</strong> Silakan pilih apakah Anda ingin meninjau/mengedit di formulir terlebih dahulu, atau langsung menyimpannya ke database Supabase saat ini juga.
               </div>
             </div>
 

@@ -6,6 +6,7 @@ import { FaKaaba, FaRegFilePdf, FaPenToSquare, FaTrashCan } from "react-icons/fa
 import { HiDocumentText } from "react-icons/hi2";
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { FaPassport } from "react-icons/fa";
+import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -20,6 +21,15 @@ export default function PersiapanUmrohPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [exportingId, setExportingId] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   const confirmDelete = (item) => {
     setItemToDelete(item);
@@ -37,16 +47,17 @@ export default function PersiapanUmrohPage() {
 
       if (error) {
         console.error("Gagal menghapus materi:", error.message);
-        alert(`Gagal menghapus materi: ${error.message}`);
+        showToast(`Gagal menghapus materi: ${error.message}`, "error");
         return;
       }
 
       setMateriList((prev) => prev.filter((m) => m.id !== itemToDelete.id));
       setDeleteModalOpen(false);
       setItemToDelete(null);
+      showToast("Materi persiapan teknis berhasil dihapus.", "success");
     } catch (err) {
       console.error("Error deleting:", err);
-      alert("Terjadi kesalahan saat menghapus materi.");
+      showToast("Terjadi kesalahan saat menghapus materi.", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -93,6 +104,19 @@ export default function PersiapanUmrohPage() {
     };
 
     fetchData();
+
+    if (typeof window !== "undefined") {
+      const flash = sessionStorage.getItem("flash_toast");
+      if (flash) {
+        try {
+          const parsed = JSON.parse(flash);
+          showToast(parsed.message, parsed.type || "success");
+        } catch {
+          showToast(flash, "success");
+        }
+        sessionStorage.removeItem("flash_toast");
+      }
+    }
   }, []);
 
   // Export PDF yang mencetak isi materi lengkap yang ada di dalam (Judul, Subjudul, Deskripsi, & Isi Konten)
@@ -116,12 +140,27 @@ export default function PersiapanUmrohPage() {
       }
     }
 
-    exportMateriToPDF({
-      title: dataToExport.title || dataToExport.bab,
-      sub_title: dataToExport.sub_title,
-      description: dataToExport.description || dataToExport.anakSubjudul,
-      content: dataToExport.content,
-    });
+    try {
+      setExportingId(item.id);
+      exportMateriToPDF({
+        title: dataToExport.title || dataToExport.bab,
+        sub_title: dataToExport.sub_title,
+        description: dataToExport.description || dataToExport.anakSubjudul,
+        content: dataToExport.content,
+        onAfterPrint: () => {
+          setExportingId(null);
+          showToast("Materi berhasil diekspor ke PDF!", "success");
+        },
+        onError: (err) => {
+          setExportingId(null);
+          showToast("Gagal mengekspor PDF: " + err.message, "error");
+        },
+      });
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      setExportingId(null);
+      showToast("Gagal mengekspor PDF: " + err.message, "error");
+    }
   };
 
   return (
@@ -187,12 +226,14 @@ export default function PersiapanUmrohPage() {
                   {/* Bagian Kanan: Tombol Aksi */}
                   <div className="shrink-0 self-end md:self-center pt-2 md:pt-0 flex items-center gap-2">
                     <button
+                      type="button"
+                      disabled={exportingId === item.id}
                       onClick={(e) => handleExportPDF(item, e)}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3.5 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2 shadow-xs"
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3.5 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2 shadow-xs disabled:opacity-60"
                       title="Export to PDF"
                     >
                       <FaRegFilePdf className="w-3.5 h-3.5 text-red-500" />
-                      Export to pdf
+                      {exportingId === item.id ? "Menyiapkan PDF..." : "Export to pdf"}
                     </button>
 
                     {isAdmin && (
@@ -287,6 +328,26 @@ export default function PersiapanUmrohPage() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

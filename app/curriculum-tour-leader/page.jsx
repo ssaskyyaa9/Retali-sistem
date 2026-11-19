@@ -5,6 +5,7 @@ import PageHeader from "@/app/components/PageHeader";
 import { FaBook, FaRegFilePdf, FaPenToSquare, FaTrashCan } from "react-icons/fa6";
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { HiDocumentText } from "react-icons/hi2";
+import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { exportMateriToPDF } from "@/lib/exportPdf";
@@ -18,6 +19,15 @@ export default function CurriculumTourLeaderPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [exportingId, setExportingId] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   const confirmDelete = (item) => {
     setItemToDelete(item);
@@ -35,16 +45,17 @@ export default function CurriculumTourLeaderPage() {
 
       if (error) {
         console.error("Gagal menghapus materi kurikulum:", error.message);
-        alert(`Gagal menghapus materi kurikulum: ${error.message}`);
+        showToast(`Gagal menghapus materi kurikulum: ${error.message}`, "error");
         return;
       }
 
       setMateriList((prev) => prev.filter((m) => m.id !== itemToDelete.id));
       setDeleteModalOpen(false);
       setItemToDelete(null);
+      showToast("Materi kurikulum berhasil dihapus.", "success");
     } catch (err) {
       console.error("Error deleting:", err);
-      alert("Terjadi kesalahan saat menghapus materi kurikulum.");
+      showToast("Terjadi kesalahan saat menghapus materi kurikulum.", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -92,6 +103,19 @@ export default function CurriculumTourLeaderPage() {
     };
 
     fetchData();
+
+    if (typeof window !== "undefined") {
+      const flash = sessionStorage.getItem("flash_toast");
+      if (flash) {
+        try {
+          const parsed = JSON.parse(flash);
+          showToast(parsed.message, parsed.type || "success");
+        } catch {
+          showToast(flash, "success");
+        }
+        sessionStorage.removeItem("flash_toast");
+      }
+    }
   }, []);
 
   // Export PDF yang mencetak isi materi kurikulum lengkap
@@ -115,24 +139,39 @@ export default function CurriculumTourLeaderPage() {
       }
     }
 
-    exportMateriToPDF({
-      title: dataToExport.title || dataToExport.bab,
-      sub_title: dataToExport.sub_title,
-      description: dataToExport.description || dataToExport.anakSubjudul,
-      content: dataToExport.content,
-    });
+    try {
+      setExportingId(item.id);
+      exportMateriToPDF({
+        title: dataToExport.title || dataToExport.bab,
+        sub_title: dataToExport.sub_title,
+        description: dataToExport.description || dataToExport.anakSubjudul,
+        content: dataToExport.content,
+        onAfterPrint: () => {
+          setExportingId(null);
+          showToast("Materi kurikulum berhasil diekspor ke PDF!", "success");
+        },
+        onError: (err) => {
+          setExportingId(null);
+          showToast("Gagal mengekspor PDF: " + err.message, "error");
+        },
+      });
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      setExportingId(null);
+      showToast("Gagal mengekspor PDF: " + err.message, "error");
+    }
   };
 
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
-        title="Curriculum Tour Leader"
-        breadcrumbs={["Dashboard", "Curriculum Tour Leader"]}
+        title="Kurikulum"
+        breadcrumbs={["Dashboard", "Kurikulum"]}
       />
 
       <div className="flex-1 overflow-y-auto px-6 py-8 md:p-10 w-full max-w-5xl no-scrollbar mx-auto">
         <PageHeader
-          title="Curriculum Tour Leader"
+          title="Kurikulum"
           description="Berisi materi dan standar kurikulum pelatihan untuk tour leader dalam memimpin serta membimbing jamaah."
           icon={<FaBook className="w-[26px] h-[26px] text-[#eab308]" />}
           buttonText={isAdmin ? "Tambah Materi" : undefined}
@@ -162,7 +201,7 @@ export default function CurriculumTourLeaderPage() {
                 Belum ada materi
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Belum ada materi curriculum tour leader yang tersedia saat ini.
+                Belum ada materi kurikulum yang tersedia saat ini.
               </p>
             </div>
           ) : (
@@ -188,12 +227,14 @@ export default function CurriculumTourLeaderPage() {
                   {/* Bagian Kanan: Tombol Aksi */}
                   <div className="shrink-0 self-end md:self-center pt-2 md:pt-0 flex items-center gap-2">
                     <button
+                      type="button"
+                      disabled={exportingId === item.id}
                       onClick={(e) => handleExportPDF(item, e)}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3.5 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2 shadow-xs"
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3.5 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2 shadow-xs disabled:opacity-60"
                       title="Export to PDF"
                     >
                       <FaRegFilePdf className="w-3.5 h-3.5 text-red-500" />
-                      Export to pdf
+                      {exportingId === item.id ? "Menyiapkan PDF..." : "Export to pdf"}
                     </button>
 
                     {isAdmin && (
@@ -288,6 +329,26 @@ export default function CurriculumTourLeaderPage() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-2.5 text-xs sm:text-sm font-semibold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
