@@ -4,6 +4,7 @@ import Topbar from "../components/Topbar";
 import PageHeader from "../components/PageHeader";
 import { FaUserTie, FaUserPlus } from "react-icons/fa6";
 import { IoMdClose } from "react-icons/io";
+import { FiTrash2, FiAlertCircle } from "react-icons/fi";
 import { supabase } from "../../lib/supabase";
 import {
   createTourLeaderAction,
@@ -27,11 +28,26 @@ export default function TourLeaderPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [kloterOptions, setKloterOptions] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal Edit & Delete states
   const [editingId, setEditingId] = useState(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    user: null,
+  });
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success",
+  });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   const [formData, setFormData] = useState({
     namaLengkap: "",
@@ -85,6 +101,7 @@ export default function TourLeaderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     let result;
 
@@ -99,10 +116,12 @@ export default function TourLeaderPage() {
 
     if (!result.success) {
       console.error("Error saving Tour Leader:", result.error);
-      alert("Gagal menyimpan data: " + result.error);
+      showToast("Gagal menyimpan data: " + result.error, "error");
+      setIsSubmitting(false);
       return;
     }
 
+    setIsSubmitting(false);
     // Tutup modal dan reset form jika sukses
     setShowAddModal(false);
     setEditingId(null); // Pastikan reset editingId
@@ -114,25 +133,34 @@ export default function TourLeaderPage() {
       kloterId: "",
     });
 
+    showToast(
+      editingId
+        ? "Tour Leader berhasil diperbarui!"
+        : "Tour Leader berhasil ditambahkan!"
+    );
+
     // Refresh data tabel
     fetchTourLeaders();
   };
 
   const handleDeleteUser = async () => {
-    if (!userToDelete || !userToDelete.realId) return;
+    const targetUser = confirmModal.user;
+    if (!targetUser || !targetUser.realId) return;
+
+    setConfirmModal({ show: false, user: null });
 
     // Panggil action delete menggunakan realId (UUID asli)
-    const result = await deleteTourLeaderAction(userToDelete.realId);
+    const result = await deleteTourLeaderAction(targetUser.realId);
 
     if (!result.success) {
       console.error("Error deleting Tour Leader:", result.error);
-      alert("Gagal menghapus data: " + result.error);
+      showToast("Gagal menghapus data: " + result.error, "error");
       return;
     }
 
-    // Tutup modal, reset state, dan refresh tabel
-    setDeleteModalOpen(false);
-    setUserToDelete(null);
+    showToast("Tour Leader berhasil dihapus secara permanen.");
+
+    // Refresh tabel
     fetchTourLeaders();
   };
 
@@ -213,11 +241,26 @@ export default function TourLeaderPage() {
   };
 
   return (
-    <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
+    <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col relative">
       <Topbar
         title="Tour Leader"
         breadcrumbs={["Dashboard", "Petugas", "Tour Leader"]}
       />
+
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            <FiAlertCircle className="w-4 h-4" />
+            {toast.message}
+          </div>
+        </div>
+      )}
 
       <main className="p-8 w-full max-w-7xl mx-auto flex-1 no-scrollbar overflow-y-auto">
         {view === 0 && (
@@ -259,7 +302,17 @@ export default function TourLeaderPage() {
                 </div>
 
                 <button
-                  onClick={() => setShowAddModal(true)}
+                  onClick={() => {
+                    setEditingId(null);
+                    setFormData({
+                      namaLengkap: "",
+                      email: "",
+                      noTelepon: "",
+                      password: "",
+                      kloterId: "",
+                    });
+                    setShowAddModal(true);
+                  }}
                   className="bg-[#1b3167] hover:bg-[#1a2538] transition-colors text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2"
                 >
                   <FaUserPlus className="w-4 h-4" />
@@ -374,8 +427,7 @@ export default function TourLeaderPage() {
                               <button
                                 onClick={() => {
                                   // Logika untuk set user yang akan dihapus dan buka modal hapus
-                                  setUserToDelete(tl);
-                                  setDeleteModalOpen(true);
+                                  setConfirmModal({ show: true, user: tl });
                                 }}
                                 className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                 title="Hapus"
@@ -460,307 +512,254 @@ export default function TourLeaderPage() {
                 </div>
               </div>
             </div>
-            {/* Modal Tambah / Edit Tour Leader */}
-            <div
-              className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 transition-all duration-300 ease-in-out ${
-                showAddModal
-                  ? "opacity-100 visible pointer-events-auto"
-                  : "opacity-0 invisible pointer-events-none"
-              }`}
-            >
-              <div
-                className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
-                  showAddModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
-                }`}
-              >
-                {/* Modal Header */}
-                <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                      <svg
-                        className="w-5 h-5 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                      </svg>
+
+            {/* Popup Modal Tambah / Edit Tour Leader */}
+            {showAddModal && (
+              <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-gray-100 overflow-hidden animate-scale-up">
+                  {/* Modal Header */}
+                  <div className="bg-[#121c2d] px-6 py-4 text-white flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shrink-0">
+                        <svg
+                          className="w-5 h-5 text-amber-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      </div>
+                      <h2 className="text-sm font-bold">
+                        {editingId ? "Edit Tour Leader" : "Tambah Tour Leader"}
+                      </h2>
                     </div>
-                    <h2 className="text-sm font-bold">
-                      {/* editingId adalah state penanda apakah sedang mode edit atau tambah */}
-                      {editingId ? "Edit Tour Leader" : "Tambah Tour Leader"}
-                    </h2>
                   </div>
-                  <button
-                    onClick={() => setShowAddModal(false)}
-                    className="text-gray-300 hover:text-white transition-colors p-1"
-                  >
-                    ✕
-                  </button>
-                </div>
 
-                {/* Modal Body */}
-                <form onSubmit={handleSubmit}>
-                  <div className="p-6 space-y-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                        Nama Lengkap <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="namaLengkap"
-                        value={formData.namaLengkap}
-                        onChange={handleInputChange}
-                        placeholder="Contoh: Ahmad Fauzi"
-                        required
-                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                  {/* Modal Body */}
+                  <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    <div className="space-y-4">
                       <div>
                         <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                          Email <span className="text-red-500">*</span>
+                          Nama Lengkap <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
+                          type="text"
+                          name="namaLengkap"
+                          value={formData.namaLengkap}
                           onChange={handleInputChange}
-                          placeholder="email@contoh.com"
+                          placeholder="Contoh: Ahmad Fauzi"
                           required
-                          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
+                          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
                         />
                       </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                          Nomor Telepon <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="tel"
-                          name="noTelepon"
-                          value={formData.noTelepon}
-                          onChange={handleInputChange}
-                          placeholder="Cth: 08123456789"
-                          required
-                          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
-                        />
-                      </div>
-                    </div>
 
-                    {/* Render Password HANYA saat Create (editingId bernilai null) */}
-                    {!editingId && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                            Email <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            placeholder="email@contoh.com"
+                            required
+                            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                            Nomor Telepon <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            name="noTelepon"
+                            value={formData.noTelepon}
+                            onChange={handleInputChange}
+                            placeholder="Cth: 08123456789"
+                            required
+                            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Render Password HANYA saat Create (editingId bernilai null) */}
+                      {!editingId && (
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                            Password <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPassword ? "text" : "password"}
+                              name="password"
+                              value={formData.password}
+                              onChange={handleInputChange}
+                              placeholder="••••••••"
+                              required={!editingId}
+                              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d] pr-10"
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={() => setShowPassword(true)}
+                              onMouseUp={() => setShowPassword(false)}
+                              onMouseLeave={() => setShowPassword(false)}
+                              onTouchStart={() => setShowPassword(true)}
+                              onTouchEnd={() => setShowPassword(false)}
+                              className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                            >
+                              {showPassword ? (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                  />
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                                  />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div>
                         <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                          Password <span className="text-red-500">*</span>
+                          Pilih Kloter <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            name="password"
-                            value={formData.password}
+                          <select
+                            name="kloterId"
+                            value={formData.kloterId}
                             onChange={handleInputChange}
-                            placeholder="••••••••"
-                            required={!editingId} // Hanya wajib diisi saat mode tambah
-                            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167] pr-10"
-                          />
-                          <button
-                            type="button"
-                            onMouseDown={() => setShowPassword(true)}
-                            onMouseUp={() => setShowPassword(false)}
-                            onMouseLeave={() => setShowPassword(false)}
-                            onTouchStart={() => setShowPassword(true)}
-                            onTouchEnd={() => setShowPassword(false)}
-                            className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+                            required
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-900 focus:outline-none focus:border-[#121c2d] appearance-none"
                           >
-                            {showPassword ? (
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                />
-                              </svg>
-                            ) : (
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                                />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                        Pilih Kloter <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          name="kloterId"
-                          value={formData.kloterId}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs text-gray-900 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167] appearance-none"
-                        >
-                          <option value="" disabled>
-                            -- Pilih Kloter --
-                          </option>
-                          {kloterOptions.map((kloter) => (
-                            <option key={kloter.id} value={kloter.id}>
-                              {kloter.name}
+                            <option value="" disabled>
+                              -- Pilih Kloter --
                             </option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
+                            {kloterOptions.map((kloter) => (
+                              <option key={kloter.id} value={kloter.id}>
+                                {kloter.name}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Modal Footer */}
-                  <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4">
+                    {/* Modal Footer */}
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddModal(false)}
+                        className="px-5 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                      >
+                        Kembali
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="px-6 py-2.5 text-xs font-bold text-white bg-[#121c2d] hover:bg-[#1a2942] rounded-xl transition-colors disabled:opacity-50"
+                      >
+                        {isSubmitting
+                          ? "Menyimpan..."
+                          : editingId
+                          ? "Perbarui Tour Leader"
+                          : "Simpan Tour Leader"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Popup Modal Konfirmasi Hapus Tour Leader */}
+            {confirmModal.show && (
+              <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center animate-scale-up">
+                  <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+                    <FiTrash2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">
+                      Hapus Tour Leader
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Apakah Anda yakin ingin menghapus akses petugas{" "}
+                      <span className="font-bold text-gray-800">
+                        "{confirmModal.user?.name}"
+                      </span>{" "}
+                      secara permanen?
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={() => setShowAddModal(false)}
-                      className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+                      onClick={() =>
+                        setConfirmModal({ show: false, user: null })
+                      }
+                      className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
                     >
                       Batal
                     </button>
                     <button
-                      type="submit"
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
+                      type="button"
+                      onClick={handleDeleteUser}
+                      className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors"
                     >
-                      <svg
-                        className="w-4 h-4 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
-                        />
-                        <polyline points="17 21 17 13 7 13 7 21" />
-                        <polyline points="7 3 7 8 15 8" />
-                      </svg>
-                      Simpan
+                      Ya, Hapus
                     </button>
                   </div>
-                </form>
-              </div>
-            </div>
-            {/* Modal Hapus Tour Leader */}
-            <div
-              className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 ${
-                deleteModalOpen
-                  ? "opacity-100 visible pointer-events-auto"
-                  : "opacity-0 invisible pointer-events-none"
-              }`}
-            >
-              <div
-                className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl animate-in fade-in zoom-in duration-150 ${
-                  deleteModalOpen
-                    ? "scale-100 opacity-100"
-                    : "scale-95 opacity-0"
-                }`}
-              >
-                {/* Modal Header */}
-                <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                      <svg
-                        className="w-5 h-5 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </div>
-                    <h2 className="text-sm font-bold">Hapus Tour Leader</h2>
-                  </div>
-                  <button
-                    onClick={() => setDeleteModalOpen(false)}
-                    className="text-gray-300 hover:text-white transition-colors p-1"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {/* Modal Body */}
-                <div className="p-6 text-center">
-                  <p className="text-sm text-gray-600 font-medium leading-relaxed">
-                    Yakin ingin menghapus akses petugas ini? <br />
-                    <span className="text-lg font-bold text-gray-900 mt-2 block">
-                      "{userToDelete?.name}"
-                    </span>
-                  </p>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
-                  <button
-                    type="button"
-                    onClick={() => setDeleteModalOpen(false)}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteUser}
-                    className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
-                  >
-                    Ya, Hapus
-                  </button>
                 </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </main>
