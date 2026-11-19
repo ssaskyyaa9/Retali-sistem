@@ -572,14 +572,14 @@ export default function ItineraryPage() {
       {/* MODAL PRATINJAU & KONFIRMASI IMPORT FILE */}
       {importModalOpen && importPreviewData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 border border-slate-100 animate-in zoom-in-95 duration-150 space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 border border-slate-100 animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-[#1b3167]/10 text-[#1b3167] flex items-center justify-center font-bold">
                   <FiFileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                  <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
                     Pratinjau Hasil Impor File (Excel / CSV)
                   </h3>
                   <p className="text-xs text-slate-400">
@@ -656,7 +656,7 @@ export default function ItineraryPage() {
               <span className="text-xs font-bold text-slate-700 block">
                 Daftar Hari & Contoh Kegiatan:
               </span>
-              <div className="max-h-48 overflow-y-auto no-scrollbar space-y-2 border border-slate-200/80 rounded-2xl p-3 bg-slate-50/40">
+              <div className="max-h-40 overflow-y-auto no-scrollbar space-y-2 border border-slate-200/80 rounded-2xl p-3 bg-slate-50/40">
                 {importPreviewData.days.map((d, i) => (
                   <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 text-xs shadow-2xs">
                     <div className="flex items-center justify-between font-bold text-slate-800 mb-1">
@@ -672,14 +672,6 @@ export default function ItineraryPage() {
                     </p>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Kotak Info Status Penyimpanan */}
-            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
-              <FiAlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <strong>Data baru dibaca dari file dan belum masuk ke database.</strong> Silakan pilih apakah Anda ingin meninjau/mengedit di formulir terlebih dahulu, atau langsung menyimpannya ke database Supabase saat ini juga.
               </div>
             </div>
 
