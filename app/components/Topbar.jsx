@@ -388,11 +388,17 @@ export default function Topbar({
                           isViewed ? "bg-white" : "bg-amber-50/30"
                         }`}
                       >
-                        {/* Ikon biru jika belum pernah dilihat, sedikit greyed-out jika sudah terview di sesi sebelumnya */}
+                        {/* Ikon sesuai warna stage jika belum dilihat, atau greyed-out jika sudah terview */}
                         <div
                           className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors duration-300 ${
                             isViewed
                               ? "bg-gray-100 text-gray-400"
+                              : notif.stageColor === "emerald"
+                              ? "bg-emerald-50 text-emerald-600"
+                              : notif.stageColor === "amber"
+                              ? "bg-amber-50 text-amber-600"
+                              : notif.stageColor === "rose"
+                              ? "bg-rose-50 text-rose-600"
                               : "bg-blue-50 text-blue-600"
                           }`}
                         >
@@ -418,7 +424,24 @@ export default function Topbar({
                                 : "font-bold text-gray-900"
                             } leading-snug transition-colors duration-300`}
                           >
-                            {notif.title}
+                            <span>{notif.stage ? notif.mainTitle : notif.title}</span>
+                            {notif.stage && (
+                              <span
+                                className={`ml-1 font-semibold ${
+                                  isViewed
+                                    ? "text-gray-400"
+                                    : notif.stageColor === "emerald"
+                                    ? "text-emerald-600"
+                                    : notif.stageColor === "amber"
+                                    ? "text-amber-600"
+                                    : notif.stageColor === "rose"
+                                    ? "text-rose-600"
+                                    : "text-gray-600"
+                                }`}
+                              >
+                                {notif.stage}
+                              </span>
+                            )}
                           </p>
                           <p
                             className={`text-[11px] ${

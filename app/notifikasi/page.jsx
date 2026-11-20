@@ -275,8 +275,8 @@ export default function NotifikasiPage() {
 
     if (diffHours <= 0) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
           Petugas telah diingati saat kegiatan
         </span>
       );
@@ -289,8 +289,8 @@ export default function NotifikasiPage() {
       );
     } else if (diffHours <= 24) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
           Petugas telah diingati 24 jam sebelum kegiatan
         </span>
       );
@@ -569,10 +569,10 @@ export default function NotifikasiPage() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
-                <span className="w-3 h-3 rounded-full bg-rose-500 shrink-0 mt-1"></span>
+              <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100">
+                <span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
                 <div>
-                  <span className="font-bold text-gray-900 block">Merah (Peringatan 24 Jam)</span>
+                  <span className="font-bold text-gray-900 block">Hijau (Peringatan 24 Jam)</span>
                   <span className="text-gray-600">Jadwal kegiatan mendekati rentang 12 hingga 24 jam lagi.</span>
                 </div>
               </div>
@@ -585,10 +585,10 @@ export default function NotifikasiPage() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100">
-                <span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
+              <div className="flex items-start gap-3 p-2.5 rounded-xl bg-rose-50/50 border border-rose-100">
+                <span className="w-3 h-3 rounded-full bg-rose-500 shrink-0 mt-1"></span>
                 <div>
-                  <span className="font-bold text-gray-900 block">Hijau (Saat Kegiatan)</span>
+                  <span className="font-bold text-gray-900 block">Merah (Saat Kegiatan / Hari H)</span>
                   <span className="text-gray-600">Waktu kegiatan sudah tiba atau telah terlewat.</span>
                 </div>
               </div>
