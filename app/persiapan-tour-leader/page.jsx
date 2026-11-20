@@ -6,6 +6,7 @@ import { FaBook, FaRegFilePdf, FaPenToSquare, FaTrashCan } from "react-icons/fa6
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { BsMoonStarsFill } from "react-icons/bs";
 import { HiDocumentText } from "react-icons/hi2";
+import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { exportMateriToPDF } from "@/lib/exportPdf";
@@ -19,6 +20,15 @@ export default function PersiapanTourLeaderPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [exportingId, setExportingId] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   const confirmDelete = (item) => {
     setItemToDelete(item);
@@ -36,16 +46,17 @@ export default function PersiapanTourLeaderPage() {
 
       if (error) {
         console.error("Gagal menghapus materi:", error.message);
-        alert(`Gagal menghapus materi: ${error.message}`);
+        showToast(`Gagal menghapus materi: ${error.message}`, "error");
         return;
       }
 
       setMateriList((prev) => prev.filter((m) => m.id !== itemToDelete.id));
       setDeleteModalOpen(false);
       setItemToDelete(null);
+      showToast("Materi persiapan diniyah berhasil dihapus.", "success");
     } catch (err) {
       console.error("Error deleting:", err);
-      alert("Terjadi kesalahan saat menghapus materi.");
+      showToast("Terjadi kesalahan saat menghapus materi.", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -77,7 +88,7 @@ export default function PersiapanTourLeaderPage() {
         const { data, error } = await supabase
           .from("persiapan_diniyah")
           .select("id, title, sub_title, description, content")
-          .order("created_at", { ascending: true });
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
 
@@ -92,6 +103,19 @@ export default function PersiapanTourLeaderPage() {
     };
 
     fetchData();
+
+    if (typeof window !== "undefined") {
+      const flash = sessionStorage.getItem("flash_toast");
+      if (flash) {
+        try {
+          const parsed = JSON.parse(flash);
+          showToast(parsed.message, parsed.type || "success");
+        } catch {
+          showToast(flash, "success");
+        }
+        sessionStorage.removeItem("flash_toast");
+      }
+    }
   }, []);
 
   // Export PDF yang mencetak isi materi lengkap yang ada di dalam (Judul, Subjudul, Deskripsi, & Isi Konten)
@@ -115,12 +139,27 @@ export default function PersiapanTourLeaderPage() {
       }
     }
 
-    exportMateriToPDF({
-      title: dataToExport.title || dataToExport.bab,
-      sub_title: dataToExport.sub_title,
-      description: dataToExport.description || dataToExport.anakSubjudul,
-      content: dataToExport.content,
-    });
+    try {
+      setExportingId(item.id);
+      exportMateriToPDF({
+        title: dataToExport.title || dataToExport.bab,
+        sub_title: dataToExport.sub_title,
+        description: dataToExport.description || dataToExport.anakSubjudul,
+        content: dataToExport.content,
+        onAfterPrint: () => {
+          setExportingId(null);
+          showToast("Materi berhasil diekspor ke PDF!", "success");
+        },
+        onError: (err) => {
+          setExportingId(null);
+          showToast("Gagal mengekspor PDF: " + err.message, "error");
+        },
+      });
+    } catch (err) {
+      console.error("Export PDF error:", err);
+      setExportingId(null);
+      showToast("Gagal mengekspor PDF: " + err.message, "error");
+    }
   };
 
   return (
@@ -188,12 +227,14 @@ export default function PersiapanTourLeaderPage() {
                   {/* Bagian Kanan: Tombol Aksi */}
                   <div className="shrink-0 self-end md:self-center pt-2 md:pt-0 flex items-center gap-2">
                     <button
+                      type="button"
+                      disabled={exportingId === item.id}
                       onClick={(e) => handleExportPDF(item, e)}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3.5 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2 shadow-xs"
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3.5 py-2.5 rounded-lg font-medium transition-all cursor-pointer border border-transparent flex items-center gap-2 shadow-xs disabled:opacity-60"
                       title="Export to PDF"
                     >
                       <FaRegFilePdf className="w-3.5 h-3.5 text-red-500" />
-                      Export to pdf
+                      {exportingId === item.id ? "Menyiapkan PDF..." : "Export to pdf"}
                     </button>
 
                     {isAdmin && (
@@ -232,62 +273,59 @@ export default function PersiapanTourLeaderPage() {
       </div>
 
       {/* Modal Konfirmasi Hapus */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 transition-all duration-300 ease-in-out ${
-          deleteModalOpen
-            ? "opacity-100 visible pointer-events-auto"
-            : "opacity-0 invisible pointer-events-none"
-        }`}
-      >
-        <div
-          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
-            deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
-          }`}
-        >
-          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/20 text-rose-300 shrink-0">
-                <FaTrashCan className="w-4 h-4 text-rose-400" />
-              </div>
-              <h2 className="text-sm font-bold">Hapus Materi</h2>
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <FaTrashCan className="w-6 h-6" />
             </div>
-            <button
-              onClick={() => setDeleteModalOpen(false)}
-              className="text-gray-300 hover:text-white transition-colors p-1 cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="p-6 text-center">
-            <p className="text-sm text-gray-600 font-medium leading-relaxed">
-              Apakah Anda yakin ingin menghapus materi ini? Tindakan ini tidak dapat dibatalkan.
-            </p>
-            <p className="text-base font-bold text-gray-900 mt-2 line-clamp-2">
-              "{itemToDelete?.title || itemToDelete?.bab}"
-            </p>
-          </div>
-
-          <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={() => setDeleteModalOpen(false)}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              Batal
-            </button>
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={handleDelete}
-              className="rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-bold text-white shadow-md transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-            >
-              {isDeleting ? "Menghapus..." : "Ya, Hapus"}
-            </button>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Hapus Materi Persiapan Diniyah</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Apakah Anda yakin ingin menghapus materi <span className="font-bold text-gray-800">"{itemToDelete?.title || itemToDelete?.bab}"</span> secara permanen?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteModalOpen(false)}
+                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDelete}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Topbar from "@/app/components/Topbar";
 import { FaArrowLeft, FaCheck } from "react-icons/fa6";
+import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import dynamic from "next/dynamic";
@@ -12,6 +13,14 @@ const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 export default function TambahCurriculumTourLeaderPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   const [form, setForm] = useState({
     bab: "",
@@ -34,8 +43,13 @@ export default function TambahCurriculumTourLeaderPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.bab || !form.deskripsi || form.deskripsi === "<p><br></p>") {
-      alert("Judul BAB dan Materi Penjelasan wajib diisi!");
+    if (!form.bab || !form.bab.trim()) {
+      showToast("Judul BAB wajib diisi!", "error");
+      return;
+    }
+
+    if (!form.deskripsi || form.deskripsi === "<p><br></p>" || !form.deskripsi.trim()) {
+      showToast("Materi Penjelasan wajib diisi!", "error");
       return;
     }
 
@@ -50,9 +64,9 @@ export default function TambahCurriculumTourLeaderPage() {
       // SIMPAN KE TABEL curriculum_tour_leader
       const { error } = await supabase.from("curriculum_tour_leader").insert([
         {
-          title: form.bab,
-          sub_title: form.subjudul || null,
-          description: form.anakSubjudul || null,
+          title: form.bab.trim(),
+          sub_title: form.subjudul ? form.subjudul.trim() : null,
+          description: form.anakSubjudul ? form.anakSubjudul.trim() : null,
           content: form.deskripsi,
           category: "curriculum",
           visibility: "tour_leader",
@@ -63,11 +77,17 @@ export default function TambahCurriculumTourLeaderPage() {
 
       if (error) throw error;
 
-      alert("Materi kurikulum berhasil ditambahkan!");
+      sessionStorage.setItem(
+        "flash_toast",
+        JSON.stringify({
+          message: "Materi kurikulum berhasil ditambahkan!",
+          type: "success",
+        })
+      );
       router.push("/curriculum-tour-leader");
     } catch (err) {
       console.error("Gagal menyimpan ke Supabase:", err);
-      alert(`Gagal menyimpan: ${err.message}`);
+      showToast(`Gagal menyimpan: ${err.message}`, "error");
     } finally {
       setLoading(false);
     }
@@ -76,10 +96,10 @@ export default function TambahCurriculumTourLeaderPage() {
   return (
     <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col">
       <Topbar
-        title="Curriculum Tour Leader"
+        title="Kurikulum Tour Leader"
         breadcrumbs={[
           "Dashboard",
-          "Curriculum Tour Leader",
+          "Kurikulum Tour Leader",
           "Tambah Materi",
         ]}
       />
@@ -186,6 +206,26 @@ export default function TambahCurriculumTourLeaderPage() {
           </form>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

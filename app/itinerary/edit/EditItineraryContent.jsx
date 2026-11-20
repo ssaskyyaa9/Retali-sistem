@@ -11,7 +11,9 @@ import {
   FiPlus,
   FiClock,
   FiMapPin,
-  FiCheck
+  FiCheck,
+  FiCheckCircle,
+  FiAlertCircle
 } from "react-icons/fi";
 import Topbar from "@/app/components/Topbar";
 import { createClient } from "@/lib/supabase";
@@ -22,6 +24,18 @@ export default function EditItineraryContent({ id }) {
 
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  // State Toast Notifikasi & Modal Konfirmasi Hapus Kegiatan
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [deleteActivityModalOpen, setDeleteActivityModalOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   // Data penerima dari Supabase profiles
   const [tourleaders, setTourleaders] = useState([]);
@@ -300,7 +314,7 @@ export default function EditItineraryContent({ id }) {
 
   const handleAddActivity = (dayNumber) => {
     if (!newActivity.title.trim()) {
-      alert("Judul kegiatan wajib diisi!");
+      showToast("Judul kegiatan wajib diisi!", "error");
       return;
     }
 
@@ -324,22 +338,39 @@ export default function EditItineraryContent({ id }) {
 
     setNewActivity({ time: "08:00 - 10:00", title: "", location: "" });
     setAddingActivityDay(null);
+    showToast("Kegiatan berhasil ditambahkan.", "success");
   };
 
-  const handleDeleteActivity = (dayNumber, activityId) => {
-    if (!confirm("Hapus kegiatan ini dari daftar?")) return;
+  const confirmDeleteActivity = (dayNumber, activity) => {
+    setActivityToDelete({ dayNumber, activity });
+    setDeleteActivityModalOpen(true);
+  };
+
+  const executeDeleteActivity = () => {
+    if (!activityToDelete) return;
+    const { dayNumber, activity } = activityToDelete;
+
     setDaysData(prev => prev.map(day => {
       if (day.day_number === dayNumber) {
         return {
           ...day,
-          activities: day.activities.filter(a => a.id !== activityId)
+          activities: day.activities.filter(a => a.id !== activity.id)
         };
       }
       return day;
     }));
+
+    setDeleteActivityModalOpen(false);
+    setActivityToDelete(null);
+    showToast("Kegiatan berhasil dihapus dari jadwal.", "success");
   };
 
   const handleUpdate = async () => {
+    if (!editData.title.trim()) {
+      showToast("Nama paket itinerary wajib diisi!", "error");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -381,11 +412,17 @@ export default function EditItineraryContent({ id }) {
         }
       }
 
-      alert("Perubahan itinerary berhasil disimpan ke Supabase!");
+      sessionStorage.setItem(
+        "flash_toast",
+        JSON.stringify({
+          message: "Perubahan itinerary berhasil disimpan ke Supabase!",
+          type: "success",
+        })
+      );
       router.push("/itinerary");
     } catch (error) {
       console.error("Gagal memperbarui:", error.message);
-      alert("Terjadi kesalahan saat memperbarui data: " + error.message);
+      showToast("Terjadi kesalahan saat memperbarui data: " + error.message, "error");
     } finally {
       setLoading(false);
     }
@@ -710,7 +747,7 @@ export default function EditItineraryContent({ id }) {
                                 <div className="flex items-center gap-2">
                                   <button 
                                     type="button"
-                                    onClick={() => handleDeleteActivity(day.day_number, act.id)}
+                                    onClick={() => confirmDeleteActivity(day.day_number, act)}
                                     className="p-2 bg-slate-50 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 transition-colors border border-slate-100 cursor-pointer"
                                     title="Hapus Kegiatan"
                                   >
@@ -761,6 +798,64 @@ export default function EditItineraryContent({ id }) {
           </div>
         </div>
       </div>
+
+      {/* Modal Konfirmasi Hapus Kegiatan */}
+      {deleteActivityModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <FiTrash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Hapus Kegiatan</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Apakah Anda yakin ingin menghapus kegiatan <span className="font-bold text-gray-800">"{activityToDelete?.activity?.title || "Kegiatan"}"</span> secara permanen?
+              </p>
+              {activityToDelete?.activity?.time && (
+                <p className="text-[11px] text-purple-700 font-semibold mt-1">
+                  Waktu: {activityToDelete.activity.time}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteActivityModalOpen(false)}
+                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={executeDeleteActivity}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors cursor-pointer"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

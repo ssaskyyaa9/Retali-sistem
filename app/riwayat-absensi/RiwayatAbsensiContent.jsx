@@ -226,7 +226,6 @@ function formatTanggal(isoString) {
 
 function formatJam(isoString) {
   if (!isoString) return "-";
-  // Cegah tanggal saja (misal "2026-11-13") diparse sebagai waktu karena di WIB (UTC+7) akan selalu menjadi 07.00
   if (typeof isoString === "string" && isoString.length <= 10) return "-";
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return "-";
@@ -252,7 +251,6 @@ function evaluateAttendanceTiming(itemOrTimestamp, targetMulai, targetSelesai) {
   const tMulai = targetMulai ? targetMulai.slice(0, 5) : "";
   const tSelesai = targetSelesai ? targetSelesai.slice(0, 5) : "";
 
-  // 1. Jika di database sudah ada status_waktu resmi (dari submit app mobile / update status)
   if (item?.status_waktu === "terlambat") {
     return {
       status: "terlambat",
@@ -270,10 +268,8 @@ function evaluateAttendanceTiming(itemOrTimestamp, targetMulai, targetSelesai) {
     };
   }
 
-  // 2. Evaluasi jam aktual dari created_at
   const isoString = item ? (item.created_at || item.attendance_date) : itemOrTimestamp;
   if (!isoString || !tMulai || !tSelesai) return null;
-  // Jika hanya string tanggal tanpa waktu (YYYY-MM-DD), jangan dihitung
   if (typeof isoString === "string" && isoString.length <= 10) return null;
 
   const d = new Date(isoString);
@@ -445,14 +441,144 @@ function parseExcelRows(workbook) {
   });
 }
 
+// ─── Storage Keys untuk Persistensi Sub-View Kelola Sesi saat Refresh ───────
+const STORAGE_KEY_ACTIVE_TAB = "rwytab_persisted_active_tab";
+const STORAGE_KEY_JAMAAH_VIEW = "rwytab_persisted_jamaah_view";
+const STORAGE_KEY_PETUGAS_VIEW = "rwytab_persisted_petugas_view";
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function RiwayatAbsensiContent({ type }) {
+  const getInitialActiveTab = () => {
+    const fallbackTab = type === "jamaah" ? "jamaah" : "tour_leader";
+    if (typeof window === "undefined") return fallbackTab;
+    try {
+      const savedTab = window.sessionStorage.getItem(STORAGE_KEY_ACTIVE_TAB);
+      if (type === "jamaah") return "jamaah";
+      if (type === "petugas") {
+        return savedTab === "muthawif" ? "muthawif" : "tour_leader";
+      }
+      if (savedTab && ["tour_leader", "jamaah", "muthawif"].includes(savedTab)) {
+        return savedTab;
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return fallbackTab;
+  };
+
+  const getInitialJamaahView = () => {
+    if (typeof window === "undefined") return "list";
+    try {
+      const savedView = window.sessionStorage.getItem(STORAGE_KEY_JAMAAH_VIEW);
+      if (savedView === "sesi_absen") return "sesi_absen";
+    } catch {
+      // ignore storage errors
+    }
+    return "list";
+  };
+
+  const getInitialPetugasView = () => {
+    if (typeof window === "undefined") return "list";
+    try {
+      const savedView = window.sessionStorage.getItem(STORAGE_KEY_PETUGAS_VIEW);
+      if (savedView === "sesi_absen") return "sesi_absen";
+    } catch {
+      // ignore storage errors
+    }
+    return "list";
+  };
+
   const [activeTab, setActiveTab] = useState(type === "jamaah" ? "jamaah" : "tour_leader");
   const [jamaahView, setJamaahView] = useState("list"); // "list" | "tambah_absen" | "sesi_absen" | "detail_jamaah"
   const [petugasView, setPetugasView] = useState("list"); // "list" | "catat_absen" | "sesi_absen" | "detail"
   const [selectedJamaah, setSelectedJamaah] = useState(null);
   const [selectedPetugasGrup, setSelectedPetugasGrup] = useState(null);
+  const [hasHydratedView, setHasHydratedView] = useState(false);
+
+  // Baca state tersimpan setelah mount di client agar SSR dan render awal client sama persis
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const savedTab = window.sessionStorage.getItem(STORAGE_KEY_ACTIVE_TAB);
+      if (type !== "jamaah" && savedTab) {
+        if (type === "petugas") {
+          if (savedTab === "muthawif" || savedTab === "tour_leader") {
+            setActiveTab(savedTab);
+          }
+        } else if (["tour_leader", "jamaah", "muthawif"].includes(savedTab)) {
+          setActiveTab(savedTab);
+        }
+      }
+
+      const savedJamaahView = window.sessionStorage.getItem(STORAGE_KEY_JAMAAH_VIEW);
+      if (savedJamaahView === "sesi_absen") {
+        setJamaahView("sesi_absen");
+      }
+
+      const savedPetugasView = window.sessionStorage.getItem(STORAGE_KEY_PETUGAS_VIEW);
+      if (savedPetugasView === "sesi_absen") {
+        setPetugasView("sesi_absen");
+      }
+    } catch {
+      // ignore storage errors
+    } finally {
+      setHasHydratedView(true);
+    }
+  }, [type]);
+
+  // Sinkronkan activeTab, jamaahView, dan petugasView ke sessionStorage setelah hidrasi selesai
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasHydratedView) return;
+    try {
+      window.sessionStorage.setItem(STORAGE_KEY_ACTIVE_TAB, activeTab);
+    } catch {
+      // ignore storage errors
+    }
+  }, [activeTab, hasHydratedView]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasHydratedView) return;
+    try {
+      if (jamaahView === "sesi_absen") {
+        window.sessionStorage.setItem(STORAGE_KEY_JAMAAH_VIEW, "sesi_absen");
+      } else {
+        window.sessionStorage.removeItem(STORAGE_KEY_JAMAAH_VIEW);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [jamaahView, hasHydratedView]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasHydratedView) return;
+    try {
+      if (petugasView === "sesi_absen") {
+        window.sessionStorage.setItem(STORAGE_KEY_PETUGAS_VIEW, "sesi_absen");
+      } else {
+        window.sessionStorage.removeItem(STORAGE_KEY_PETUGAS_VIEW);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [petugasView, hasHydratedView]);
+
+  // ── Toast & Confirm Modal State (Gaya Notifikasi) ──────────────────────────
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    id: null,
+    delType: null,
+    name: "",
+    fullItem: null,
+  });
+
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  }, []);
 
   // ── Master data ───────────────────────────────────────────────────────────
   const [kloterOptions, setKloterOptions] = useState([]);
@@ -521,10 +647,6 @@ export default function RiwayatAbsensiContent({ type }) {
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
-  // ── Delete modal ─────────────────────────────────────────────────────────
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
-
   // ── Filter Petugas ────────────────────────────────────────────────────────
   const [searchName, setSearchName] = useState("");
   const [searchDate, setSearchDate] = useState("");
@@ -542,17 +664,11 @@ export default function RiwayatAbsensiContent({ type }) {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   // ── Helper Pembagian List Sesi Terpisah ────────────────────────────────────
-  // Sesi Jamaah: khusus kategori 'jamaah'
   const jamaahSesiList = sesiList.filter((s) => s.kategori === "jamaah");
-
-  // Sesi Petugas: semua kategori selain 'jamaah' (berlaku untuk seluruh petugas)
   const allPetugasSesiList = sesiList.filter((s) => s.kategori !== "jamaah");
-
-  // Sesi Petugas dapat dipilih untuk Tour Leader maupun Muthawif
   const tourLeaderSesiList = allPetugasSesiList;
   const muthawifSesiList = allPetugasSesiList;
 
-  // Filter list sesi petugas pada inline view
   const filteredPetugasSesiList = allPetugasSesiList.filter((item) => {
     if (petugasSesiFilterTab === "all") return true;
     if (petugasSesiFilterTab === "tour_leader") return item.kategori === "tour_leader";
@@ -652,7 +768,7 @@ export default function RiwayatAbsensiContent({ type }) {
     });
   }, []);
 
-  // ── Fetch Tour Leader Absensi (attendance_guide dengan relasi profiles) ────
+  // ── Fetch Tour Leader Absensi ────────────────────────────────────────────
   const fetchTourLeader = useCallback(async () => {
     setLoadingTl(true);
     try {
@@ -677,7 +793,7 @@ export default function RiwayatAbsensiContent({ type }) {
     }
   }, []);
 
-  // ── Fetch Muthawif Absensi (attendance_guide dengan relasi profiles) ────────
+  // ── Fetch Muthawif Absensi ────────────────────────────────────────────────
   const fetchMuthawif = useCallback(async () => {
     setLoadingMuthawif(true);
     try {
@@ -700,7 +816,7 @@ export default function RiwayatAbsensiContent({ type }) {
     }
   }, []);
 
-  // ── Fetch Kloters (dari tabel kloter untuk dropdown) ─────────────────────
+  // ── Fetch Kloters ─────────────────────────────────────────────────────────
   const fetchKloters = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -715,7 +831,7 @@ export default function RiwayatAbsensiContent({ type }) {
     }
   }, []);
 
-  // ── Fetch Staff Profiles (Tour Leader & Muthawif) ─────────────────────────
+  // ── Fetch Staff Profiles ──────────────────────────────────────────────────
   const fetchStaffProfiles = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -739,17 +855,30 @@ export default function RiwayatAbsensiContent({ type }) {
     }
   }, []);
 
-  // ── Fetch Sesi Absensi & Bagian Sesi (dari Supabase / Fallback Default) ───
+  // ── Fetch Sesi Absensi & Bagian Sesi (Terbaru di Paling Atas) ───────────
   const fetchSesi = useCallback(async () => {
     setLoadingSesi(true);
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("sesi_absensi")
         .select(`
-          id, judul, kategori, target_jam_mulai, target_jam_selesai, keterangan, urutan,
+          id, judul, kategori, target_jam_mulai, target_jam_selesai, keterangan, urutan, created_at,
           bagian:bagian_sesi_absensi(id, nama_bagian, urutan, target_jam_mulai, target_jam_selesai)
         `)
-        .order("urutan", { ascending: true });
+        .order("created_at", { ascending: false });
+
+      // Fallback jika kolom created_at belum ada di tabel sesi_absensi
+      if (error) {
+        const resByUrutan = await supabase
+          .from("sesi_absensi")
+          .select(`
+            id, judul, kategori, target_jam_mulai, target_jam_selesai, keterangan, urutan,
+            bagian:bagian_sesi_absensi(id, nama_bagian, urutan, target_jam_mulai, target_jam_selesai)
+          `)
+          .order("urutan", { ascending: false });
+        data = resByUrutan.data;
+        error = resByUrutan.error;
+      }
 
       if (!error && data && data.length > 0) {
         const formatted = data.map((s) => {
@@ -761,6 +890,7 @@ export default function RiwayatAbsensiContent({ type }) {
             target_jam_mulai: s.target_jam_mulai || "",
             target_jam_selesai: s.target_jam_selesai || "",
             keterangan: s.keterangan || "",
+            created_at: s.created_at || null,
             bagianList: parts.map((p) => p.nama_bagian),
             jumlahIsi: parts.length || 1,
             rawBagian: parts,
@@ -828,7 +958,7 @@ export default function RiwayatAbsensiContent({ type }) {
     }
   }, []);
 
-  // ── Fetch Detail per grup (cek via grup_id dan/atau kloter) ───────────────
+  // ── Fetch Detail per grup ───────────────────────────────────────────────
   const fetchJamaahDetail = useCallback(async (grup) => {
     setLoadingDetail(true);
     try {
@@ -846,7 +976,6 @@ export default function RiwayatAbsensiContent({ type }) {
           .order("no_urutan", { ascending: true, nullsFirst: false });
 
         if (resGrup.error) {
-          // Fallback order by id jika kolom no_urutan belum dibuat di Supabase
           resGrup = await supabase
             .from("attendance_user")
             .select("*")
@@ -879,7 +1008,6 @@ export default function RiwayatAbsensiContent({ type }) {
         }
       }
 
-      // Pastikan urut rapi berdasarkan no_urutan
       data.sort((a, b) => {
         if (a.no_urutan != null && b.no_urutan != null) return a.no_urutan - b.no_urutan;
         if (a.no_urutan != null) return -1;
@@ -895,7 +1023,7 @@ export default function RiwayatAbsensiContent({ type }) {
     }
   }, []);
 
-  // ── Update status kehadiran jamaah (langsung dari app) ─────────────────────
+  // ── Update status kehadiran jamaah ─────────────────────────────────────
   const handleUpdateJamaahStatus = useCallback(async (jamaahId, newStatus) => {
     try {
       const { error } = await supabase
@@ -907,9 +1035,9 @@ export default function RiwayatAbsensiContent({ type }) {
         prev.map((item) => (item.id === jamaahId ? { ...item, attendance_status: newStatus } : item))
       );
     } catch (err) {
-      alert("Gagal mengubah status: " + err.message);
+      showToast("Gagal mengubah status: " + err.message, "error");
     }
-  }, []);
+  }, [showToast]);
 
   const handleBatchUpdateJamaahStatus = useCallback(async (newStatus) => {
     if (!jamaahDetailList || jamaahDetailList.length === 0) return;
@@ -924,22 +1052,23 @@ export default function RiwayatAbsensiContent({ type }) {
         prev.map((item) => ({ ...item, attendance_status: newStatus }))
       );
     } catch (err) {
-      alert("Gagal update massal: " + err.message);
+      showToast("Gagal update massal: " + err.message, "error");
     }
-  }, [jamaahDetailList]);
+  }, [jamaahDetailList, showToast]);
 
   // ── Delete guide ──────────────────────────────────────────────────────────
   const handleDeleteGuide = useCallback(
     async (id) => {
       const { error } = await supabase.from("attendance_guide").delete().eq("id", id);
       if (error) {
-        alert("Gagal hapus: " + error.message);
+        showToast("Gagal hapus: " + error.message, "error");
         return;
       }
       if (activeTab === "tour_leader") setTlData((p) => p.filter((r) => r.id !== id));
       else setMuthawifData((p) => p.filter((r) => r.id !== id));
+      showToast("Data absensi berhasil dihapus secara permanen.");
     },
-    [activeTab]
+    [activeTab, showToast]
   );
 
   // ── Delete grup jamaah ────────────────────────────────────────────────────
@@ -947,11 +1076,12 @@ export default function RiwayatAbsensiContent({ type }) {
     await supabase.from("attendance_user").delete().eq("grup_id", item.id);
     const { error } = await supabase.from("attendance_grup").delete().eq("id", item.id);
     if (error) {
-      alert("Gagal hapus grup: " + error.message);
+      showToast("Gagal hapus grup: " + error.message, "error");
       return;
     }
     setJamaahGrupList((p) => p.filter((r) => r.id !== item.id));
-  }, []);
+    showToast("Grup absensi jamaah berhasil dihapus secara permanen.");
+  }, [showToast]);
 
   // ── Initial fetches ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -1003,7 +1133,6 @@ export default function RiwayatAbsensiContent({ type }) {
   const filteredTlData = getFilteredPetugasList(tlData);
   const filteredMuthawifData = getFilteredPetugasList(muthawifData);
 
-  // Grup Sesi Absensi Petugas (Tour Leader & Muthawif)
   const tlGrupList = useMemo(
     () => getPetugasGrupList(tlData, "tour_leader"),
     [tlData, getPetugasGrupList]
@@ -1049,22 +1178,29 @@ export default function RiwayatAbsensiContent({ type }) {
     });
   }, [selectedPetugasGrup, activeTab, tlData, muthawifData]);
 
-  // ── Delete confirmation ───────────────────────────────────────────────────
+  // ── Delete confirmation (Gaya Modal Notifikasi) ───────────────────────────
   const openDeleteConfirmation = (id, delType, name, fullItem = null) => {
-    setItemToDelete({ id, type: delType, name, fullItem });
-    setDeleteModalOpen(true);
+    setConfirmModal({ show: true, id, delType, name, fullItem });
   };
 
   const confirmDelete = async () => {
-    if (!itemToDelete) return;
+    if (!confirmModal.show) return;
+    const target = {
+      id: confirmModal.id,
+      type: confirmModal.delType,
+      name: confirmModal.name,
+      fullItem: confirmModal.fullItem,
+    };
+    setConfirmModal({ show: false, id: null, delType: null, name: "", fullItem: null });
+
     if (
-      itemToDelete.type === "tour_leader" ||
-      itemToDelete.type === "muthawif" ||
-      itemToDelete.type === "individual_petugas"
+      target.type === "tour_leader" ||
+      target.type === "muthawif" ||
+      target.type === "individual_petugas"
     ) {
-      await handleDeleteGuide(itemToDelete.id);
-    } else if (itemToDelete.type === "petugas_grup") {
-      const ids = (itemToDelete.fullItem?.members || []).map((m) => m.id);
+      await handleDeleteGuide(target.id);
+    } else if (target.type === "petugas_grup") {
+      const ids = (target.fullItem?.members || []).map((m) => m.id);
       if (ids.length > 0) {
         await supabase.from("attendance_guide").delete().in("id", ids);
         if (activeTab === "tour_leader") {
@@ -1073,7 +1209,7 @@ export default function RiwayatAbsensiContent({ type }) {
           setMuthawifData((p) => p.filter((r) => !ids.includes(r.id)));
         }
       }
-      const grupId = itemToDelete.fullItem?.grup_id || itemToDelete.fullItem?.id;
+      const grupId = target.fullItem?.grup_id || target.fullItem?.id;
       if (grupId && typeof grupId === "string" && grupId.length > 20) {
         try {
           await supabase.from("attendance_guide_grup").delete().eq("id", grupId);
@@ -1082,24 +1218,23 @@ export default function RiwayatAbsensiContent({ type }) {
         }
       }
       if (petugasView === "detail") setPetugasView("list");
-    } else if (itemToDelete.type === "jamaah") {
-      await handleDeleteGrup(itemToDelete.fullItem || { id: itemToDelete.id });
-    } else if (itemToDelete.type === "sesi") {
+      showToast("Sesi absensi petugas berhasil dihapus secara permanen.");
+    } else if (target.type === "jamaah") {
+      await handleDeleteGrup(target.fullItem || { id: target.id });
+    } else if (target.type === "sesi") {
       try {
-        if (typeof itemToDelete.id === "string" && itemToDelete.id.length > 20) {
-          await supabase.from("sesi_absensi").delete().eq("id", itemToDelete.id);
+        if (typeof target.id === "string" && target.id.length > 20) {
+          await supabase.from("sesi_absensi").delete().eq("id", target.id);
         }
       } catch (err) {
         console.warn("Delete sesi error:", err);
       }
-      setSesiList((p) => p.filter((i) => i.id !== itemToDelete.id));
+      setSesiList((p) => p.filter((i) => i.id !== target.id));
+      showToast("Sesi absensi berhasil dihapus secara permanen.");
     }
-    setDeleteModalOpen(false);
-    setItemToDelete(null);
   };
 
   // ── Sesi Modal (Create, Edit, Delete) ──────────────────────────────────────
-  // context: 'jamaah' | 'petugas'
   const handleOpenAddSesi = (context = "jamaah") => {
     setEditingSesi(null);
     setSesiModalContext(context);
@@ -1134,7 +1269,7 @@ export default function RiwayatAbsensiContent({ type }) {
   const handleSaveSesi = async (e) => {
     e.preventDefault();
     if (!judulSesi.trim()) {
-      alert("Judul sesi wajib diisi.");
+      showToast("Judul sesi wajib diisi!", "error");
       return;
     }
 
@@ -1143,13 +1278,12 @@ export default function RiwayatAbsensiContent({ type }) {
       cleanBagianList.push("Sesi Utama");
     }
 
-    // Kategori otomatis: 'jamaah' untuk sesi jamaah, 'all' untuk sesi petugas
     const finalKategori = sesiModalContext === "jamaah" ? "jamaah" : "all";
+    const isEditMode = Boolean(editingSesi);
 
     setSavingSesi(true);
     try {
       if (editingSesi && typeof editingSesi.id === "string" && editingSesi.id.length > 20) {
-        // UPDATE sesi_absensi
         const { error: updateErr } = await supabase
           .from("sesi_absensi")
           .update({
@@ -1173,10 +1307,14 @@ export default function RiwayatAbsensiContent({ type }) {
           await fetchSesi();
           setShowAddSesiModal(false);
           setEditingSesi(null);
+          showToast(
+            isEditMode
+              ? "Sesi absensi berhasil diperbarui!"
+              : "Sesi absensi berhasil ditambahkan!"
+          );
           return;
         }
       } else {
-        // INSERT sesi_absensi
         const { data: newSesi, error: insertErr } = await supabase
           .from("sesi_absensi")
           .insert({
@@ -1200,11 +1338,11 @@ export default function RiwayatAbsensiContent({ type }) {
           await fetchSesi();
           setShowAddSesiModal(false);
           setEditingSesi(null);
+          showToast("Sesi absensi berhasil ditambahkan!");
           return;
         }
       }
 
-      // Fallback state jika tabel database belum dibuat melalui SQL migration
       if (editingSesi) {
         setSesiList((prev) =>
           prev.map((s) =>
@@ -1233,18 +1371,24 @@ export default function RiwayatAbsensiContent({ type }) {
           bagianList: cleanBagianList,
           jumlahIsi: cleanBagianList.length,
         };
-        setSesiList((prev) => [...prev, newItem]);
+        setSesiList((prev) => [newItem, ...prev]);
       }
       setShowAddSesiModal(false);
       setEditingSesi(null);
+      showToast(
+        isEditMode
+          ? "Sesi absensi berhasil diperbarui!"
+          : "Sesi absensi berhasil ditambahkan!"
+      );
     } catch (err) {
       console.warn("handleSaveSesi fallback:", err);
+      showToast("Terjadi kesalahan saat menyimpan sesi.", "error");
     } finally {
       setSavingSesi(false);
     }
   };
 
-  // ── Catat Absen Petugas (Tour Leader & Muthawif) Handlers ─────────────────
+  // ── Catat Absen Petugas Handlers ─────────────────────────────────────────
   const handleOpenCatatAbsenPetugas = () => {
     const relevantSesiList = activeTab === "tour_leader" ? tourLeaderSesiList : muthawifSesiList;
     const defaultSesiObj = relevantSesiList[0] || null;
@@ -1303,14 +1447,15 @@ export default function RiwayatAbsensiContent({ type }) {
   const handleSavePetugasGrupAbsen = async (e) => {
     e?.preventDefault();
     if (!petugasGrupForm.sesi) {
-      alert("Pilih sesi kegiatan terlebih dahulu.");
+      showToast("Pilih sesi kegiatan terlebih dahulu!", "error");
       return;
     }
     if (petugasGrupForm.selectedUserIds.length === 0) {
-      alert(
+      showToast(
         `Pilih minimal 1 ${
           activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"
-        } yang wajib absen.`
+        } yang wajib absen!`,
+        "error"
       );
       return;
     }
@@ -1342,7 +1487,7 @@ export default function RiwayatAbsensiContent({ type }) {
         const row = {
           user_id: userId,
           kloter: staffKloter,
-          type: "masuk", // Memenuhi CHECK constraint: 'masuk', 'pulang', 'izin', 'sakit', 'alpa'
+          type: "masuk",
           attendance_date: petugasGrupForm.tanggalAbsen || now.toISOString().split("T")[0],
           note: formattedNote,
           sesi: petugasGrupForm.sesi,
@@ -1352,7 +1497,6 @@ export default function RiwayatAbsensiContent({ type }) {
           status_waktu: null,
         };
 
-        // Hindari foreign key constraint jika sesi_id berupa ID fallback/dummy
         if (
           selectedSesiObj &&
           typeof selectedSesiObj.id === "string" &&
@@ -1366,7 +1510,6 @@ export default function RiwayatAbsensiContent({ type }) {
         return row;
       });
 
-      // ── 1. Simpan Parent Record ke attendance_guide_grup ──
       const representativeKloter = payloads[0]?.kloter || "Umum";
       const validSesiId =
         selectedSesiObj &&
@@ -1401,7 +1544,6 @@ export default function RiwayatAbsensiContent({ type }) {
         createdGrupId = gData?.id;
       } catch (firstGErr) {
         console.warn("attendance_guide_grup full insert fallback:", firstGErr.message);
-        // Fallback jika constraint lama belum di-drop: pakai 'kegiatan_harian' agar lolos CHECK constraint
         const safeGrupPayload = {
           kloter: representativeKloter,
           attendance_date: petugasGrupForm.tanggalAbsen || now.toISOString().split("T")[0],
@@ -1426,7 +1568,6 @@ export default function RiwayatAbsensiContent({ type }) {
         });
       }
 
-      // ── 2. Simpan Member Records ke attendance_guide ──
       let insertErr = null;
       try {
         const res = await supabase.from("attendance_guide").insert(payloads);
@@ -1459,14 +1600,14 @@ export default function RiwayatAbsensiContent({ type }) {
       }
 
       setPetugasView("list");
-      alert(
-        `✓ Berhasil menerbitkan absensi ${
+      showToast(
+        `Absensi ${
           activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"
-        } untuk ${payloads.length} petugas!`
+        } berhasil diterbitkan untuk ${payloads.length} petugas!`
       );
     } catch (err) {
       console.error("handleSavePetugasGrupAbsen error:", err);
-      alert("Gagal menyimpan absensi petugas: " + err.message);
+      showToast("Gagal menyimpan absensi petugas: " + err.message, "error");
     } finally {
       setSavingPetugas(false);
     }
@@ -1546,9 +1687,10 @@ export default function RiwayatAbsensiContent({ type }) {
 
       setShowUpdateMemberModal(false);
       setEditingPetugasMember(null);
+      showToast("Kehadiran petugas berhasil diperbarui!");
     } catch (err) {
       console.error("handleSaveMemberAttendance error:", err);
-      alert("Gagal memperbarui absensi: " + err.message);
+      showToast("Gagal memperbarui absensi: " + err.message, "error");
     } finally {
       setSavingPetugas(false);
     }
@@ -1562,7 +1704,7 @@ export default function RiwayatAbsensiContent({ type }) {
   const handleSaveNewMemberToGrup = async (e) => {
     e?.preventDefault();
     if (!newMemberStaffId || !selectedPetugasGrup) {
-      alert("Pilih petugas yang akan ditambahkan.");
+      showToast("Pilih petugas yang akan ditambahkan!", "error");
       return;
     }
 
@@ -1585,7 +1727,7 @@ export default function RiwayatAbsensiContent({ type }) {
       const newRow = {
         user_id: newMemberStaffId,
         kloter: staffKloter,
-        type: "masuk", // Memenuhi CHECK constraint: 'masuk', 'pulang', 'izin', 'sakit', 'alpa'
+        type: "masuk",
         attendance_date: selectedPetugasGrup.tanggal || new Date().toISOString().split("T")[0],
         note: `[Belum Absen] [Ditugaskan untuk sesi ${sesiLabel}]`,
         sesi: selectedPetugasGrup.sesi,
@@ -1616,9 +1758,10 @@ export default function RiwayatAbsensiContent({ type }) {
 
       setShowAddMemberToGrupModal(false);
       setNewMemberStaffId("");
+      showToast("Petugas berhasil ditambahkan ke sesi!");
     } catch (err) {
       console.error("handleSaveNewMemberToGrup error:", err);
-      alert("Gagal menambahkan petugas: " + err.message);
+      showToast("Gagal menambahkan petugas: " + err.message, "error");
     } finally {
       setSavingPetugas(false);
     }
@@ -1626,7 +1769,7 @@ export default function RiwayatAbsensiContent({ type }) {
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert("Browser Anda tidak mendukung geolokasi.");
+      showToast("Browser Anda tidak mendukung geolokasi.", "error");
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -1638,7 +1781,7 @@ export default function RiwayatAbsensiContent({ type }) {
         }));
       },
       (err) => {
-        alert("Gagal mengambil lokasi: " + err.message);
+        showToast("Gagal mengambil lokasi: " + err.message, "error");
       }
     );
   };
@@ -1646,7 +1789,6 @@ export default function RiwayatAbsensiContent({ type }) {
   const getKoordinat = (item) =>
     item.latitude && item.longitude ? `${item.latitude}, ${item.longitude}` : "-";
 
-  // Helper mencari info sesi untuk baris data petugas
   const getSesiInfoForPetugas = (item) => {
     let matchedSesi = null;
     if (item.sesi) {
@@ -1717,22 +1859,21 @@ export default function RiwayatAbsensiContent({ type }) {
     reader.readAsArrayBuffer(file);
   };
 
-  // ── Simpan ke Supabase (attendance_grup + attendance_user) ─────────────────
   const handleSimpanAbsen = async () => {
     if (!selectedKloter) {
-      alert("Pilih kloter terlebih dahulu.");
+      showToast("Pilih kloter terlebih dahulu!", "error");
       return;
     }
     if (!selectedSesiAbsen) {
-      alert("Pilih sesi absen terlebih dahulu.");
+      showToast("Pilih sesi absen terlebih dahulu!", "error");
       return;
     }
     if (!selectedBagianSesi) {
-      alert("Pilih bagian sesi terlebih dahulu.");
+      showToast("Pilih bagian sesi terlebih dahulu!", "error");
       return;
     }
     if (excelRows.length === 0) {
-      alert("Upload file Excel terlebih dahulu.");
+      showToast("Upload file Excel terlebih dahulu!", "error");
       return;
     }
 
@@ -1745,7 +1886,6 @@ export default function RiwayatAbsensiContent({ type }) {
     try {
       const sesiGabungan = `${selectedSesiAbsen} – ${selectedBagianSesi}`;
 
-      // 1. Cek atau buat grup di attendance_grup
       const { data: existingGrup, error: grupFetchErr } = await supabase
         .from("attendance_grup")
         .select("id, total_jamaah")
@@ -1800,7 +1940,6 @@ export default function RiwayatAbsensiContent({ type }) {
         grupId = newGrup.id;
       }
 
-      // 2. Normalisasi & sanitasi baris untuk attendance_user
       const rowsToInsert = excelRows.map((row, idx) => ({
         no_urutan: row.no_urutan ? parseInt(row.no_urutan, 10) : idx + 1,
         jamaah_name: cleanString(row.jamaah_name) || "Jamaah",
@@ -1816,14 +1955,12 @@ export default function RiwayatAbsensiContent({ type }) {
         grup_id: grupId,
       }));
 
-      // 3. Insert ke attendance_user (batch 50) dengan fallback jika no_urutan belum ada di Supabase
       const BATCH = 50;
       for (let i = 0; i < rowsToInsert.length; i += BATCH) {
         const batch = rowsToInsert.slice(i, i + BATCH);
         const { error: insertErr } = await supabase.from("attendance_user").insert(batch);
         if (insertErr) {
           if (insertErr.message && insertErr.message.includes("no_urutan")) {
-            // Kolom no_urutan belum dibuat di Supabase, fallback insert tanpa no_urutan
             const fallbackBatch = batch.map(({ no_urutan, ...rest }) => rest);
             const { error: fallbackErr } = await supabase.from("attendance_user").insert(fallbackBatch);
             if (fallbackErr) throw fallbackErr;
@@ -1833,7 +1970,6 @@ export default function RiwayatAbsensiContent({ type }) {
         }
       }
 
-      // 4. Update total_jamaah di attendance_grup
       const { count } = await supabase
         .from("attendance_user")
         .select("*", { count: "exact", head: true })
@@ -1852,6 +1988,7 @@ export default function RiwayatAbsensiContent({ type }) {
           assignedTL || "-"
         }" pada kloter "${selectedKloter}".`
       );
+      showToast(`${rowsToInsert.length} data absen jamaah berhasil disimpan!`);
 
       fetchJamaahGrup();
       setTimeout(() => {
@@ -1860,6 +1997,7 @@ export default function RiwayatAbsensiContent({ type }) {
     } catch (err) {
       setUploadStatus("error");
       setUploadMessage("Gagal menyimpan ke attendance_user: " + err.message);
+      showToast("Gagal menyimpan absen jamaah: " + err.message, "error");
       console.error("handleSimpanAbsen error:", err);
     }
   };
@@ -1887,7 +2025,7 @@ export default function RiwayatAbsensiContent({ type }) {
         }
       `}</style>
 
-      <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans">
+      <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans relative">
         <Topbar
           title={
             type === "jamaah"
@@ -1906,6 +2044,21 @@ export default function RiwayatAbsensiContent({ type }) {
               : []),
           ]}
         />
+
+        {toast.show && (
+          <div className="fixed top-6 right-6 z-50 animate-bounce">
+            <div
+              className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
+                toast.type === "error"
+                  ? "bg-rose-50 border-rose-200 text-rose-800"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-800"
+              }`}
+            >
+              <FiAlertCircle className="w-4 h-4" />
+              {toast.message}
+            </div>
+          </div>
+        )}
 
         <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           <PageHeader
@@ -1960,10 +2113,9 @@ export default function RiwayatAbsensiContent({ type }) {
           {activeTab !== "jamaah" && (
             <div className="space-y-6">
 
-              {/* VIEW A: LIST RIWAYAT ABSENSI PETUGAS (DAFTAR ABSEN YANG PERLU DIPENUHI) */}
+              {/* VIEW A: LIST RIWAYAT ABSENSI PETUGAS */}
               {petugasView === "list" && (
                 <div className="space-y-6">
-                  {/* Header Banner - Gaya Card Jamaah */}
                   <div className="bg-[#121c2d] text-white p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -1999,7 +2151,6 @@ export default function RiwayatAbsensiContent({ type }) {
                     onSubmit={handleFilter}
                     className="flex flex-wrap gap-4 items-end bg-white p-5 rounded-2xl border border-gray-100 shadow-2xs"
                   >
-                    {/* Sesi Filter Khusus Petugas */}
                     <div className="w-72">
                       <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
                         Filter Sesi Absen
@@ -2047,7 +2198,7 @@ export default function RiwayatAbsensiContent({ type }) {
                     </button>
                   </form>
 
-                  {/* List Daftar Absen yang Perlu Dipenuhi Petugas (Mirip List Grup Jamaah) */}
+                  {/* List Daftar Absen yang Perlu Dipenuhi Petugas */}
                   {(activeTab === "tour_leader" ? loadingTl : loadingMuthawif) ? (
                     <Spinner />
                   ) : (
@@ -2072,9 +2223,7 @@ export default function RiwayatAbsensiContent({ type }) {
                                 key={item.key}
                                 className="bg-white p-5 sm:p-6 rounded-2xl border border-gray-100/90 shadow-xs hover:shadow-md hover:border-gray-200/80 transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-5 group"
                               >
-                                {/* Sisi Kiri: Informasi Sesi & Metadata */}
                                 <div className="space-y-3 flex-1 min-w-0">
-                                  {/* Baris Judul & Badge Bagian */}
                                   <div className="flex items-center gap-2.5 flex-wrap">
                                     <span className="w-7 h-7 rounded-lg bg-[#1b3167]/10 text-[#1b3167] font-bold text-xs flex items-center justify-center shrink-0">
                                       {index + 1}
@@ -2090,7 +2239,6 @@ export default function RiwayatAbsensiContent({ type }) {
                                     )}
                                   </div>
 
-                                  {/* Baris Metadata: Tanggal, Target Waktu, Kloter */}
                                   <div className="flex items-center gap-2 flex-wrap text-xs">
                                     {item.tanggal && (
                                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 text-gray-600 border border-gray-200/80 font-medium">
@@ -2113,15 +2261,12 @@ export default function RiwayatAbsensiContent({ type }) {
                                     )}
                                   </div>
 
-                                  {/* Baris Timestamp Dibuat */}
                                   <p className="text-[12px] text-gray-400 font-medium">
                                     Dibuat: {formatTanggalPanjang(item.created_at || item.tanggal)}
                                   </p>
                                 </div>
 
-                                {/* Sisi Kanan: Status Badges & Action Buttons */}
                                 <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-gray-100 flex-wrap sm:flex-nowrap">
-                                  {/* Info Badges */}
                                   <div className="flex items-center gap-2">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50/80 text-blue-700 border border-blue-200/70 text-xs font-semibold shadow-2xs">
                                       <FiUsers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
@@ -2146,10 +2291,8 @@ export default function RiwayatAbsensiContent({ type }) {
                                     </span>
                                   </div>
 
-                                  {/* Divider vertikal pemisah badge dan tombol */}
                                   <div className="h-7 w-px bg-gray-200 hidden sm:block" />
 
-                                  {/* Action Buttons */}
                                   <div className="flex items-center gap-2 shrink-0">
                                     <button
                                       onClick={() => handleOpenPetugasDetail(item)}
@@ -2186,10 +2329,9 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               )}
 
-              {/* VIEW B: CATAT ABSEN PETUGAS (FORM PEMILIHAN PETUGAS YANG WAJIB ABSEN) */}
+              {/* VIEW B: CATAT ABSEN PETUGAS */}
               {petugasView === "catat_absen" && (
                 <div className="space-y-6">
-                  {/* Header Form */}
                   <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex justify-between items-center flex-wrap gap-4">
                     <div>
                       <div className="flex items-center gap-2">
@@ -2214,7 +2356,6 @@ export default function RiwayatAbsensiContent({ type }) {
                   </div>
 
                   <form onSubmit={handleSavePetugasGrupAbsen} className="space-y-6">
-                    {/* Step 1: Konteks Sesi Kegiatan */}
                     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-xs">
                       <div className="bg-blue-50/70 px-6 py-3.5 border-b border-blue-100 flex justify-between items-center">
                         <h4 className="text-sm font-bold text-blue-900">
@@ -2225,7 +2366,6 @@ export default function RiwayatAbsensiContent({ type }) {
                         </span>
                       </div>
                       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* Sesi Kegiatan */}
                         <div>
                           <label className="block text-sm font-bold text-gray-800 mb-2">
                             Sesi Kegiatan Petugas <span className="text-red-500">*</span>
@@ -2254,7 +2394,6 @@ export default function RiwayatAbsensiContent({ type }) {
                           </div>
                         </div>
 
-                        {/* Bagian Sesi */}
                         <div>
                           <label className="block text-sm font-bold text-gray-800 mb-2">
                             Bagian / Isi Sesi (Opsional)
@@ -2290,7 +2429,6 @@ export default function RiwayatAbsensiContent({ type }) {
                           })()}
                         </div>
 
-                        {/* Tanggal Absen */}
                         <div>
                           <label className="block text-sm font-bold text-gray-800 mb-2">
                             Tanggal Kegiatan / Absensi <span className="text-red-500">*</span>
@@ -2309,7 +2447,6 @@ export default function RiwayatAbsensiContent({ type }) {
                           />
                         </div>
 
-                        {/* Catatan Sesi / Instruksi Khusus (Digabung ke Nomor 1) */}
                         <div>
                           <label className="block text-sm font-bold text-gray-800 mb-2">
                             Catatan Sesi / Instruksi Khusus (Opsional)
@@ -2328,7 +2465,6 @@ export default function RiwayatAbsensiContent({ type }) {
                           />
                         </div>
 
-                        {/* Target Jam Info (Otomatis dari Sesi Data Tanpa Input Manual) */}
                         {(() => {
                           const curSesi = (
                             activeTab === "tour_leader" ? tourLeaderSesiList : muthawifSesiList
@@ -2354,7 +2490,6 @@ export default function RiwayatAbsensiContent({ type }) {
                       </div>
                     </div>
 
-                    {/* Step 2: Pilih Tour Leader / Muthawif yang Wajib Absen */}
                     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-xs">
                       <div className="bg-slate-50 px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
@@ -2386,7 +2521,6 @@ export default function RiwayatAbsensiContent({ type }) {
                       </div>
 
                       <div className="p-6 space-y-4">
-                        {/* List Staff Checkboxes */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                           {(activeTab === "tour_leader"
                             ? tourLeaderProfiles
@@ -2421,7 +2555,7 @@ export default function RiwayatAbsensiContent({ type }) {
                                     <input
                                       type="checkbox"
                                       checked={isSelected}
-                                      onChange={() => {}} // handled by parent onClick
+                                      onChange={() => {}}
                                       className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
                                     />
                                     <div className="w-10 h-10 rounded-full bg-[#121c2d] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
@@ -2447,7 +2581,6 @@ export default function RiwayatAbsensiContent({ type }) {
                           )}
                         </div>
 
-                        {/* Selected Count Indicator */}
                         <div className="pt-2 flex justify-between items-center text-xs font-bold text-gray-600">
                           <span>
                             Total Dipilih:{" "}
@@ -2465,9 +2598,6 @@ export default function RiwayatAbsensiContent({ type }) {
                       </div>
                     </div>
 
-
-
-                    {/* Action Buttons */}
                     <div className="flex justify-end gap-3 pt-2">
                       <button
                         type="button"
@@ -2495,10 +2625,9 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               )}
 
-              {/* VIEW C: DETAIL ABSEN PETUGAS (TABEL SELURUH PETUGAS YANG TERPILIH) */}
+              {/* VIEW C: DETAIL ABSEN PETUGAS */}
               {petugasView === "detail" && (
                 <div className="space-y-6">
-                  {/* Header Detail Banner */}
                   <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -2549,7 +2678,6 @@ export default function RiwayatAbsensiContent({ type }) {
                     </div>
                   </div>
 
-                  {/* Tabel Daftar Petugas Terpilih — Menampilkan 8 Kolom Utama + Status */}
                   <div className="bg-white rounded-xl shadow-xs border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto no-scrollbar">
                       <table className="w-full text-left border-collapse">
@@ -2593,12 +2721,9 @@ export default function RiwayatAbsensiContent({ type }) {
 
                               return (
                                 <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                                  {/* NO */}
                                   <td className="py-4 px-4 text-center font-bold text-gray-400 text-xs">
                                     {index + 1}
                                   </td>
-
-                                  {/* TANGGAL & WAKTU */}
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     <div className="flex flex-col items-center">
                                       <span className="font-bold text-gray-900 text-xs">
@@ -2611,8 +2736,6 @@ export default function RiwayatAbsensiContent({ type }) {
                                       </span>
                                     </div>
                                   </td>
-
-                                  {/* USER ID / NAMA PETUGAS */}
                                   <td className="py-4 px-6">
                                     <div className="flex items-center gap-2.5">
                                       <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
@@ -2628,15 +2751,11 @@ export default function RiwayatAbsensiContent({ type }) {
                                       </div>
                                     </div>
                                   </td>
-
-                                  {/* KLOTER */}
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     <span className="inline-block rounded-md bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 border border-blue-200/60 shadow-2xs">
                                       {item.kloter || item.profiles?.kloter?.name || "-"}
                                     </span>
                                   </td>
-
-                                  {/* STATUS HADIR */}
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     <span
                                       className={`inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase border shadow-2xs ${statusInfo.color}`}
@@ -2644,8 +2763,6 @@ export default function RiwayatAbsensiContent({ type }) {
                                       {statusInfo.label}
                                     </span>
                                   </td>
-
-                                  {/* STATUS WAKTU */}
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     {statusInfo.label === "Hadir" && timing ? (
                                       <span
@@ -2663,8 +2780,6 @@ export default function RiwayatAbsensiContent({ type }) {
                                       <span className="text-xs text-gray-400 italic">Bebas</span>
                                     )}
                                   </td>
-
-                                  {/* FOTO */}
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     {item.photo_url ? (
                                       <button
@@ -2685,8 +2800,6 @@ export default function RiwayatAbsensiContent({ type }) {
                                       <span className="text-gray-300 text-xs">–</span>
                                     )}
                                   </td>
-
-                                  {/* KOORDINAT */}
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     {item.latitude && item.longitude ? (
                                       <a
@@ -2704,13 +2817,9 @@ export default function RiwayatAbsensiContent({ type }) {
                                       <span className="text-gray-400 text-xs">–</span>
                                     )}
                                   </td>
-
-                                  {/* CATATAN */}
                                   <td className="py-4 px-6 text-xs text-gray-600 max-w-[180px]">
                                     <div>{item.note ? item.note.replace(/\[.*?\]/g, "").trim() || item.note : "-"}</div>
                                   </td>
-
-                                  {/* AKSI */}
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     <div className="flex items-center justify-center gap-2">
                                       <button
@@ -2745,7 +2854,7 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               )}
 
-              {/* VIEW B: KELOLA SESI ABSEN PETUGAS (INLINE VIEW — BUKAN POPUP, SAMA SEPERTI KELOLA JAMAAH) */}
+              {/* VIEW B: KELOLA SESI ABSEN PETUGAS */}
               {petugasView === "sesi_absen" && (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex-wrap gap-4">
@@ -2754,7 +2863,7 @@ export default function RiwayatAbsensiContent({ type }) {
                         Kelola Sesi Absen Petugas
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">
-                        Daftar sesi serta bagian sesi dan target waktu absensinya 
+                        Daftar sesi serta bagian sesi dan target waktu absensinya
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -2773,7 +2882,6 @@ export default function RiwayatAbsensiContent({ type }) {
                     </div>
                   </div>
 
-                  {/* Tabel Inline Sesi Petugas — Tanpa Filter Tab & Tanpa Kolom Kategori */}
                   <div className="bg-white rounded-xl shadow-xs border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto no-scrollbar">
                       {loadingSesi ? (
@@ -2863,7 +2971,6 @@ export default function RiwayatAbsensiContent({ type }) {
           {/* ── Tab: Jamaah ─────────────────────────────────────────────── */}
           {activeTab === "jamaah" && (
             <div className="space-y-6">
-              {/* VIEW 1: LIST GRUP JAMAAH */}
               {jamaahView === "list" && (
                 <div className="space-y-6">
                   <div className="bg-[#121c2d] text-white p-6 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
@@ -2895,7 +3002,7 @@ export default function RiwayatAbsensiContent({ type }) {
                     <div className="space-y-4">
                       {jamaahGrupList.length === 0 ? (
                         <div className="bg-white rounded-xl border border-gray-100 p-12 text-center text-gray-400 text-sm font-semibold shadow-xs">
-                          Belum ada data grup absensi jamaah. Silakan klik "Tambah Absen" untuk memulai.
+                          Belum ada data grup absensi jamaah. Silakan klik &quot;Tambah Absen&quot; untuk memulai.
                         </div>
                       ) : (
                         jamaahGrupList.map((item, index) => (
@@ -2978,10 +3085,8 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               )}
 
-              {/* VIEW 2: TAMBAH ABSEN JAMAAH — NO DUMMY DATA, KHUSUS SESI JAMAAH */}
               {jamaahView === "tambah_absen" && (
                 <div className="space-y-6">
-                  {/* Step 1: Pilih Konteks Sesi & Kloter */}
                   <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-xs">
                     <div className="bg-blue-50/70 px-6 py-3.5 border-b border-blue-100 flex justify-between items-center">
                       <h4 className="text-sm font-bold text-blue-900">
@@ -2993,7 +3098,6 @@ export default function RiwayatAbsensiContent({ type }) {
                     </div>
 
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Kloter - NO DUMMY DATA */}
                       <div>
                         <label className="block text-sm font-bold text-gray-800 mb-2">
                           Kloter <span className="text-red-500">*</span>
@@ -3035,7 +3139,6 @@ export default function RiwayatAbsensiContent({ type }) {
                         )}
                       </div>
 
-                      {/* Sesi Absen - HANYA MEMUAT SESI JAMAAH (TANPA KATEGORI PETUGAS) */}
                       <div>
                         <label className="block text-sm font-bold text-gray-800 mb-2">
                           Sesi Absen Jamaah <span className="text-red-500">*</span>
@@ -3071,7 +3174,6 @@ export default function RiwayatAbsensiContent({ type }) {
                         )}
                       </div>
 
-                      {/* Bagian Sesi Absen - Mengikuti Bagian/Isi Sesi Jamaah Terpilih */}
                       {(() => {
                         const curSesi = jamaahSesiList.find((s) => s.judul === selectedSesiAbsen);
                         const availableBagian = curSesi?.bagianList || [];
@@ -3084,8 +3186,8 @@ export default function RiwayatAbsensiContent({ type }) {
                               </label>
                               {curSesi && (
                                 <span className="text-xs text-blue-600 font-semibold">
-                                  {availableBagian.length} bagian isi tersedia untuk sesi "
-                                  {curSesi.judul}"
+                                  {availableBagian.length} bagian isi tersedia untuk sesi &quot;
+                                  {curSesi.judul}&quot;
                                 </span>
                               )}
                             </div>
@@ -3117,7 +3219,6 @@ export default function RiwayatAbsensiContent({ type }) {
                     </div>
                   </div>
 
-                  {/* Step 2: Upload File Excel per Tour Leader */}
                   <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-xs">
                     <div className="bg-blue-50/70 px-6 py-3.5 border-b border-blue-100">
                       <h4 className="text-sm font-bold text-blue-900">
@@ -3161,7 +3262,6 @@ export default function RiwayatAbsensiContent({ type }) {
                           </div>
                         </div>
 
-                        {/* File Input */}
                         <div className="border border-gray-300 rounded-xl p-2 flex items-center gap-3 bg-white">
                           <label className="cursor-pointer bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center shadow-2xs">
                             Choose File
@@ -3201,7 +3301,6 @@ export default function RiwayatAbsensiContent({ type }) {
                           </div>
                         )}
 
-                        {/* Preview data */}
                         {excelRows.length > 0 && (
                           <div className="pt-2">
                             <p className="text-xs font-bold text-gray-700 mb-2">
@@ -3277,7 +3376,6 @@ export default function RiwayatAbsensiContent({ type }) {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex justify-between items-center pt-2">
                     <button
                       onClick={() => setJamaahView("list")}
@@ -3308,7 +3406,6 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               )}
 
-              {/* VIEW 3: KELOLA SESI ABSEN JAMAAH (Pasti untuk semua jamaah, tanpa kategori) */}
               {jamaahView === "sesi_absen" && (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex-wrap gap-4">
@@ -3406,7 +3503,6 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               )}
 
-              {/* VIEW 4: DETAIL JAMAAH */}
               {jamaahView === "detail_jamaah" && (
                 <div className="space-y-6">
                   <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -3547,198 +3643,211 @@ export default function RiwayatAbsensiContent({ type }) {
         </main>
       </div>
 
-      {/* ── Modal Konfirmasi Hapus ──────────────────────────────────────── */}
-      {deleteModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
-            <p className="text-xs text-gray-600">
-              Apakah Anda yakin ingin menghapus data{" "}
-              <span className="font-bold text-gray-900">{itemToDelete?.name}</span>? Tindakan ini
-              tidak dapat dibatalkan.
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
+      {/* ── Popup Modal Konfirmasi Hapus (Gaya Notifikasi) ──────────────── */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center animate-scale-up">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <FiTrash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Hapus Data</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Apakah Anda yakin ingin menghapus{" "}
+                <span className="font-bold text-gray-800">&quot;{confirmModal.name}&quot;</span>{" "}
+                secara permanen?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
               <button
-                onClick={() => setDeleteModalOpen(false)}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                type="button"
+                onClick={() =>
+                  setConfirmModal({ show: false, id: null, delType: null, name: "", fullItem: null })
+                }
+                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
               >
                 Batal
               </button>
               <button
+                type="button"
                 onClick={confirmDelete}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors cursor-pointer"
               >
-                Hapus
+                Ya, Hapus
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Modal Tambah/Edit Sesi (Dipisahkan: Jamaah vs Petugas) ───────── */}
+      {/* ── Popup Modal Tambah/Edit Sesi (Gaya Notifikasi) ──────────────── */}
       {showAddSesiModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-8 space-y-6 shadow-2xl my-8">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold text-[#121c2d]">
-                  {editingSesi
-                    ? sesiModalContext === "jamaah"
-                      ? "Edit Sesi Jamaah"
-                      : "Edit Sesi Petugas"
-                    : sesiModalContext === "jamaah"
-                    ? "Tambah Sesi Jamaah"
-                    : "Tambah Sesi Petugas"}
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {sesiModalContext === "jamaah"
-                    ? "Sesi absen untuk seluruh jamaah perjalanan umroh."
-                    : "Sesi absen dengan target waktu untuk Tour Leader & Muthawif."}
-                </p>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-gray-100 overflow-hidden animate-scale-up my-8">
+            <div className="bg-[#121c2d] px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shrink-0">
+                  <FiList className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold">
+                    {editingSesi
+                      ? sesiModalContext === "jamaah"
+                        ? "Edit Sesi Jamaah"
+                        : "Edit Sesi Petugas"
+                      : sesiModalContext === "jamaah"
+                      ? "Tambah Sesi Jamaah"
+                      : "Tambah Sesi Petugas"}
+                  </h2>
+                  <p className="text-[11px] text-gray-300 mt-0.5">
+                    {sesiModalContext === "jamaah"
+                      ? "Sesi absen untuk seluruh jamaah perjalanan umroh."
+                      : "Sesi absen dengan target waktu untuk Tour Leader & Muthawif."}
+                  </p>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowAddSesiModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 cursor-pointer"
+                className="text-gray-300 hover:text-white transition-colors p-1 cursor-pointer"
               >
-                <FiX className="w-6 h-6" />
+                <FiX className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSesi} className="space-y-5">
-              {/* Judul Sesi */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-2">
-                  Judul Sesi <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={judulSesi}
-                  onChange={(e) => setJudulSesi(e.target.value)}
-                  placeholder={
-                    sesiModalContext === "jamaah"
-                      ? "Contoh: Keberangkatan Bandara, Hotel Madinah, dll."
-                      : "Contoh: Briefing Bandara, Distribusi Kamar, Bimbingan Miqat..."
-                  }
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#121c2d] placeholder:text-gray-400 transition-all font-medium"
-                  required
-                />
-              </div>
-
-
-
-              {/* Target Jam Absensi (HANYA UNTUK PETUGAS) */}
-              {sesiModalContext === "petugas" && (
-                <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <FiClock className="w-4 h-4 text-amber-700 shrink-0" />
-                    <span className="text-xs font-bold text-amber-900 uppercase tracking-wide">
-                      Target Rentang Waktu Absensi Petugas
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Target Jam Mulai
-                      </label>
-                      <input
-                        type="time"
-                        value={targetMulai}
-                        onChange={(e) => setTargetMulai(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#121c2d]"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Target Jam Selesai
-                      </label>
-                      <input
-                        type="time"
-                        value={targetSelesai}
-                        onChange={(e) => setTargetSelesai(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#121c2d]"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Keterangan */}
-              <div>
-                <label className="block text-sm font-bold text-gray-800 mb-1.5">
-                  Keterangan / Catatan Sesi
-                </label>
-                <input
-                  type="text"
-                  value={keteranganSesi}
-                  onChange={(e) => setKeteranganSesi(e.target.value)}
-                  placeholder="Keterangan singkat kegiatan sesi..."
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-xs text-gray-900 bg-white focus:outline-none focus:border-[#121c2d] placeholder:text-gray-400"
-                />
-              </div>
-
-              {/* Bagian / Isi Sesi */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-bold text-gray-800">
-                    Bagian / Isi Sesi
+            <form onSubmit={handleSaveSesi} className="p-6 space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                    Judul Sesi <span className="text-red-500">*</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleAddIsiField}
-                    className="text-blue-600 hover:text-blue-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <FiPlus className="w-3.5 h-3.5" /> Tambah Bagian
-                  </button>
+                  <input
+                    type="text"
+                    value={judulSesi}
+                    onChange={(e) => setJudulSesi(e.target.value)}
+                    placeholder={
+                      sesiModalContext === "jamaah"
+                        ? "Contoh: Keberangkatan Bandara, Hotel Madinah, dll."
+                        : "Contoh: Briefing Bandara, Distribusi Kamar, Bimbingan Miqat..."
+                    }
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 bg-white focus:outline-none focus:border-[#121c2d] placeholder:text-gray-400 transition-all font-medium"
+                    required
+                  />
                 </div>
-                <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1 no-scrollbar">
-                  {isiSesiList.map((val, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={val}
-                        onChange={(e) => {
-                          const newList = [...isiSesiList];
-                          newList[idx] = e.target.value;
-                          setIsiSesiList(newList);
-                        }}
-                        className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 bg-white focus:outline-none focus:border-[#121c2d] transition-all font-medium"
-                        placeholder={`Nama bagian ${idx + 1} (cth: Bus 1, Lobby Hotel, Gate 3)`}
-                        required
-                      />
-                      {isiSesiList.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveIsiField(idx)}
-                          className="text-red-500 hover:text-red-700 p-2 cursor-pointer"
-                        >
-                          <FiTrash2 className="w-4 h-4" />
-                        </button>
-                      )}
+
+                {sesiModalContext === "petugas" && (
+                  <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FiClock className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+                        Target Rentang Waktu Absensi Petugas
+                      </span>
                     </div>
-                  ))}
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="mb-1 block text-xs font-bold text-gray-700">
+                          Target Jam Mulai
+                        </label>
+                        <input
+                          type="time"
+                          value={targetMulai}
+                          onChange={(e) => setTargetMulai(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#121c2d]"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-bold text-gray-700">
+                          Target Jam Selesai
+                        </label>
+                        <input
+                          type="time"
+                          value={targetSelesai}
+                          onChange={(e) => setTargetSelesai(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs font-bold text-gray-900 bg-white focus:outline-none focus:border-[#121c2d]"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                    Keterangan / Catatan Sesi
+                  </label>
+                  <input
+                    type="text"
+                    value={keteranganSesi}
+                    onChange={(e) => setKeteranganSesi(e.target.value)}
+                    placeholder="Keterangan singkat kegiatan sesi..."
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 bg-white focus:outline-none focus:border-[#121c2d] placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-xs font-bold text-gray-700">
+                      Bagian / Isi Sesi
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddIsiField}
+                      className="text-blue-600 hover:text-blue-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <FiPlus className="w-3.5 h-3.5" /> Tambah Bagian
+                    </button>
+                  </div>
+                  <div className="space-y-2.5 max-h-44 overflow-y-auto pr-1 no-scrollbar">
+                    {isiSesiList.map((val, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={val}
+                          onChange={(e) => {
+                            const newList = [...isiSesiList];
+                            newList[idx] = e.target.value;
+                            setIsiSesiList(newList);
+                          }}
+                          className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-xs text-gray-900 bg-white focus:outline-none focus:border-[#121c2d] transition-all font-medium"
+                          placeholder={`Nama bagian ${idx + 1} (cth: Bus 1, Lobby Hotel, Gate 3)`}
+                          required
+                        />
+                        {isiSesiList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveIsiField(idx)}
+                            className="text-red-500 hover:text-red-700 p-2 cursor-pointer"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex items-center justify-between border-t border-gray-100 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowAddSesiModal(false)}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-5 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="px-5 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
                 >
-                  Batal
+                  Kembali
                 </button>
                 <button
                   type="submit"
                   disabled={savingSesi}
-                  className="bg-[#121c2d] hover:bg-[#1f2d47] text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer flex items-center gap-2"
+                  className="px-6 py-2.5 text-xs font-bold text-white bg-[#121c2d] hover:bg-[#1a2942] rounded-xl transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-50"
                 >
                   {savingSesi ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Menyimpan...
                     </>
+                  ) : editingSesi ? (
+                    "Perbarui Sesi"
                   ) : (
                     "Simpan Sesi"
                   )}
@@ -3778,7 +3887,6 @@ export default function RiwayatAbsensiContent({ type }) {
             </div>
 
             <form onSubmit={handleSaveMemberAttendance} className="space-y-4">
-              {/* Status Kehadiran Selector */}
               <div>
                 <label className="block text-xs font-bold text-gray-800 mb-1.5">
                   Status Kehadiran <span className="text-red-500">*</span>
@@ -3807,7 +3915,6 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               </div>
 
-              {/* Foto URL */}
               <div>
                 <label className="block text-xs font-bold text-gray-800 mb-1.5">
                   Link / URL Foto Bukti Kehadiran
@@ -3823,7 +3930,6 @@ export default function RiwayatAbsensiContent({ type }) {
                 />
               </div>
 
-              {/* Koordinat GPS */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="block text-xs font-bold text-gray-800">
@@ -3859,7 +3965,6 @@ export default function RiwayatAbsensiContent({ type }) {
                 </div>
               </div>
 
-              {/* Catatan */}
               <div>
                 <label className="block text-xs font-bold text-gray-800 mb-1.5">
                   Catatan / Keterangan Kehadiran
@@ -3875,7 +3980,6 @@ export default function RiwayatAbsensiContent({ type }) {
                 />
               </div>
 
-              {/* Submit Buttons */}
               <div className="flex justify-end gap-3 pt-3">
                 <button
                   type="button"

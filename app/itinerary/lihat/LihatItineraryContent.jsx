@@ -6,7 +6,6 @@ import {
   FiClock, 
   FiMapPin, 
   FiArrowLeft,
-  FiEdit2,
   FiUserCheck,
   FiCalendar,
   FiCompass,
@@ -282,12 +281,6 @@ export default function LihatItineraryContent({ id }) {
 
                 <div className="flex items-center gap-3">
                   <button 
-                    onClick={() => router.push(`/itinerary/edit/${itinerary.id}`)}
-                    className="bg-[#263754] hover:bg-[#1e293b] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer border border-white/10"
-                  >
-                    <FiEdit2 className="w-3.5 h-3.5" /> Edit Itinerary
-                  </button>
-                  <button 
                     onClick={() => router.push("/itinerary")}
                     className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4.5 py-2.5 rounded-xl transition-all border border-white/10 cursor-pointer flex items-center gap-1.5"
                   >
@@ -443,16 +436,10 @@ export default function LihatItineraryContent({ id }) {
                     )}
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 space-y-2">
-                    <button
-                      onClick={() => router.push(`/itinerary/edit/${itinerary.id}`)}
-                      className="w-full py-3 bg-[#263754] hover:bg-[#1e293b] text-white font-bold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                    >
-                      <FiEdit2 className="w-3.5 h-3.5" /> Edit Paket Itinerary Ini
-                    </button>
+                  <div className="pt-4 border-t border-slate-100">
                     <button
                       onClick={() => router.push("/itinerary")}
-                      className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 border border-gray-200/80"
+                      className="w-full py-3 bg-[#263754] hover:bg-[#1e293b] text-white font-bold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                     >
                       <FiArrowLeft className="w-3.5 h-3.5" /> Kembali ke Daftar
                     </button>

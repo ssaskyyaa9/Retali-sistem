@@ -27,6 +27,7 @@ import {
 } from "react-icons/fa";
 import { FaUserGraduate } from "react-icons/fa6";
 import { PlusIcon } from "@/app/components/CustomIcons";
+import { FiCheckCircle, FiAlertCircle, FiTrash2 } from "react-icons/fi";
 
 import { createCeklisAction, updateCeklisAction } from "../actions/ceklis";
 import { supabase } from "@/lib/supabase";
@@ -59,6 +60,19 @@ export default function TugasCeklisPage() {
   const [selectedTaskDetail, setSelectedTaskDetail] = useState(null);
   const [isTaskCompleted, setIsTaskCompleted] = useState(false);
   const [markingDone, setMarkingDone] = useState(false);
+
+  // State Modal Konfirmasi Hapus & Toast Notifikasi
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   // State "Pengguna Tertentu" Tambahan
   const [searchQuery, setSearchQuery] = useState("");
@@ -250,10 +264,10 @@ export default function TugasCeklisPage() {
       .eq("recipient_id", currentUser.id);
 
     if (error) {
-      alert("Gagal menandai tugas selesai: " + error.message);
+      showToast("Gagal menandai tugas selesai: " + error.message, "error");
     } else {
       setIsTaskCompleted(true);
-      alert("Tugas berhasil ditandai selesai!");
+      showToast("Tugas berhasil ditandai selesai!", "success");
 
       // Update UI List seketika menjadi hijau tanpa harus refresh halaman
       setTasks((prevTasks) =>
@@ -431,25 +445,39 @@ export default function TugasCeklisPage() {
     setView(2);
   };
 
-  // Handler Hapus Tugas
-  const handleDeleteTask = async (taskId) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus tugas ini?")) return;
+  // Handler Modal & Hapus Tugas
+  const confirmDeleteTask = (task) => {
+    setTaskToDelete(task);
+    setDeleteModalOpen(true);
+  };
 
-    await supabase.from("checklist_questions").delete().eq("task_id", taskId);
-    await supabase.from("checklist_assignments").delete().eq("task_id", taskId);
+  const executeDeleteTask = async () => {
+    if (!taskToDelete) return;
+    setIsDeleting(true);
 
-    const { error } = await supabase
-      .from("checklist_tasks")
-      .delete()
-      .eq("id", taskId);
+    try {
+      await supabase.from("checklist_questions").delete().eq("task_id", taskToDelete.id);
+      await supabase.from("checklist_assignments").delete().eq("task_id", taskToDelete.id);
 
-    if (error) {
-      alert("Gagal menghapus tugas: " + error.message);
-      return;
+      const { error } = await supabase
+        .from("checklist_tasks")
+        .delete()
+        .eq("id", taskToDelete.id);
+
+      if (error) {
+        showToast("Gagal menghapus tugas: " + error.message, "error");
+        return;
+      }
+
+      setDeleteModalOpen(false);
+      setTaskToDelete(null);
+      showToast("Tugas berhasil dihapus.", "success");
+      fetchTasks();
+    } catch (err) {
+      showToast("Terjadi kesalahan saat menghapus tugas: " + err.message, "error");
+    } finally {
+      setIsDeleting(false);
     }
-
-    alert("Tugas berhasil dihapus.");
-    fetchTasks();
   };
 
   const handleTargetSelection = (targetVal) => {
@@ -483,7 +511,7 @@ export default function TugasCeklisPage() {
 
   const handleRemoveQuestion = (index) => {
     if (questions.length === 1) {
-      alert("Minimal harus ada 1 soal!");
+      showToast("Minimal harus ada 1 soal!", "error");
       return;
     }
     const newQuestions = questions.filter((_, idx) => idx !== index);
@@ -562,7 +590,7 @@ export default function TugasCeklisPage() {
     const validQuestions = questions.filter((q) => q.text.trim() !== "");
 
     if (!taskForm.title.trim() || !taskForm.opensAt || !taskForm.closesAt) {
-      alert("Judul, Waktu Buka, dan Waktu Tutup harus diisi!");
+      showToast("Judul, Waktu Buka, dan Waktu Tutup harus diisi!", "error");
       setLoading(false);
       return;
     }
@@ -571,19 +599,19 @@ export default function TugasCeklisPage() {
     const closeTime = new Date(taskForm.closesAt).getTime();
 
     if (closeTime <= openTime) {
-      alert("Error: Waktu Tutup harus lebih lama dari Waktu Buka!");
+      showToast("Waktu Tutup harus lebih lama dari Waktu Buka!", "error");
       setLoading(false);
       return;
     }
 
     if (selectedRecipients.length === 0) {
-      alert("Pilih minimal 1 orang penerima tugas!");
+      showToast("Pilih minimal 1 orang penerima tugas!", "error");
       setLoading(false);
       return;
     }
 
     if (validQuestions.length === 0) {
-      alert("Daftar soal tidak boleh kosong!");
+      showToast("Daftar soal tidak boleh kosong!", "error");
       setLoading(false);
       return;
     }
@@ -607,12 +635,12 @@ export default function TugasCeklisPage() {
       );
 
       if (!result.success) {
-        alert("Gagal memperbarui tugas: " + result.error);
+        showToast("Gagal memperbarui tugas: " + result.error, "error");
         setLoading(false);
         return;
       }
 
-      alert("Tugas berhasil diperbarui!");
+      showToast("Tugas berhasil diperbarui!", "success");
     } else {
       const result = await createCeklisAction(
         taskForm,
@@ -621,12 +649,12 @@ export default function TugasCeklisPage() {
       );
 
       if (!result.success) {
-        alert("Error: " + result.error);
+        showToast("Gagal membuat tugas: " + result.error, "error");
         setLoading(false);
         return;
       }
 
-      alert("Tugas berhasil dibuat dan dikirim ke petugas!");
+      showToast("Tugas berhasil dibuat dan dikirim ke petugas!", "success");
     }
 
     setTaskForm({ title: "", opensAt: "", closesAt: "" });
@@ -836,8 +864,8 @@ export default function TugasCeklisPage() {
                               Hasil
                             </button>
                             <button
-                              onClick={() => handleDeleteTask(task.id)}
-                              className="px-3.5 py-2 text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100/50 flex items-center gap-1.5 transition-colors"
+                              onClick={() => confirmDeleteTask(task)}
+                              className="px-3.5 py-2 text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-100/50 flex items-center gap-1.5 transition-colors cursor-pointer"
                             >
                               <FaTrash className="w-3 h-3" /> Hapus
                             </button>
@@ -1691,6 +1719,60 @@ export default function TugasCeklisPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Konfirmasi Hapus Tugas Ceklis */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center animate-scale-up">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <FiTrash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Hapus Tugas Ceklis</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Apakah Anda yakin ingin menghapus tugas <span className="font-bold text-gray-800">"{taskToDelete?.title || "Tugas"}"</span> secara permanen?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteModalOpen(false)}
+                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeDeleteTask}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? "Menghapus..." : "Ya, Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
+          <div
+            className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
+              toast.type === "error"
+                ? "bg-rose-50 border-rose-200 text-rose-800"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <FiAlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <FiCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toast.message}</span>
           </div>
         </div>
       )}

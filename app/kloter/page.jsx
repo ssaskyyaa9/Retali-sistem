@@ -5,6 +5,7 @@ import Topbar from "@/app/components/Topbar";
 import PageHeader from "@/app/components/PageHeader";
 import { PlusIcon } from "@/app/components/CustomIcons";
 import { TbPlaneDepartureFilled } from "react-icons/tb";
+import { FiTrash2, FiAlertCircle } from "react-icons/fi";
 import { supabase } from "@/lib/supabase";
 
 const initialForm = {
@@ -24,15 +25,30 @@ function formatDateIndonesian(dateString) {
 }
 
 export default function KloterPage() {
-  const [view, setView] = useState(0); // 0 = Tabel List, 1 = Modal Form Tambah/Edit
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [kloterToDelete, setKloterToDelete] = useState(null);
+  const [view, setView] = useState(0); // 0 = Tabel List, 1 = Popup Modal Form Tambah/Edit
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    id: null,
+    name: "",
+  });
 
   const [kloters, setKloters] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
-  const [success, setSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success",
+  });
   const [loading, setLoading] = useState(false);
+
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3500);
+  };
 
   // Ambil data dari Supabase saat komponen dimuat
   useEffect(() => {
@@ -64,7 +80,6 @@ export default function KloterPage() {
   function openCreateForm() {
     setForm(initialForm);
     setEditingId(null);
-    setSuccess("");
     setView(1);
   }
 
@@ -75,7 +90,6 @@ export default function KloterPage() {
       end_date: kloter.end_date || "",
     });
     setEditingId(kloter.id);
-    setSuccess("");
     setView(1);
   }
 
@@ -89,9 +103,13 @@ export default function KloterPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setSuccess("");
 
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      showToast("Nama kloter wajib diisi!", "error");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     if (editingId) {
       const { error } = await supabase
@@ -105,10 +123,12 @@ export default function KloterPage() {
 
       if (error) {
         console.error("Gagal memperbarui kloter:", error.message);
+        showToast("Terjadi kesalahan: " + error.message, "error");
+        setIsSubmitting(false);
         return;
       }
 
-      setSuccess("Kloter berhasil diperbarui.");
+      showToast("Kloter berhasil diperbarui!");
     } else {
       const { error } = await supabase.from("kloter").insert([
         {
@@ -121,12 +141,15 @@ export default function KloterPage() {
 
       if (error) {
         console.error("Gagal menambahkan kloter:", error.message);
+        showToast("Terjadi kesalahan: " + error.message, "error");
+        setIsSubmitting(false);
         return;
       }
 
-      setSuccess("Kloter berhasil ditambahkan.");
+      showToast("Kloter berhasil ditambahkan!");
     }
 
+    setIsSubmitting(false);
     setForm(initialForm);
     setEditingId(null);
     setView(0);
@@ -134,26 +157,28 @@ export default function KloterPage() {
   }
 
   function confirmDelete(kloter) {
-    setKloterToDelete(kloter);
-    setDeleteModalOpen(true);
+    setConfirmModal({
+      show: true,
+      id: kloter.id,
+      name: kloter.name,
+    });
   }
 
   async function handleDelete() {
-    if (!kloterToDelete) return;
+    const id = confirmModal.id;
+    if (!id) return;
 
-    const { error } = await supabase
-      .from("kloter")
-      .delete()
-      .eq("id", kloterToDelete.id);
+    setConfirmModal({ show: false, id: null, name: "" });
+
+    const { error } = await supabase.from("kloter").delete().eq("id", id);
 
     if (error) {
       console.error("Gagal menghapus kloter:", error.message);
+      showToast("Gagal menghapus: " + error.message, "error");
       return;
     }
 
-    setSuccess("Kloter berhasil dihapus.");
-    setDeleteModalOpen(false);
-    setKloterToDelete(null);
+    showToast("Kloter berhasil dihapus secara permanen.");
     fetchKloters();
   }
 
@@ -175,19 +200,25 @@ export default function KloterPage() {
         }
       `}</style>
 
-      <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans">
+      <div className="w-full bg-[#f8fafc] h-screen overflow-hidden flex flex-col font-sans relative">
         <Topbar title="Kloter" breadcrumbs={["Dashboard", "Kloter"]} />
 
-        <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
-          {success && (
+        {toast.show && (
+          <div className="fixed top-6 right-6 z-50 animate-bounce">
             <div
-              role="status"
-              className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 shadow-sm"
+              className={`px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 text-xs font-bold ${
+                toast.type === "error"
+                  ? "bg-rose-50 border-rose-200 text-rose-800"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-800"
+              }`}
             >
-              {success}
+              <FiAlertCircle className="w-4 h-4" />
+              {toast.message}
             </div>
-          )}
+          </div>
+        )}
 
+        <main className="p-6 lg:p-8 space-y-6 flex-1 max-w-7xl w-full mx-auto no-scrollbar overflow-y-auto">
           <PageHeader
             title="Daftar Kloter"
             description={`Kelola data kloter perjalanan umrah. Total kloter saat ini: ${kloters.length}`}
@@ -316,170 +347,144 @@ export default function KloterPage() {
         </main>
       </div>
 
-      {/* Modal Form Tambah / Edit Kloter */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 transition-all duration-300 ease-in-out ${
-          view === 1
-            ? "opacity-100 visible pointer-events-auto"
-            : "opacity-0 invisible pointer-events-none"
-        }`}
-      >
-        <div
-          className={`w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
-            view === 1 ? "scale-100 opacity-100" : "scale-95 opacity-0"
-          }`}
-        >
-          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                <TbPlaneDepartureFilled className="text-[#EAB308]" />
+      {/* Popup Modal Form Tambah / Edit Kloter */}
+      {view === 1 && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-gray-100 overflow-hidden animate-scale-up">
+            <div className="bg-[#121c2d] px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shrink-0">
+                  <TbPlaneDepartureFilled className="w-5 h-5 text-amber-400" />
+                </div>
+                <h2 className="text-sm font-bold">
+                  {editingId ? "Edit Kloter" : "Tambah Kloter"}
+                </h2>
               </div>
-              <h2 className="text-sm font-bold">
-                {editingId ? "Edit Kloter" : "Tambah Kloter"}
-              </h2>
             </div>
-            <button
-              onClick={closeModal}
-              className="text-gray-300 hover:text-white transition-colors p-1"
-            >
-              ✕
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-4">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="mb-1.5 block text-xs font-bold text-gray-700"
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="mb-1.5 block text-xs font-bold text-gray-700"
+                  >
+                    Nama Kloter <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    value={form.name}
+                    onChange={handleChange}
+                    placeholder="Nama Kloter"
+                    required
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="start_date"
+                      className="mb-1.5 block text-xs font-bold text-gray-700"
+                    >
+                      Tanggal Mulai <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="start_date"
+                      name="start_date"
+                      type="date"
+                      value={form.start_date}
+                      onChange={handleChange}
+                      required
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:outline-none focus:border-[#121c2d]"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="end_date"
+                      className="mb-1.5 block text-xs font-bold text-gray-700"
+                    >
+                      Tanggal Berakhir <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="end_date"
+                      name="end_date"
+                      type="date"
+                      value={form.end_date}
+                      onChange={handleChange}
+                      required
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:outline-none focus:border-[#121c2d]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-5 py-2.5 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                 >
-                  Nama Kloter <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="Nama Kloter"
-                  required
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
-                />
+                  Kembali
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 text-xs font-bold text-white bg-[#121c2d] hover:bg-[#1a2942] rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting
+                    ? "Menyimpan..."
+                    : editingId
+                    ? "Perbarui Kloter"
+                    : "Simpan Kloter"}
+                </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="start_date"
-                    className="mb-1.5 block text-xs font-bold text-gray-700"
-                  >
-                    Tanggal Mulai <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="start_date"
-                    name="start_date"
-                    type="date"
-                    value={form.start_date}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="end_date"
-                    className="mb-1.5 block text-xs font-bold text-gray-700"
-                  >
-                    Tanggal Berakhir <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="end_date"
-                    name="end_date"
-                    type="date"
-                    value={form.end_date}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 focus:border-[#1b3167] focus:outline-none focus:ring-1 focus:ring-[#1b3167]"
-                  />
-                </div>
-              </div>
+      {/* Popup Modal Konfirmasi Hapus */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-gray-100 space-y-4 text-center animate-scale-up">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <FiTrash2 className="w-6 h-6" />
             </div>
-
-            <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Hapus Kloter</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Apakah Anda yakin ingin menghapus kloter{" "}
+                <span className="font-bold text-gray-800">
+                  "{confirmModal.name}"
+                </span>{" "}
+                secara permanen?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
               <button
                 type="button"
-                onClick={closeModal}
-                className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
+                onClick={() =>
+                  setConfirmModal({ show: false, id: null, name: "" })
+                }
+                className="px-4 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
               >
                 Batal
               </button>
               <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1b3167] px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#15254f] transition-colors"
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2.5 text-xs font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors"
               >
-                Simpan
+                Ya, Hapus
               </button>
             </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Modal Hapus */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 transition-all duration-300 ease-in-out ${
-          deleteModalOpen
-            ? "opacity-100 visible pointer-events-auto"
-            : "opacity-0 invisible pointer-events-none"
-        }`}
-      >
-        <div
-          className={`w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out ${
-            deleteModalOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
-          }`}
-        >
-          <div className="flex items-center justify-between bg-[#1b3167] px-6 py-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/20 shadow-2xs shrink-0">
-                <TbPlaneDepartureFilled className="text-[#EAB308]" />
-              </div>
-              <h2 className="text-sm font-bold">Hapus Kloter</h2>
-            </div>
-            <button
-              onClick={() => setDeleteModalOpen(false)}
-              className="text-gray-300 hover:text-white transition-colors p-1"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="p-6 text-center">
-            <p className="text-lg text-gray-600 font-medium leading-relaxed">
-              Yakin Untuk Menghapus Kloter Ini? <br />
-              <span className="text-lg font-bold text-gray-900 mt-1 block">
-                "{kloterToDelete?.name}"
-              </span>
-            </p>
-          </div>
-
-          <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 bg-gray-50/70 px-6 py-3.5">
-            <button
-              type="button"
-              onClick={() => setDeleteModalOpen(false)}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-colors"
-            >
-              Tidak
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700 transition-colors"
-            >
-              Ya, Hapus
-            </button>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
