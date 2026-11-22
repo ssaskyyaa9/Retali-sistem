@@ -7,10 +7,18 @@ export async function createTourLeaderAction(formData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY,
   );
 
+  const email = (formData.email || "").trim().toLowerCase();
+  if (!email.endsWith("@retali.com")) {
+    return {
+      success: false,
+      error: "Email petugas wajib berakhiran @retali.com (domain lain tidak diizinkan)",
+    };
+  }
+
   // 1. Create user di auth.users
   const { data: authData, error: authError } =
     await supabaseAdmin.auth.admin.createUser({
-      email: formData.email,
+      email: email,
       password: formData.password,
       email_confirm: true,
     });
@@ -23,7 +31,7 @@ export async function createTourLeaderAction(formData) {
     {
       id: userId,
       username: formData.namaLengkap,
-      email: formData.email,
+      email: email,
       phone: formData.noTelepon,
       role: "tour_leader",
       kloter_id: formData.kloterId || null,
@@ -44,14 +52,34 @@ export async function updateTourLeaderAction(userId, formData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY,
   );
 
-  // Update tabel profiles beserta kloter_id
+  const email = (formData.email || "").trim().toLowerCase();
+  if (!email.endsWith("@retali.com")) {
+    return {
+      success: false,
+      error: "Email petugas wajib berakhiran @retali.com (domain lain tidak diizinkan)",
+    };
+  }
+
+  // 1. Update email di Supabase Auth (auth.users)
+  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+    userId,
+    { email: email, email_confirm: true }
+  );
+  if (authError) {
+    return {
+      success: false,
+      error: "Gagal memperbarui email di auth: " + authError.message,
+    };
+  }
+
+  // 2. Update tabel profiles beserta kloter_id
   const { error: profileError } = await supabaseAdmin
     .from("profiles")
     .update({
       username: formData.namaLengkap,
-      email: formData.email,
+      email: email,
       phone: formData.noTelepon,
-      kloter_id: formData.kloterId || null, // <-- TAMBAHKAN INI
+      kloter_id: formData.kloterId || null,
     })
     .eq("id", userId);
 
@@ -149,6 +177,14 @@ export async function deleteTourLeaderAction(userId) {
       .from("curriculum_tour_leader")
       .update({ created_by: null })
       .eq("created_by", userId);
+      await supabaseAdmin
+          .from("koper")
+          .update({ scanned_by: null })
+          .eq("scanned_by", userId);
+        await supabaseAdmin
+          .from("passport_scans")
+          .update({ scanned_by: null })
+          .eq("scanned_by", userId);
 
     // 9. Hapus dari tabel public.profiles di Supabase
     const { error: profileError } = await supabaseAdmin

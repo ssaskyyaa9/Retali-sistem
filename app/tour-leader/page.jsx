@@ -51,6 +51,7 @@ export default function TourLeaderPage() {
 
   const [formData, setFormData] = useState({
     namaLengkap: "",
+    emailPrefix: "",
     email: "",
     noTelepon: "",
     password: "",
@@ -68,6 +69,18 @@ export default function TourLeaderPage() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleEmailChange = (e) => {
+    let val = e.target.value.trim().toLowerCase();
+    if (val.includes("@")) {
+      val = val.split("@")[0];
+    }
+    setFormData((prev) => ({
+      ...prev,
+      emailPrefix: val,
+      email: val ? `${val}@retali.com` : "",
     }));
   };
 
@@ -103,15 +116,28 @@ export default function TourLeaderPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const cleanPrefix = (formData.emailPrefix || "").trim().toLowerCase();
+    if (!cleanPrefix) {
+      showToast("Email petugas wajib diisi", "error");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const fullEmail = `${cleanPrefix}@retali.com`;
+    const payload = {
+      ...formData,
+      email: fullEmail,
+    };
+
     let result;
 
     // Cek apakah ini mode Edit atau mode Tambah
     if (editingId) {
       // Mode Edit
-      result = await updateTourLeaderAction(editingId, formData);
+      result = await updateTourLeaderAction(editingId, payload);
     } else {
       // Mode Tambah
-      result = await createTourLeaderAction(formData);
+      result = await createTourLeaderAction(payload);
     }
 
     if (!result.success) {
@@ -127,6 +153,7 @@ export default function TourLeaderPage() {
     setEditingId(null); // Pastikan reset editingId
     setFormData({
       namaLengkap: "",
+      emailPrefix: "",
       email: "",
       noTelepon: "",
       password: "",
@@ -306,6 +333,7 @@ export default function TourLeaderPage() {
                     setEditingId(null);
                     setFormData({
                       namaLengkap: "",
+                      emailPrefix: "",
                       email: "",
                       noTelepon: "",
                       password: "",
@@ -398,11 +426,19 @@ export default function TourLeaderPage() {
                                 onClick={() => {
                                   // Logika untuk set data form dan buka modal edit
                                   setEditingId(tl.realId);
+                                  let prefix = "";
+                                  if (tl.email && tl.email !== "-") {
+                                    prefix = tl.email.includes("@")
+                                      ? tl.email.split("@")[0]
+                                      : tl.email;
+                                  }
                                   setFormData({
                                     namaLengkap:
                                       tl.name === "Unknown" ? "" : tl.name,
-                                    email: tl.email === "-" ? "" : tl.email,
+                                    emailPrefix: prefix,
+                                    email: prefix ? `${prefix}@retali.com` : "",
                                     noTelepon: tl.phone === "-" ? "" : tl.phone,
+                                    password: "",
                                     kloterId: tl.kloterId,
                                   });
                                   setShowAddModal(true);
@@ -558,38 +594,33 @@ export default function TourLeaderPage() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
+                      <div>
                           <label className="mb-1.5 block text-xs font-bold text-gray-700">
                             Email <span className="text-red-500">*</span>
                           </label>
-                          <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            placeholder="email@contoh.com"
-                            required
-                            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
-                          />
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              name="emailPrefix"
+                              value={formData.emailPrefix || ""}
+                              onChange={handleEmailChange}
+                              placeholder="nama petugas"
+                              required
+                              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
+                            />
+                            <input
+                              type="text"
+                              value="@retali.com"
+                              disabled
+                              readOnly
+                              tabIndex={-1}
+                              className="w-28 shrink-0 rounded-xl border border-gray-200 bg-gray-100 px-2.5 py-3 text-xs font-bold text-gray-500 select-none cursor-not-allowed text-center"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                            Nomor Telepon <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="tel"
-                            name="noTelepon"
-                            value={formData.noTelepon}
-                            onChange={handleInputChange}
-                            placeholder="Cth: 08123456789"
-                            required
-                            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
-                          />
-                        </div>
-                      </div>
 
-                      {/* Render Password HANYA saat Create (editingId bernilai null) */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Render Password HANYA saat Create (editingId bernilai null) */}
                       {!editingId && (
                         <div>
                           <label className="mb-1.5 block text-xs font-bold text-gray-700">
@@ -653,6 +684,21 @@ export default function TourLeaderPage() {
                           </div>
                         </div>
                       )}
+                        <div>
+                          <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                            Nomor Telepon <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="tel"
+                            name="noTelepon"
+                            value={formData.noTelepon}
+                            onChange={handleInputChange}
+                            placeholder="Cth: 08123456789"
+                            required
+                            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
+                          />
+                        </div>
+                      </div>
 
                       <div>
                         <label className="mb-1.5 block text-xs font-bold text-gray-700">

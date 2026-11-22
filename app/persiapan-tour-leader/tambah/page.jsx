@@ -5,6 +5,8 @@ import { FaArrowLeft, FaCheck } from "react-icons/fa6";
 import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import CoverImageUpload from "@/app/components/CoverImageUpload";
+import { uploadCoverImage } from "@/lib/uploadCover";
 import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
 
@@ -28,6 +30,8 @@ export default function TambahMateriPage() {
     anakSubjudul: "",
     deskripsi: "",
   });
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
 
   const modules = {
     toolbar: [
@@ -61,20 +65,35 @@ export default function TambahMateriPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
+      // Unggah cover image jika ada
+      let uploadedCoverUrl = null;
+      if (coverFile) {
+        uploadedCoverUrl = await uploadCoverImage(coverFile);
+      }
+
       // SIMPAN MASING-MASING KE KOLOM SUPABASE YANG SESUAI:
-      // title, sub_title, description, content
-      const { error } = await supabase.from("persiapan_diniyah").insert([
-        {
-          title: form.bab.trim(),
-          sub_title: form.subjudul ? form.subjudul.trim() : null,
-          description: form.anakSubjudul ? form.anakSubjudul.trim() : null,
-          content: form.deskripsi,
-          category: "diniyah",
-          visibility: "public",
-          is_published: true,
-          created_by: user ? user.id : null,
-        },
-      ]);
+      // title, sub_title, description, content, cover, attachment_url
+      const payload = {
+        title: form.bab.trim(),
+        sub_title: form.subjudul ? form.subjudul.trim() : null,
+        description: form.anakSubjudul ? form.anakSubjudul.trim() : null,
+        content: form.deskripsi,
+        cover: uploadedCoverUrl,
+        attachment_url: uploadedCoverUrl,
+        category: "diniyah",
+        visibility: "public",
+        is_published: true,
+        created_by: user ? user.id : null,
+      };
+
+      let { error } = await supabase.from("persiapan_diniyah").insert([payload]);
+
+      // Fallback jika kolom 'cover' belum ditambahkan di Supabase
+      if (error && (error.code === "42703" || error.message?.includes("cover"))) {
+        const { cover, ...fallbackPayload } = payload;
+        const res = await supabase.from("persiapan_diniyah").insert([fallbackPayload]);
+        error = res.error;
+      }
 
       if (error) throw error;
 
@@ -167,6 +186,25 @@ export default function TambahMateriPage() {
                 }
                 placeholder="Masukkan anak subjudul..."
                 className="w-full border border-gray-300 rounded-xl p-3 text-sm text-gray-800 focus:ring-2 focus:ring-[#263754] focus:border-transparent outline-none transition bg-white"
+              />
+            </div>
+
+            {/* Input Foto Cover Materi (Dibawah Deskripsi, Diatas Materi Penjelasan) */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Foto Cover Materi (Opsional)
+              </label>
+              <CoverImageUpload
+                coverUrl={coverPreview}
+                disabled={loading}
+                onCoverChange={(file, previewUrl) => {
+                  setCoverFile(file);
+                  setCoverPreview(previewUrl);
+                }}
+                onCoverRemove={() => {
+                  setCoverFile(null);
+                  setCoverPreview(null);
+                }}
               />
             </div>
 

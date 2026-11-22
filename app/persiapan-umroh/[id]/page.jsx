@@ -11,6 +11,8 @@ import {
 import { FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import CoverImageUpload from "@/app/components/CoverImageUpload";
+import { uploadCoverImage } from "@/lib/uploadCover";
 import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
 import { exportMateriToPDF } from "@/lib/exportPdf";
@@ -78,14 +80,17 @@ export default function DetailMateriPage() {
     }
   };
 
-  // State langsung memetakan 4 kolom database: title, sub_title, description, content
+  // State langsung memetakan kolom database: title, sub_title, description, content, cover
   const [materi, setMateri] = useState({
     id: "",
     title: "",
     sub_title: "",
     description: "",
     content: "",
+    cover: null,
   });
+  const [newCoverFile, setNewCoverFile] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   // Konfigurasi toolbar editor ala Microsoft Word
   const modules = {
@@ -121,11 +126,21 @@ export default function DetailMateriPage() {
         }
 
         // 2. Ambil Data Detail Materi dari Supabase (persiapan_teknis)
-        const { data: dataMateri, error } = await supabase
+        let { data: dataMateri, error } = await supabase
           .from("persiapan_teknis")
-          .select("id, title, sub_title, description, content")
+          .select("id, title, sub_title, description, content, cover, attachment_url")
           .eq("id", id)
           .single();
+
+        if (error && (error.code === "42703" || error.message?.includes("cover"))) {
+          const fallback = await supabase
+            .from("persiapan_teknis")
+            .select("id, title, sub_title, description, content, attachment_url")
+            .eq("id", id)
+            .single();
+          dataMateri = fallback.data;
+          error = fallback.error;
+        }
 
         if (error) throw error;
 
@@ -136,6 +151,7 @@ export default function DetailMateriPage() {
             sub_title: dataMateri.sub_title || "",
             description: dataMateri.description || "",
             content: dataMateri.content || "",
+            cover: dataMateri.cover || dataMateri.attachment_url || null,
           });
         }
       } catch (err) {
@@ -155,7 +171,7 @@ export default function DetailMateriPage() {
     return html.replace(/&nbsp;/g, " ").replace(/\u00a0/g, " ");
   };
 
-  // Fungsi Simpan Perubahan saat Edit ke 4 Kolom Database
+  // Fungsi Simpan Perubahan saat Edit ke Kolom Database
   const handleSave = async () => {
     try {
       if (!materi.title || !materi.title.trim()) {
@@ -163,18 +179,38 @@ export default function DetailMateriPage() {
         return;
       }
 
+      setSaving(true);
+      let finalCover = materi.cover;
+      if (newCoverFile) {
+        finalCover = await uploadCoverImage(newCoverFile);
+      }
+
       const payload = {
         title: materi.title.trim(),
         sub_title: materi.sub_title ? materi.sub_title.trim() : null,
         description: materi.description ? materi.description.trim() : null,
         content: materi.content,
+        cover: finalCover,
+        attachment_url: finalCover,
       };
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("persiapan_teknis")
         .update(payload)
         .eq("id", id)
         .select();
+
+      // Fallback jika kolom 'cover' belum ditambahkan di Supabase
+      if (error && (error.code === "42703" || error.message?.includes("cover"))) {
+        const { cover, ...fallbackPayload } = payload;
+        const res = await supabase
+          .from("persiapan_teknis")
+          .update(fallbackPayload)
+          .eq("id", id)
+          .select();
+        data = res.data;
+        error = res.error;
+      }
 
       if (error) {
         console.error("Supabase Update Error:", error);
@@ -190,11 +226,15 @@ export default function DetailMateriPage() {
         return;
       }
 
+      setMateri((prev) => ({ ...prev, cover: finalCover }));
+      setNewCoverFile(null);
       setIsEditing(false);
       showToast("Materi persiapan teknis berhasil disimpan!", "success");
     } catch (err) {
       console.error("System Error:", err);
       showToast("Terjadi kesalahan sistem saat menyimpan.", "error");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -206,6 +246,7 @@ export default function DetailMateriPage() {
         sub_title: materi.sub_title,
         description: materi.description,
         content: materi.content,
+        cover: materi.cover,
         onAfterPrint: () => {
           setIsExporting(false);
           showToast("Materi berhasil diekspor ke PDF!", "success");
@@ -350,6 +391,25 @@ export default function DetailMateriPage() {
                   />
                 </div>
 
+                {/* 3.5. Foto Cover Materi saat Edit */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Foto Cover Materi (Opsional)
+                  </label>
+                  <CoverImageUpload
+                    coverUrl={materi.cover}
+                    disabled={saving}
+                    onCoverChange={(file, previewUrl) => {
+                      setNewCoverFile(file);
+                      setMateri({ ...materi, cover: previewUrl });
+                    }}
+                    onCoverRemove={() => {
+                      setNewCoverFile(null);
+                      setMateri({ ...materi, cover: null });
+                    }}
+                  />
+                </div>
+
                 {/* 4. Content (Rich Text Editor) */}
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
@@ -405,6 +465,17 @@ export default function DetailMateriPage() {
                   <p className="text-sm text-gray-500 font-normal !not-italic leading-relaxed break-words mt-1">
                     {materi.description}
                   </p>
+                )}
+
+                {/* 3.5. Menampilkan Cover Image Utuh (Jika ada) */}
+                {materi.cover && (
+                  <div className="w-full my-5 bg-slate-50/80 border border-slate-200/80 rounded-2xl p-3 md:p-4 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={materi.cover}
+                      alt={materi.title || "Cover Materi"}
+                      className="w-auto h-auto max-h-[460px] max-w-full object-contain rounded-xl shadow-2xs"
+                    />
+                  </div>
                 )}
 
                 {/* Garis Pemisah Antara Header dan Konten Materi */}

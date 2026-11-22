@@ -8,9 +8,17 @@ export async function createMuthawifAction(formData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY,
   );
 
+  const email = (formData.email || "").trim().toLowerCase();
+  if (!email.endsWith("@retali.com")) {
+    return {
+      success: false,
+      error: "Email muthawif wajib berakhiran @retali.com (domain lain tidak diizinkan)",
+    };
+  }
+
   const { data: authData, error: authError } =
     await supabaseAdmin.auth.admin.createUser({
-      email: formData.email,
+      email: email,
       password: formData.password,
       email_confirm: true,
     });
@@ -22,7 +30,7 @@ export async function createMuthawifAction(formData) {
     {
       id: userId,
       username: formData.namaLengkap,
-      email: formData.email,
+      email: email,
       phone: formData.noTelepon,
       role: "muthawif",
       kloter_id: formData.kloterId || null, // <-- Menggunakan kloter_id langsung
@@ -44,11 +52,32 @@ export async function updateMuthawifAction(userId, formData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY,
   );
 
+  const email = (formData.email || "").trim().toLowerCase();
+  if (!email.endsWith("@retali.com")) {
+    return {
+      success: false,
+      error: "Email muthawif wajib berakhiran @retali.com (domain lain tidak diizinkan)",
+    };
+  }
+
+  // 1. Update email di Supabase Auth (auth.users)
+  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+    userId,
+    { email: email, email_confirm: true }
+  );
+  if (authError) {
+    return {
+      success: false,
+      error: "Gagal memperbarui email di auth: " + authError.message,
+    };
+  }
+
+  // 2. Update tabel profiles
   const { error: profileError } = await supabaseAdmin
     .from("profiles")
     .update({
       username: formData.namaLengkap,
-      email: formData.email,
+      email: email,
       phone: formData.noTelepon,
       kloter_id: formData.kloterId || null, // <-- Menggunakan kloter_id langsung
     })

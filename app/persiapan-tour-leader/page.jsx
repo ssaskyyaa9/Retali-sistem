@@ -84,11 +84,20 @@ export default function PersiapanTourLeaderPage() {
           }
         }
 
-        // 2. Ambil data daftar materi dari Supabase (termasuk sub_title dan content)
-        const { data, error } = await supabase
+        // 2. Ambil data daftar materi dari Supabase (termasuk sub_title, content, cover)
+        let { data, error } = await supabase
           .from("persiapan_diniyah")
-          .select("id, title, sub_title, description, content")
+          .select("id, title, sub_title, description, content, cover, attachment_url")
           .order("created_at", { ascending: false });
+
+        if (error && (error.code === "42703" || error.message?.includes("cover"))) {
+          const fallback = await supabase
+            .from("persiapan_diniyah")
+            .select("id, title, sub_title, description, content, attachment_url")
+            .order("created_at", { ascending: false });
+          data = fallback.data;
+          error = fallback.error;
+        }
 
         if (error) throw error;
 
@@ -146,6 +155,7 @@ export default function PersiapanTourLeaderPage() {
         sub_title: dataToExport.sub_title,
         description: dataToExport.description || dataToExport.anakSubjudul,
         content: dataToExport.content,
+        cover: dataToExport.cover || dataToExport.attachment_url,
         onAfterPrint: () => {
           setExportingId(null);
           showToast("Materi berhasil diekspor ke PDF!", "success");
@@ -212,16 +222,36 @@ export default function PersiapanTourLeaderPage() {
                 className="bg-white rounded-2xl shadow-xs border border-gray-200/80 p-6 md:p-7 relative transition-all duration-200 cursor-pointer hover:border-gray-300 hover:shadow-md hover:-translate-y-0.5 group"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  {/* Bagian Kiri: Judul & Deskripsi */}
-                  <div className="space-y-1 flex-1 min-w-0 pr-2">
-                    <h2 className="text-xl md:text-2xl font-bold text-[#0f172a] tracking-tight group-hover:text-amber-600 transition-colors">
-                      {item.title || item.bab}
-                    </h2>
-                    <p className="text-sm text-gray-500 font-normal leading-relaxed line-clamp-2">
-                      {item.description ||
-                        item.subjudul ||
-                        "Belum ada deskripsi untuk materi ini."}
-                    </p>
+                  {/* Bagian Kiri: Square Preview Cover & Judul/Deskripsi */}
+                  <div className="flex items-center gap-4 flex-1 min-w-0 pr-2">
+                    {/* Square Preview */}
+                    <div className="w-18 h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-2xl shrink-0 overflow-hidden border border-gray-200 bg-slate-50 flex items-center justify-center p-1.5 shadow-2xs group-hover:border-amber-300/80 transition-colors">
+                      {item.cover || item.attachment_url ? (
+                        <img
+                          src={item.cover || item.attachment_url}
+                          alt={item.title || "Cover"}
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      ) : (
+                        <img
+                          src="/logoretali-ungu.png"
+                          alt="Retali Logo"
+                          className="w-10 h-10 md:w-11 md:h-11 object-contain grayscale opacity-30 group-hover:opacity-40 transition-opacity"
+                        />
+                      )}
+                    </div>
+
+                    {/* Judul & Deskripsi */}
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <h2 className="text-xl md:text-2xl font-bold text-[#0f172a] tracking-tight group-hover:text-amber-600 transition-colors">
+                        {item.title || item.bab}
+                      </h2>
+                      <p className="text-sm text-gray-500 font-normal leading-relaxed line-clamp-2">
+                        {item.description ||
+                          item.subjudul ||
+                          "Belum ada deskripsi untuk materi ini."}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Bagian Kanan: Tombol Aksi */}

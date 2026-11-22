@@ -39,6 +39,14 @@ function LoginForm() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (email.trim().toLowerCase().endsWith("@retali.com")) {
+      setError(
+        "Akses ditolak! Akun Petugas (@retali.com) hanya dapat login melalui Aplikasi Mobile."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {

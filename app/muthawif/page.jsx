@@ -52,6 +52,7 @@ export default function MuthawifPage() {
 
   const [formData, setFormData] = useState({
     namaLengkap: "",
+    emailPrefix: "",
     email: "",
     noTelepon: "",
     password: "",
@@ -69,6 +70,18 @@ export default function MuthawifPage() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleEmailChange = (e) => {
+    let val = e.target.value.trim().toLowerCase();
+    if (val.includes("@")) {
+      val = val.split("@")[0];
+    }
+    setFormData((prev) => ({
+      ...prev,
+      emailPrefix: val,
+      email: val ? `${val}@retali.com` : "",
     }));
   };
 
@@ -102,11 +115,24 @@ export default function MuthawifPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const cleanPrefix = (formData.emailPrefix || "").trim().toLowerCase();
+    if (!cleanPrefix) {
+      showToast("Email muthawif wajib diisi", "error");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const fullEmail = `${cleanPrefix}@retali.com`;
+    const payload = {
+      ...formData,
+      email: fullEmail,
+    };
+
     let result;
     if (editingId) {
-      result = await updateMuthawifAction(editingId, formData);
+      result = await updateMuthawifAction(editingId, payload);
     } else {
-      result = await createMuthawifAction(formData);
+      result = await createMuthawifAction(payload);
     }
 
     if (!result.success) {
@@ -230,6 +256,7 @@ export default function MuthawifPage() {
       setEditingId(null);
       setFormData({
         namaLengkap: "",
+        emailPrefix: "",
         email: "",
         noTelepon: "",
         password: "",
@@ -306,6 +333,7 @@ export default function MuthawifPage() {
                     setEditingId(null);
                     setFormData({
                       namaLengkap: "",
+                      emailPrefix: "",
                       email: "",
                       noTelepon: "",
                       password: "",
@@ -397,10 +425,17 @@ export default function MuthawifPage() {
                               <button
                                 onClick={() => {
                                   setEditingId(mt.realId);
+                                  let prefix = "";
+                                  if (mt.email && mt.email !== "-") {
+                                    prefix = mt.email.includes("@")
+                                      ? mt.email.split("@")[0]
+                                      : mt.email;
+                                  }
                                   setFormData({
                                     namaLengkap:
                                       mt.name === "Unknown" ? "" : mt.name,
-                                    email: mt.email === "-" ? "" : mt.email,
+                                    emailPrefix: prefix,
+                                    email: prefix ? `${prefix}@retali.com` : "",
                                     noTelepon: mt.phone === "-" ? "" : mt.phone,
                                     password: "",
                                     kloterId: mt.kloterId,
@@ -562,38 +597,33 @@ export default function MuthawifPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div>
                     <label className="mb-1.5 block text-xs font-bold text-gray-700">
                       Email <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="email@contoh.com"
-                      required
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        name="emailPrefix"
+                        value={formData.emailPrefix || ""}
+                        onChange={handleEmailChange}
+                        placeholder="nama petugas"
+                        required
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
+                      />
+                      <input
+                        type="text"
+                        value="@retali.com"
+                        disabled
+                        readOnly
+                        tabIndex={-1}
+                        className="w-28 shrink-0 rounded-xl border border-gray-200 bg-gray-100 px-2.5 py-3 text-xs font-bold text-gray-500 select-none cursor-not-allowed text-center"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                      Nomor Telepon <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      name="noTelepon"
-                      value={formData.noTelepon}
-                      onChange={handleInputChange}
-                      placeholder="Cth: 08123456789"
-                      required
-                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
-                    />
-                  </div>
-                </div>
 
-                {/* Render Password HANYA saat Create (editingId bernilai null) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Render Password HANYA saat Create (editingId bernilai null) */}
                 {!editingId && (
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-gray-700">
@@ -657,6 +687,23 @@ export default function MuthawifPage() {
                     </div>
                   </div>
                 )}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                      Nomor Telepon <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="noTelepon"
+                      value={formData.noTelepon}
+                      onChange={handleInputChange}
+                      placeholder="Cth: 08123456789"
+                      required
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#121c2d]"
+                    />
+                  </div>
+                </div>
+
+                
 
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-gray-700">
