@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2, TbQrcode, TbCopy, TbCheck, TbEye } from "react-icons/tb";
+import { TbRefresh, TbDownload, TbTrash, TbAlertTriangle, TbX, TbSearch, TbChevronLeft, TbChevronRight, TbLoader2, TbQrcode, TbCopy, TbCheck, TbEye, TbMapPin } from "react-icons/tb";
 import Topbar from "@/app/components/Topbar";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
@@ -167,22 +167,21 @@ export default function RiwayatScanPage() {
 
     let rows = [];
     if (activeTab === "koper") {
-      rows.push(["No", "Kode Koper", "Nama Pemilik", "No Telepon", "Kloter", "Waktu Scan"]);
+      rows.push(["No", "Kode Koper", "Nama Pemilik", "No Telepon", "Kloter", "Waktu Scan", "Latitude", "Longitude"]);
       activeData.forEach((item, index) => {
-        const petugas = item.profiles?.username
-          ? `${item.profiles.username} (${item.profiles.role === "muthawif" ? "Muthawif" : "Tour Leader"})`
-          : "-";
         rows.push([
           item.no_urutan != null ? item.no_urutan : index + 1,
           item.kode_koper || "-",
           item.nama_pemilik || "-",
           item.nomor_telepon || "-",
           item.kloter || "-",
-          item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"
+          item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-",
+          item.latitude != null ? item.latitude : "-",
+          item.longitude != null ? item.longitude : "-"
         ]);
       });
     } else {
-      rows.push(["No", "No Paspor", "Nama Pemilik", "Telepon", "Kloter", "Petugas Scan", "Waktu Scan"]);
+      rows.push(["No", "No Paspor", "Nama Pemilik", "Telepon", "Kloter", "Petugas Scan", "Waktu Scan", "Latitude", "Longitude"]);
       activeData.forEach((item, index) => {
         const petugas = item.profiles?.username
           ? `${item.profiles.username} (${item.profiles.role === "muthawif" ? "Muthawif" : "Tour Leader"})`
@@ -193,7 +192,10 @@ export default function RiwayatScanPage() {
           item.owner_name || "-",
           item.phone || "-",
           item.kloter || "-",
-          item.scanned_at ? new Date(item.scanned_at).toLocaleString("id-ID") : "-"
+          petugas,
+          item.scanned_at ? new Date(item.scanned_at).toLocaleString("id-ID") : "-",
+          item.latitude != null ? item.latitude : "-",
+          item.longitude != null ? item.longitude : "-"
         ]);
       });
     }
@@ -222,6 +224,8 @@ export default function RiwayatScanPage() {
       { wch: 18 }, // Telepon
       { wch: 15 }, // Kloter
       { wch: 22 }, // Waktu Scan
+      { wch: 15 }, // Latitude
+      { wch: 15 }, // Longitude
     ];
 
     const fileName = `Laporan_Riwayat_Scan_${activeTab === "koper" ? "Koper" : "Paspor"}_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -431,8 +435,9 @@ export default function RiwayatScanPage() {
                   <th className="px-5 py-4">Nama Pemilik</th>
                   <th className="px-5 py-4">No Telepon</th>
                   <th className="px-5 py-4">Kloter</th>
+                  <th className="px-5 py-4 text-center">Koordinat</th>
                   <th className="px-5 py-4 text-center">Waktu Scan</th>
-                  <th className="px-5 py-4 text-center w-28">Aksi</th>
+                  <th className="px-5 py-4 text-center w-32">Aksi</th>
                 </tr>
               ) : (
                 <tr>
@@ -441,8 +446,9 @@ export default function RiwayatScanPage() {
                   <th className="px-5 py-4">Nama Pemilik</th>
                   <th className="px-5 py-4">Telepon</th>
                   <th className="px-5 py-4">Kloter</th>
+                  <th className="px-5 py-4 text-center">Koordinat</th>
                   <th className="px-5 py-4 text-center">Waktu Scan</th>
-                  <th className="px-5 py-4 text-center w-28">Aksi</th>
+                  <th className="px-5 py-4 text-center w-32">Aksi</th>
                 </tr>
               )}
             </thead>
@@ -478,6 +484,15 @@ export default function RiwayatScanPage() {
                           {item.kloter || "-"}
                         </td>
                         <td className="px-5 py-4 text-center whitespace-nowrap">
+                          {item.latitude != null && item.longitude != null ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                              <span>{Number(item.latitude).toFixed(5)}, {Number(item.longitude).toFixed(5)}</span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">-</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-center whitespace-nowrap">
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                             {item.created_at ? new Date(item.created_at).toLocaleString("id-ID") : "-"}
@@ -493,6 +508,15 @@ export default function RiwayatScanPage() {
                           {item.kloter || "-"}
                         </td>
                         <td className="px-5 py-4 text-center whitespace-nowrap">
+                          {item.latitude != null && item.longitude != null ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                              <span>{Number(item.latitude).toFixed(5)}, {Number(item.longitude).toFixed(5)}</span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">-</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-center whitespace-nowrap">
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                             {item.scanned_at ? new Date(item.scanned_at).toLocaleString("id-ID") : "-"}
@@ -503,6 +527,25 @@ export default function RiwayatScanPage() {
 
                     <td className="px-5 py-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
+                        {item.latitude != null && item.longitude != null ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors inline-flex items-center justify-center"
+                            title="Buka Lokasi Koordinat di Google Maps"
+                          >
+                            <TbMapPin className="w-4 h-4 text-red-500" />
+                          </a>
+                        ) : (
+                          <button
+                            disabled
+                            className="p-1.5 text-gray-300 rounded-lg inline-flex items-center justify-center cursor-not-allowed"
+                            title="Koordinat belum tersedia"
+                          >
+                            <TbMapPin className="w-4 h-4" />
+                          </button>
+                        )}
                         <button 
                           onClick={() => openDetailModal(item)}
                           className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center justify-center"
@@ -616,6 +659,26 @@ export default function RiwayatScanPage() {
                           {selectedDetailItem?.created_at ? new Date(selectedDetailItem.created_at).toLocaleString("id-ID") : "-"}
                         </span>
                       </div>
+                      <div className="col-span-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-gray-400 block mb-0.5 font-semibold text-[11px] uppercase">Koordinat Lokasi GPS</span>
+                          <span className="font-semibold text-gray-800 font-mono text-xs">
+                            {selectedDetailItem?.latitude != null && selectedDetailItem?.longitude != null
+                              ? `${selectedDetailItem.latitude}, ${selectedDetailItem.longitude}`
+                              : "Tidak tercatat / Tanpa GPS"}
+                          </span>
+                        </div>
+                        {selectedDetailItem?.latitude != null && selectedDetailItem?.longitude != null && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${selectedDetailItem.latitude},${selectedDetailItem.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#263754] hover:bg-[#1e293b] text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all"
+                          >
+                            <TbMapPin className="w-3.5 h-3.5 text-red-400" /> Buka Maps
+                          </a>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <>
@@ -640,6 +703,26 @@ export default function RiwayatScanPage() {
                         <span className="font-semibold text-emerald-600">
                           {selectedDetailItem?.scanned_at ? new Date(selectedDetailItem.scanned_at).toLocaleString("id-ID") : "-"}
                         </span>
+                      </div>
+                      <div className="col-span-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-gray-400 block mb-0.5 font-semibold text-[11px] uppercase">Koordinat Lokasi GPS</span>
+                          <span className="font-semibold text-gray-800 font-mono text-xs">
+                            {selectedDetailItem?.latitude != null && selectedDetailItem?.longitude != null
+                              ? `${selectedDetailItem.latitude}, ${selectedDetailItem.longitude}`
+                              : "Tidak tercatat / Tanpa GPS"}
+                          </span>
+                        </div>
+                        {selectedDetailItem?.latitude != null && selectedDetailItem?.longitude != null && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${selectedDetailItem.latitude},${selectedDetailItem.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#263754] hover:bg-[#1e293b] text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all"
+                          >
+                            <TbMapPin className="w-3.5 h-3.5 text-red-400" /> Buka Maps
+                          </a>
+                        )}
                       </div>
                     </>
                   )}
