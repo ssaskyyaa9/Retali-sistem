@@ -4,34 +4,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import PageHeader from "@/app/components/PageHeader";
 import Topbar from "@/app/components/Topbar";
 import { FaUserClock } from "react-icons/fa";
-import {
-  FiRefreshCw,
-  FiPlus,
-  FiArrowLeft,
-  FiX,
-  FiEdit3,
-  FiTrash2,
-  FiMapPin,
-  FiList,
-  FiChevronDown,
-  FiUpload,
-  FiCheckCircle,
-  FiAlertCircle,
-  FiFile,
-  FiClock,
-  FiCalendar,
-  FiCheck,
-  FiAlertTriangle,
-  FiInfo,
-  FiUsers,
-  FiEye,
-  FiImage,
-} from "react-icons/fi";
+import { FiRefreshCw, FiPlus, FiArrowLeft, FiX, FiEdit3, FiTrash2, FiMapPin, FiList, FiChevronDown, FiUpload, FiCheckCircle, FiAlertCircle, FiFile, FiClock, FiCalendar, FiCheck, FiAlertTriangle, FiInfo, FiUsers, FiEye, FiImage, } from "react-icons/fi";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
 
-// ─── Default Master Sesi (Fallback jika tabel belum dimigrasi di database) ───
-// A. Sesi Khusus Jamaah (kategori: 'jamaah' - pasti untuk semua jamaah)
 const DEFAULT_JAMAAH_SESI = [
   {
     id: "a1000000-0000-0000-0000-000000000001",
