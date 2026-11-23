@@ -494,6 +494,8 @@ export default function RiwayatAbsensiContent({ type }) {
   const [petugasView, setPetugasView] = useState("list"); // "list" | "catat_absen" | "sesi_absen" | "detail"
   const [selectedJamaah, setSelectedJamaah] = useState(null);
   const [selectedPetugasGrup, setSelectedPetugasGrup] = useState(null);
+  const [editingPetugasGrup, setEditingPetugasGrup] = useState(null);
+  const [hoveredGrupKey, setHoveredGrupKey] = useState(null);
   const [hasHydratedView, setHasHydratedView] = useState(false);
 
   // Baca state tersimpan setelah mount di client agar SSR dan render awal client sama persis
@@ -1390,6 +1392,7 @@ export default function RiwayatAbsensiContent({ type }) {
 
   // ── Catat Absen Petugas Handlers ─────────────────────────────────────────
   const handleOpenCatatAbsenPetugas = () => {
+    setEditingPetugasGrup(null);
     const relevantSesiList = activeTab === "tour_leader" ? tourLeaderSesiList : muthawifSesiList;
     const defaultSesiObj = relevantSesiList[0] || null;
     const defaultSesi = defaultSesiObj?.judul || "";
@@ -1407,6 +1410,24 @@ export default function RiwayatAbsensiContent({ type }) {
       targetJamSelesai: targetSelesai,
       selectedUserIds: staffPool.map((p) => p.id),
       note: "",
+    });
+    setPetugasView("catat_absen");
+  };
+
+  const handleOpenEditPetugasGrup = (grup) => {
+    setEditingPetugasGrup(grup);
+    const memberIds = (grup.members || []).map((m) => m.user_id).filter(Boolean);
+    const firstMemberNote = grup.members?.[0]?.note || "";
+    const cleanNote = firstMemberNote.replace(/\[.*?\]/g, "").trim();
+
+    setPetugasGrupForm({
+      sesi: grup.sesi || "",
+      bagianSesi: grup.bagian_sesi || "",
+      tanggalAbsen: grup.tanggal || new Date().toISOString().split("T")[0],
+      targetJamMulai: grup.target_jam_mulai ? grup.target_jam_mulai.slice(0, 5) : "",
+      targetJamSelesai: grup.target_jam_selesai ? grup.target_jam_selesai.slice(0, 5) : "",
+      selectedUserIds: memberIds,
+      note: cleanNote,
     });
     setPetugasView("catat_absen");
   };
@@ -1464,14 +1485,116 @@ export default function RiwayatAbsensiContent({ type }) {
     try {
       const selectedSesiObj = sesiList.find((s) => s.judul === petugasGrupForm.sesi);
       const now = new Date();
+      const targetDate = petugasGrupForm.tanggalAbsen || now.toISOString().split("T")[0];
 
       const sesiLabel = `${petugasGrupForm.sesi}${
         petugasGrupForm.bagianSesi ? ` – ${petugasGrupForm.bagianSesi}` : ""
       }`;
 
       const staffPool = activeTab === "tour_leader" ? tourLeaderProfiles : muthawifProfiles;
-
       const userNote = (petugasGrupForm.note || "").trim();
+
+      const validSesiId =
+        selectedSesiObj &&
+        typeof selectedSesiObj.id === "string" &&
+        !selectedSesiObj.id.startsWith("a1000000") &&
+        !selectedSesiObj.id.startsWith("b1000000") &&
+        selectedSesiObj.id.length > 20
+          ? selectedSesiObj.id
+          : null;
+
+      if (editingPetugasGrup) {
+        const existingMembers = editingPetugasGrup.members || [];
+        const existingUserMap = new Map();
+        existingMembers.forEach((m) => existingUserMap.set(m.user_id, m));
+
+        const removedMemberIds = existingMembers
+          .filter((m) => !petugasGrupForm.selectedUserIds.includes(m.user_id))
+          .map((m) => m.id);
+
+        if (removedMemberIds.length > 0) {
+          await supabase.from("attendance_guide").delete().in("id", removedMemberIds);
+        }
+
+        for (const userId of petugasGrupForm.selectedUserIds) {
+          const staffObj = staffPool.find((p) => p.id === userId);
+          const staffKloter =
+            staffObj?.kloter?.name ||
+            (kloterOptions.find((k) => k.id === staffObj?.kloter_id)?.name) ||
+            staffObj?.kloter_id ||
+            "Umum";
+
+          const existingRec = existingUserMap.get(userId);
+          const existingStatus = existingRec ? getMemberAttendanceStatus(existingRec) : "belum_absen";
+          const statusTag = existingStatus === "hadir" ? "[Status: hadir]" : "[Belum Absen]";
+          const formattedNote = userNote
+            ? `${userNote} ${statusTag} [Sesi: ${sesiLabel}]`
+            : `${statusTag} [Sesi: ${sesiLabel}]`;
+
+          if (existingRec) {
+            await supabase
+              .from("attendance_guide")
+              .update({
+                kloter: staffKloter,
+                attendance_date: targetDate,
+                note: formattedNote,
+                sesi: petugasGrupForm.sesi,
+                bagian_sesi: petugasGrupForm.bagianSesi || null,
+                target_jam_mulai: selectedSesiObj?.target_jam_mulai || null,
+                target_jam_selesai: selectedSesiObj?.target_jam_selesai || null,
+                ...(validSesiId ? { sesi_id: validSesiId } : {}),
+              })
+              .eq("id", existingRec.id);
+          } else {
+            const newRow = {
+              user_id: userId,
+              kloter: staffKloter,
+              type: "masuk",
+              attendance_date: targetDate,
+              note: `[Belum Absen] [Sesi: ${sesiLabel}]${userNote ? ` ${userNote}` : ""}`,
+              sesi: petugasGrupForm.sesi,
+              bagian_sesi: petugasGrupForm.bagianSesi || null,
+              target_jam_mulai: selectedSesiObj?.target_jam_mulai || null,
+              target_jam_selesai: selectedSesiObj?.target_jam_selesai || null,
+              status_waktu: null,
+              ...(editingPetugasGrup.grup_id ? { grup_id: editingPetugasGrup.grup_id } : {}),
+              ...(validSesiId ? { sesi_id: validSesiId } : {}),
+            };
+            await supabase.from("attendance_guide").insert(newRow);
+          }
+        }
+
+        const grupId = editingPetugasGrup.grup_id;
+        if (grupId && typeof grupId === "string" && grupId.length > 20) {
+          try {
+            await supabase
+              .from("attendance_guide_grup")
+              .update({
+                attendance_date: targetDate,
+                sesi: petugasGrupForm.sesi,
+                bagian_sesi: petugasGrupForm.bagianSesi || null,
+                target_jam_mulai: selectedSesiObj?.target_jam_mulai || null,
+                target_jam_selesai: selectedSesiObj?.target_jam_selesai || null,
+                total_petugas: petugasGrupForm.selectedUserIds.length,
+              })
+              .eq("id", grupId);
+          } catch {
+            // ignore optional column error
+          }
+        }
+
+        if (activeTab === "tour_leader") {
+          await fetchTourLeader();
+        } else {
+          await fetchMuthawif();
+        }
+
+        setEditingPetugasGrup(null);
+        setPetugasView("list");
+        showToast("Data sesi absensi petugas berhasil diperbarui!");
+        return;
+      }
+
       const formattedNote = userNote
         ? `${userNote} [Belum Absen] [Sesi: ${sesiLabel}]`
         : `[Belum Absen] [Sesi: ${sesiLabel}]`;
@@ -1488,7 +1611,7 @@ export default function RiwayatAbsensiContent({ type }) {
           user_id: userId,
           kloter: staffKloter,
           type: "masuk",
-          attendance_date: petugasGrupForm.tanggalAbsen || now.toISOString().split("T")[0],
+          attendance_date: targetDate,
           note: formattedNote,
           sesi: petugasGrupForm.sesi,
           bagian_sesi: petugasGrupForm.bagianSesi || null,
@@ -1497,33 +1620,19 @@ export default function RiwayatAbsensiContent({ type }) {
           status_waktu: null,
         };
 
-        if (
-          selectedSesiObj &&
-          typeof selectedSesiObj.id === "string" &&
-          !selectedSesiObj.id.startsWith("a1000000") &&
-          !selectedSesiObj.id.startsWith("b1000000") &&
-          selectedSesiObj.id.length > 20
-        ) {
-          row.sesi_id = selectedSesiObj.id;
+        if (validSesiId) {
+          row.sesi_id = validSesiId;
         }
 
         return row;
       });
 
       const representativeKloter = payloads[0]?.kloter || "Umum";
-      const validSesiId =
-        selectedSesiObj &&
-        typeof selectedSesiObj.id === "string" &&
-        !selectedSesiObj.id.startsWith("a1000000") &&
-        !selectedSesiObj.id.startsWith("b1000000") &&
-        selectedSesiObj.id.length > 20
-          ? selectedSesiObj.id
-          : null;
 
       let createdGrupId = null;
       const fullGrupPayload = {
         kloter: representativeKloter,
-        attendance_date: petugasGrupForm.tanggalAbsen || now.toISOString().split("T")[0],
+        attendance_date: targetDate,
         sesi: petugasGrupForm.sesi,
         bagian_sesi: petugasGrupForm.bagianSesi || null,
         sesi_id: validSesiId,
@@ -1546,7 +1655,7 @@ export default function RiwayatAbsensiContent({ type }) {
         console.warn("attendance_guide_grup full insert fallback:", firstGErr.message);
         const safeGrupPayload = {
           kloter: representativeKloter,
-          attendance_date: petugasGrupForm.tanggalAbsen || now.toISOString().split("T")[0],
+          attendance_date: targetDate,
           sesi: "kegiatan_harian",
           total_petugas: payloads.length,
         };
@@ -2092,6 +2201,7 @@ export default function RiwayatAbsensiContent({ type }) {
                     setActiveTab(tab);
                     setJamaahView("list");
                     setPetugasView("list");
+                    setEditingPetugasGrup(null);
                   }}
                   className={`pb-3 text-base font-bold transition-all cursor-pointer ${
                     activeTab === tab
@@ -2268,13 +2378,59 @@ export default function RiwayatAbsensiContent({ type }) {
 
                                 <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-gray-100 flex-wrap sm:flex-nowrap">
                                   <div className="flex items-center gap-2">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50/80 text-blue-700 border border-blue-200/70 text-xs font-semibold shadow-2xs">
-                                      <FiUsers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                                      {item.members.length}{" "}
-                                      <span className="hidden sm:inline">
-                                        {activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"}
+                                    <div
+                                      className="relative"
+                                      onMouseEnter={() => setHoveredGrupKey(item.key)}
+                                      onMouseLeave={() => setHoveredGrupKey(null)}
+                                    >
+                                      <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50/80 text-blue-700 border border-blue-200/70 text-xs font-semibold shadow-2xs cursor-default">
+                                        <FiUsers className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                        {item.members.length}{" "}
+                                        <span className="hidden sm:inline">
+                                          {activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"}
+                                        </span>
                                       </span>
-                                    </span>
+
+                                      {hoveredGrupKey === item.key && (
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-40 w-64 bg-white rounded-xl shadow-xl border border-gray-200 p-3 text-left pointer-events-none">
+                                          <div className="text-[11px] font-bold text-gray-900 pb-1.5 mb-1.5 border-b border-gray-100 flex items-center justify-between">
+                                            <span>
+                                              {activeTab === "tour_leader"
+                                                ? "Tour Leader Terpilih"
+                                                : "Muthawif Terpilih"}
+                                            </span>
+                                            <span className="text-blue-600">{item.members.length}</span>
+                                          </div>
+                                          {item.members.length === 0 ? (
+                                            <p className="text-[11px] text-gray-400 italic">
+                                              Tidak ada petugas terpilih
+                                            </p>
+                                          ) : (
+                                            <ul className="space-y-1.5 max-h-44 overflow-y-auto no-scrollbar">
+                                              {item.members.map((m, mIdx) => {
+                                                const mStatus = getMemberStatusInfo(m);
+                                                return (
+                                                  <li
+                                                    key={m.id || mIdx}
+                                                    className="flex items-center justify-between gap-2 text-xs"
+                                                  >
+                                                    <span className="font-semibold text-gray-800 truncate">
+                                                      {mIdx + 1}. {m.profiles?.username || m.user_id || "-"}
+                                                    </span>
+                                                    <span
+                                                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${mStatus.color}`}
+                                                    >
+                                                      {mStatus.label}
+                                                    </span>
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+
                                     <span
                                       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shadow-2xs ${
                                         isAllHadir
@@ -2303,6 +2459,13 @@ export default function RiwayatAbsensiContent({ type }) {
                                       Detail
                                     </button>
                                     <button
+                                      onClick={() => handleOpenEditPetugasGrup(item)}
+                                      className="inline-flex items-center justify-center p-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer"
+                                      title="Edit sesi absen ini"
+                                    >
+                                      <FiEdit3 className="w-3.5 h-3.5 text-gray-700" />
+                                    </button>
+                                    <button
                                       onClick={() =>
                                         openDeleteConfirmation(
                                           item.key,
@@ -2311,11 +2474,10 @@ export default function RiwayatAbsensiContent({ type }) {
                                           item
                                         )
                                       }
-                                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-xl text-xs font-semibold transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer"
+                                      className="inline-flex items-center justify-center p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-xl transition-all shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer"
                                       title="Hapus sesi ini"
                                     >
                                       <FiTrash2 className="w-3.5 h-3.5 text-rose-500" />
-                                      <span className="hidden sm:inline">Hapus</span>
                                     </button>
                                   </div>
                                 </div>
@@ -2336,10 +2498,11 @@ export default function RiwayatAbsensiContent({ type }) {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase bg-blue-100 text-blue-900">
-                          Formulir Absensi
+                          {editingPetugasGrup ? "Edit Absensi" : "Formulir Absensi"}
                         </span>
                         <h3 className="text-xl font-bold text-gray-900">
-                          Catat Absen {activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"}
+                          {editingPetugasGrup ? "Edit Absen" : "Catat Absen"}{" "}
+                          {activeTab === "tour_leader" ? "Tour Leader" : "Muthawif"}
                         </h3>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -2348,7 +2511,10 @@ export default function RiwayatAbsensiContent({ type }) {
                       </p>
                     </div>
                     <button
-                      onClick={() => setPetugasView("list")}
+                      onClick={() => {
+                        setEditingPetugasGrup(null);
+                        setPetugasView("list");
+                      }}
                       className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                     >
                       <FiArrowLeft className="w-3.5 h-3.5" /> Kembali
@@ -2601,7 +2767,10 @@ export default function RiwayatAbsensiContent({ type }) {
                     <div className="flex justify-end gap-3 pt-2">
                       <button
                         type="button"
-                        onClick={() => setPetugasView("list")}
+                        onClick={() => {
+                          setEditingPetugasGrup(null);
+                          setPetugasView("list");
+                        }}
                         className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-3 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                       >
                         Batal
@@ -2614,8 +2783,10 @@ export default function RiwayatAbsensiContent({ type }) {
                         {savingPetugas ? (
                           <>
                             <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Menerbitkan...
+                            {editingPetugasGrup ? "Menyimpan..." : "Menerbitkan..."}
                           </>
+                        ) : editingPetugasGrup ? (
+                          `Simpan Perubahan (${petugasGrupForm.selectedUserIds.length} Petugas)`
                         ) : (
                           `Simpan & Terbitkan Absensi (${petugasGrupForm.selectedUserIds.length} Petugas)`
                         )}
@@ -2669,29 +2840,21 @@ export default function RiwayatAbsensiContent({ type }) {
                       >
                         <FiArrowLeft className="w-3.5 h-3.5" /> Kembali
                       </button>
-                      <button
-                        onClick={handleOpenAddMemberToGrup}
-                        className="bg-[#121c2d] hover:bg-[#1f2d47] text-white px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                      >
-                        <FiPlus className="w-4 h-4" /> Edit Sesi Ini
-                      </button>
                     </div>
                   </div>
 
                   <div className="bg-white rounded-xl shadow-xs border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto no-scrollbar">
                       <table className="w-full text-left border-collapse">
-                        <thead className="bg-[#121c2d] text-white text-xs font-bold tracking-wide">
+                        <thead className="bg-[#121c2d] text-white text-xs font-bold tracking-wide uppercase">
                           <tr>
                             <th className="py-4 px-4 w-14 text-center">NO</th>
-                            <th className="py-4 px-6 text-center">TANGGAL & WAKTU</th>
-                            <th className="py-4 px-6">USER ID / NAMA PETUGAS</th>
-                            <th className="py-4 px-6 text-center">KLOTER</th>
-                            <th className="py-4 px-6 text-center">STATUS HADIR</th>
-                            <th className="py-4 px-6 text-center">STATUS WAKTU</th>
+                            <th className="py-4 px-6">TANGGAL</th>
+                            <th className="py-4 px-6">NAMA</th>
+                            <th className="py-4 px-6">KLOTER</th>
                             <th className="py-4 px-6 text-center">FOTO</th>
-                            <th className="py-4 px-6 text-center">KOORDINAT</th>
-                            <th className="py-4 px-6 text-center">CATATAN</th>
+                            <th className="py-4 px-6">KOORDINAT</th>
+                            <th className="py-4 px-6 text-center">STATUS WAKTU</th>
                             <th className="py-4 px-6 text-center">AKSI</th>
                           </tr>
                         </thead>
@@ -2699,7 +2862,7 @@ export default function RiwayatAbsensiContent({ type }) {
                           {currentGrupMembers.length === 0 ? (
                             <tr>
                               <td
-                                colSpan="10"
+                                colSpan="8"
                                 className="py-12 text-center text-gray-400 text-sm font-semibold"
                               >
                                 Tidak ada petugas yang terdaftar pada sesi absensi ini.
@@ -2724,61 +2887,27 @@ export default function RiwayatAbsensiContent({ type }) {
                                   <td className="py-4 px-4 text-center font-bold text-gray-400 text-xs">
                                     {index + 1}
                                   </td>
-                                  <td className="py-4 px-6 text-center whitespace-nowrap">
-                                    <div className="flex flex-col items-center">
-                                      <span className="font-bold text-gray-900 text-xs">
-                                        {statusInfo.status === "belum_absen" && !item.photo_url
+                                  <td className="py-4 px-6 whitespace-nowrap">
+                                    <div className="flex flex-col">
+                                      <span className="font-semibold text-gray-900 text-xs">
+                                        {formatTanggal(item.attendance_date || item.created_at)}
+                                      </span>
+                                      <span className="text-[11px] font-medium text-gray-500 mt-0.5">
+                                        {statusInfo.label === "Belum Absen" && !item.photo_url
                                           ? "-"
                                           : formatJam(item.created_at)}
                                       </span>
-                                      <span className="text-[11px] font-semibold text-gray-500">
-                                        {formatTanggal(item.attendance_date || item.created_at)}
-                                      </span>
                                     </div>
                                   </td>
-                                  <td className="py-4 px-6">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                                        {(item.profiles?.username || "P")[0]}
-                                      </div>
-                                      <div>
-                                        <div className="font-bold text-gray-900 text-sm">
-                                          {item.profiles?.username || item.user_id || "-"}
-                                        </div>
-                                        <div className="text-[11px] text-gray-500 font-medium">
-                                          {item.profiles?.phone || item.profiles?.email || "-"}
-                                        </div>
-                                      </div>
+                                  <td className="py-4 px-6 whitespace-nowrap">
+                                    <div className="font-bold text-gray-900 text-sm">
+                                      {item.profiles?.username || item.user_id || "-"}
                                     </div>
                                   </td>
-                                  <td className="py-4 px-6 text-center whitespace-nowrap">
-                                    <span className="inline-block rounded-md bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 border border-blue-200/60 shadow-2xs">
+                                  <td className="py-4 px-6 whitespace-nowrap">
+                                    <span className="inline-block rounded-lg bg-blue-50/80 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200/70">
                                       {item.kloter || item.profiles?.kloter?.name || "-"}
                                     </span>
-                                  </td>
-                                  <td className="py-4 px-6 text-center whitespace-nowrap">
-                                    <span
-                                      className={`inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase border shadow-2xs ${statusInfo.color}`}
-                                    >
-                                      {statusInfo.label}
-                                    </span>
-                                  </td>
-                                  <td className="py-4 px-6 text-center whitespace-nowrap">
-                                    {statusInfo.label === "Hadir" && timing ? (
-                                      <span
-                                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${timing.badgeColor}`}
-                                        title={timing.description}
-                                      >
-                                        <FiClock className="w-2.5 h-2.5 mr-1" />
-                                        {timing.label}
-                                      </span>
-                                    ) : targetMulaiSesi && targetSelesaiSesi ? (
-                                      <span className="text-[11px] font-mono text-gray-500">
-                                        {targetMulaiSesi.slice(0, 5)} - {targetSelesaiSesi.slice(0, 5)}
-                                      </span>
-                                    ) : (
-                                      <span className="text-xs text-gray-400 italic">Bebas</span>
-                                    )}
                                   </td>
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
                                     {item.photo_url ? (
@@ -2788,7 +2917,7 @@ export default function RiwayatAbsensiContent({ type }) {
                                           setPreviewPhotoUrl(item.photo_url);
                                           setShowPhotoModal(true);
                                         }}
-                                        className="w-10 h-10 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden shadow-2xs mx-auto flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer"
+                                        className="w-11 h-11 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden shadow-2xs mx-auto flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer"
                                       >
                                         <img
                                           src={item.photo_url}
@@ -2800,13 +2929,13 @@ export default function RiwayatAbsensiContent({ type }) {
                                       <span className="text-gray-300 text-xs">–</span>
                                     )}
                                   </td>
-                                  <td className="py-4 px-6 text-center whitespace-nowrap">
+                                  <td className="py-4 px-6 whitespace-nowrap">
                                     {item.latitude && item.longitude ? (
                                       <a
                                         href={`https://maps.google.com/?q=${item.latitude},${item.longitude}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline font-mono"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline font-mono"
                                       >
                                         <FiMapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                                         <span>
@@ -2817,31 +2946,44 @@ export default function RiwayatAbsensiContent({ type }) {
                                       <span className="text-gray-400 text-xs">–</span>
                                     )}
                                   </td>
-                                  <td className="py-4 px-6 text-xs text-gray-600 max-w-[180px]">
-                                    <div>{item.note ? item.note.replace(/\[.*?\]/g, "").trim() || item.note : "-"}</div>
+                                  <td className="py-4 px-6 text-center whitespace-nowrap">
+                                    {statusInfo.label === "Hadir" && timing ? (
+                                      <div className="flex flex-col items-center gap-1">
+                                        <span
+                                          className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold border ${timing.badgeColor}`}
+                                          title={timing.description}
+                                        >
+                                          {timing.label}
+                                        </span>
+                                        {targetMulaiSesi && targetSelesaiSesi && (
+                                          <span className="text-[11px] font-medium text-gray-500">
+                                            Target {targetMulaiSesi.slice(0, 5)}–{targetSelesaiSesi.slice(0, 5)}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span
+                                        className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold border ${statusInfo.color}`}
+                                      >
+                                        {statusInfo.label}
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="py-4 px-6 text-center whitespace-nowrap">
-                                    <div className="flex items-center justify-center gap-2">
-                                      <button
-                                        onClick={() => handleOpenUpdateMemberModal(item)}
-                                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-800 shadow-2xs hover:bg-gray-50 transition-colors cursor-pointer"
-                                      >
-                                        <FiEdit3 className="w-3.5 h-3.5 text-blue-600" /> Update
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          openDeleteConfirmation(
-                                            item.id,
-                                            "individual_petugas",
-                                            item.profiles?.username || item.user_id || "Petugas",
-                                            item
-                                          )
-                                        }
-                                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/80 px-3 py-1.5 text-xs font-bold text-red-600 shadow-2xs hover:bg-red-100 transition-colors cursor-pointer"
-                                      >
-                                        <FiTrash2 className="w-3.5 h-3.5 text-red-500" /> Hapus
-                                      </button>
-                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        openDeleteConfirmation(
+                                          item.id,
+                                          "individual_petugas",
+                                          item.profiles?.username || item.user_id || "Petugas",
+                                          item
+                                        )
+                                      }
+                                      className="inline-flex items-center justify-center p-2 rounded-lg border border-red-200 bg-red-50/80 text-red-600 shadow-2xs hover:bg-red-100 transition-colors cursor-pointer"
+                                      title="Hapus"
+                                    >
+                                      <FiTrash2 className="w-4 h-4 text-red-500" />
+                                    </button>
                                   </td>
                                 </tr>
                               );
@@ -3520,22 +3662,6 @@ export default function RiwayatAbsensiContent({ type }) {
                     </div>
                     <div className="flex flex-wrap items-center gap-2.5">
                       <button
-                        type="button"
-                        onClick={() => handleBatchUpdateJamaahStatus("hadir")}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                        title="Tandai seluruh jamaah pada sesi ini sebagai Hadir"
-                      >
-                        <FiCheckCircle className="w-3.5 h-3.5" /> Tandai Semua Hadir
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleBatchUpdateJamaahStatus("belum_hadir")}
-                        className="bg-slate-700 hover:bg-slate-800 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                        title="Reset seluruh status jamaah menjadi Belum Hadir"
-                      >
-                        <FiClock className="w-3.5 h-3.5" /> Reset Belum Hadir
-                      </button>
-                      <button
                         onClick={() => setJamaahView("list")}
                         className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                       >
@@ -3561,7 +3687,7 @@ export default function RiwayatAbsensiContent({ type }) {
                               <th className="py-4 px-3 text-center bg-[#121c2d]">Kloter</th>
                               <th className="py-4 px-3 text-center bg-[#121c2d]">Bus</th>
                               <th className="py-4 px-4 bg-[#121c2d]">Keterangan</th>
-                              <th className="py-4 px-4 text-center bg-[#121c2d]">Status Hadir</th>
+                              <th className="py-4 px-2.5 text-center w-28 bg-[#121c2d]">Status</th>
                               <th className="py-4 px-4 text-center bg-[#121c2d]">Catatan</th>
                             </tr>
                           </thead>
@@ -3607,22 +3733,22 @@ export default function RiwayatAbsensiContent({ type }) {
                                     <td className="py-5 px-4 text-sm text-gray-700 font-semibold leading-snug">
                                       {item.description || "-"}
                                     </td>
-                                    <td className="py-4 px-4 text-center whitespace-nowrap">
-                                      <select
-                                        value={st || "belum_hadir"}
-                                        onChange={(e) => handleUpdateJamaahStatus(item.id, e.target.value)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-extrabold uppercase border cursor-pointer transition-all outline-none shadow-2xs ${
+                                    <td className="py-4 px-2.5 text-center whitespace-nowrap">
+                                      <span
+                                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
                                           st === "hadir"
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                             : st === "tidak_hadir"
-                                            ? "bg-rose-50 text-rose-700 border-rose-300"
-                                            : "bg-slate-100 text-slate-700 border-slate-300"
+                                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                                            : "bg-slate-100 text-slate-600 border-slate-200"
                                         }`}
                                       >
-                                        <option value="belum_hadir">Belum Hadir</option>
-                                        <option value="hadir">Hadir</option>
-                                        <option value="tidak_hadir">Tidak Hadir</option>
-                                      </select>
+                                        {st === "hadir"
+                                          ? "Hadir"
+                                          : st === "tidak_hadir"
+                                          ? "Alpa"
+                                          : "Belum"}
+                                      </span>
                                     </td>
                                     <td className="py-5 px-4 text-center text-sm text-gray-500 font-medium">
                                       {item.note || "-"}
